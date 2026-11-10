@@ -44,3 +44,51 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .dashboard-footer{margin-top:10px;color:#94a2aa;font-size:11px;text-align:right}
 .data-chip{display:inline-block;background:#e9f5fa;color:#087da0;border-radius:99px;padding:5px 9px;font-size:10px;font-weight:700}
 @media(max-width:720px){.sidebar{width:100%;height:auto;padding:13px}.brand-logo{margin:0 8px 12px}.brand-logo img{width:100px;height:43px}.nav-section{display:none}.hero-summary{align-items:flex-start;flex-direction:column;padding:22px}.topbar{background:#fff}.heading{align-items:flex-start}.heading .primary{white-space:nowrap}.metrics{grid-template-columns:repeat(2,1fr)}}
+
+/* S2H dashboard information architecture, 2026 */
+.dashboard-heading{display:flex;justify-content:space-between;gap:24px;align-items:center;margin:0 0 22px}
+.dashboard-heading h2{font-size:25px;letter-spacing:-.9px;margin:9px 0 7px;font-weight:750}
+.dashboard-heading p{font-size:13px;line-height:1.6;color:#798b98;margin:0}
+.date-pill{border:1px solid #dfe8ed;padding:9px 14px;background:#fff;border-radius:100px;color:#587383;font-size:11px;white-space:nowrap}
+.dashboard-actions{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#fff;border:1px solid #e4eaf0;border-radius:13px;padding:18px 23px;margin-bottom:19px}
+.dashboard-actions>div:first-child{display:flex;flex-direction:column;gap:4px}
+.dashboard-actions strong{font-size:13px}.dashboard-actions span{color:#8b99a4;font-size:11px}
+.dashboard-actions .quick-actions button{background:#eef7fa;border:1px solid #d9edf4;color:#087ca3;font-size:11px;font-weight:650}
+.dashboard-actions .quick-actions button:first-child{background:#0089b3;color:white;border-color:#0089b3}
+.metrics-dashboard{margin-bottom:20px}
+.metrics-dashboard .metric{border-top:0;position:relative;overflow:hidden}
+.metrics-dashboard .metric:before{content:"";width:28px;height:3px;background:#0089b3;position:absolute;top:0;left:23px;border-radius:0 0 5px 5px}
+.metrics-dashboard .metric:nth-child(2):before{background:#df9167}
+.metrics-dashboard .metric:nth-child(3):before{background:#59a787}
+.metrics-dashboard .metric:nth-child(4):before{background:#7391bf}
+.metrics-dashboard .metric .number{font-size:33px}
+.panel-description{font-size:12px;color:#8999a4;margin:-5px 0 16px;line-height:1.65}
+.panel-link{background:none;border:none;color:#0089b3;font-size:11px;font-weight:700}
+.panel-note{font-size:10px;color:#9ba8b0;line-height:1.6;margin:16px 0 0}
+.table-sub{display:block;margin-top:4px;color:#a0aab2;font-size:10px}
+.opportunity-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 0;border-bottom:1px solid #edf0f3}
+.opportunity-row:last-child{border-bottom:none}
+.opportunity-row strong{font-size:12px}.opportunity-row small{display:block;color:#9ba7af;font-size:10px;margin-top:6px}
+.opportunity-right{text-align:right}.opportunity-right small{margin-top:8px}
+.activity-row{display:flex;align-items:start;gap:12px;border-bottom:1px solid #edf0f3;padding:14px 0}
+.activity-row:last-child{border-bottom:none}
+.activity-row strong{font-size:12px}.activity-row p{font-size:11px;color:#8a98a2;margin:5px 0;line-height:1.5}
+.activity-row>small{color:#abb5bc;margin-left:auto;font-size:10px;white-space:nowrap}
+.activity-dot{margin-top:4px;width:8px;height:8px;background:#0089b3;flex:0 0 8px;border-radius:50%;box-shadow:0 0 0 4px #e7f5fa}
+.product-bar-row{margin:17px 0}.product-bar-row>div:first-child{display:flex;justify-content:space-between;font-size:12px;color:#627581;margin-bottom:8px}.product-bar-row strong{color:#1c4e62}
+.product-track{background:#edf3f6;height:7px;border-radius:10px;overflow:hidden}.product-track span{height:100%;background:linear-gradient(90deg,#0089b3,#54c4d9);display:block;border-radius:10px}
+.distribution-chart{display:flex;align-items:center;justify-content:space-between;gap:25px;padding:16px 0}
+.donut{--p:0%;width:153px;height:153px;min-width:153px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#0089b3 var(--p),#e4edf1 0)}
+.donut>div{border-radius:50%;width:115px;height:115px;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column}.donut strong{font-size:25px;color:#243e4b}.donut small{color:#a2b0b9;font-size:10px}
+.distribution-legend{flex:1;max-width:240px}.distribution-legend>div{display:flex;align-items:center;gap:7px;margin:13px 0;color:#82939d;font-size:11px}.distribution-legend strong{margin-left:auto;color:#2c4654}
+.legend-dot{width:8px;height:8px;border-radius:50%;background:#0089b3}.legend-1{background:#dd916c}.legend-2{background:#659d8b}.legend-3{background:#a5b0bd}
+.demo-banner{background:#fff3df;color:#9c6204;font-size:10px;font-weight:750;border-radius:100px;padding:7px 11px;margin-left:auto;margin-right:12px}
+.demo-alert{background:#fff7e9;border:1px solid #f6e2b9;padding:13px 17px;color:#946716;margin-bottom:18px;border-radius:9px;font-size:12px}
+.preview-button{display:block;width:100%;margin-top:10px;border:1px solid #d4e7ef;background:#e8f6fa;color:#006f94;padding:12px;border-radius:8px;font-weight:700}
+.preview-hint{font-size:10px!important;line-height:1.6;color:#8fa0ab!important;margin:10px 0 0!important}
+.pipeline-preview{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0}
+.pipeline-preview>div{padding:24px 14px;background:#f7f9fb;border:1px solid #e6edf1;border-radius:10px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+.pipeline-step{background:#e7f5fa;color:#0089b3;width:29px;height:29px;display:grid;place-items:center;border-radius:50%;font-weight:800}
+.pipeline-preview strong{font-size:12px}.pipeline-preview small{color:#9aabb6;font-size:10px}
+@media(max-width:1050px){.distribution-chart{flex-direction:column}.distribution-legend{width:100%;max-width:none}.pipeline-preview{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){.dashboard-heading{display:block}.dashboard-heading h2{font-size:22px}.date-pill{display:inline-block;margin-top:14px}.dashboard-actions{align-items:stretch;flex-direction:column}.dashboard-actions .quick-actions{flex-direction:column}.dashboard-actions .quick-actions button{width:100%}.distribution-chart{flex-direction:row}.pipeline-preview{grid-template-columns:repeat(2,1fr)}.demo-banner{margin-left:0;margin-right:0}.topbar{gap:8px;flex-wrap:wrap;height:auto;min-height:52px;padding-top:10px;padding-bottom:10px}}
