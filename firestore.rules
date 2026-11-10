@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function staff() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.active == true;
+    }
+    match /users/{uid} {
+      allow read: if staff() || (request.auth != null && request.auth.uid == uid);
+      allow write: if false; // 운영자가 Firebase Console에서 계정/권한을 관리
+    }
+    match /sellers/{id} {
+      allow read, create, update: if staff();
+      allow delete: if false;
+    }
+    match /groupbuys/{id} {
+      allow read, create, update: if staff();
+      allow delete: if false;
+    }
+    match /activities/{id} {
+      allow read, create: if staff()
+        && (request.method != 'create' || (
+          request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.createdAt == request.time
+        ));
+      allow update, delete: if false;
+    }
+  }
+}
