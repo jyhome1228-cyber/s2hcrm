@@ -129,14 +129,18 @@ function reminders(){
 function metric(title,value,description){return '<div class="metric"><div class="label">'+title+'</div><div class="number">'+value+'</div><div class="sub">'+description+'</div></div>';}
 function wrap(title,body,right=""){return '<div class="panel"><div class="panel-title"><h2>'+title+'</h2>'+right+'</div>'+body+'</div>';}
 function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'+headers.map(v=>'<th>'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">등록된 데이터가 없습니다.</td></tr>')+'</tbody></table></div>';}
+
 function dashboard(){
  const today=todayLocal(),rem=reminders();
  const running=state.buys.filter(b=>b.status!=="취소"&&b.startDate<=today&&b.endDate>=today);
  const upcoming=state.buys.filter(b=>b.status!=="취소"&&b.startDate>today);
- const cards='<div class="metrics">'+metric("전체 셀러",state.sellers.length,"통합 셀러 DB")+metric("연락 필요",rem.length,"완료 기록이 필요한 알림")+metric("진행 중 공구",running.length,"오늘 날짜 기준")+metric("예정 공구",upcoming.length,"시작일 도래 전")+'</div>';
+ const thisMonth=state.buys.filter(b=>(b.startDate||"").slice(0,7)===today.slice(0,7)&&b.status!=="취소");
+ const cards='<div class="metrics">'+metric("전체 셀러",state.sellers.length,"등록된 통합 셀러 DB")+metric("오늘 연락 필요",rem.length,"미처리 후속 영업")+metric("진행 중 공구",running.length,"현재 진행 일정")+metric("이번 달 공구",thisMonth.length,"이번 달 시작 기준")+'</div>';
+ const hero='<div class="hero-summary"><div><span class="eyebrow">S2H · SELLER INTELLIGENCE PLATFORM</span><h2>오늘의 영업 기회를 확인하세요.</h2><p>셀러·공구·영업 이력이 하나의 흐름으로 연결됩니다.</p></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
  const remRows=rem.slice(0,8).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong></td><td>'+h(x.buy.product)+'</td><td>'+h(x.due)+'</td><td><span class="status alert">'+x.overdue+'일 경과</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
  const buyRows=[...state.buys].filter(b=>b.status!=="취소").sort((a,b)=>a.startDate.localeCompare(b.startDate)).filter(b=>b.endDate>=today).slice(0,8).map(b=>'<tr><td><strong>'+h(b.sellerName)+'</strong></td><td>'+h(b.product)+'</td><td>'+h(b.startDate)+' ~ '+h(b.endDate)+'</td><td><span class="status '+(b.startDate<=today?'good':'')+'">'+(b.startDate<=today?'진행 중':'예정')+'</span></td></tr>');
- return cards+'<div class="layout-two">'+wrap("연락이 필요한 셀러",table(["셀러","최근 상품","연락 기준일","지연","실행"],remRows),'<span class="badge-count">'+rem.length+'건</span>')+wrap("다가오는 공구",table(["셀러","상품","일정","상태"],buyRows))+'</div>';
+ const activityRows=state.activities.slice(0,6).map(a=>'<tr><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.type)+'</td><td>'+h(dt(a.createdAt))+'</td></tr>');
+ return hero+cards+wrap("오늘의 우선 업무",table(["셀러","최근 진행 상품","연락 예정일","상태","관리"],remRows),'<span class="data-chip">'+rem.length+'건 확인 필요</span>')+'<div class="layout-two">'+wrap("예정 및 진행 중 공구",table(["셀러","상품","진행 일정","상태"],buyRows))+wrap("최근 영업 활동",table(["셀러","연락 유형","활동 일시"],activityRows))+'</div><div class="dashboard-footer">S2H CORPORATION · INTERNAL WORKSPACE</div>';
 }
 function sellersPage(){
  const term=state.search.toLowerCase();
@@ -169,6 +173,7 @@ function render(){
  $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
+ $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")buyModal();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
  if(search){search.addEventListener("input",e=>{const pos=e.target.selectionStart;state.search=e.target.value;$("#page-body").innerHTML=sellersPage();const input=$("#seller-search");input.focus();input.setSelectionRange(pos,pos);});}
  $("#page-body").querySelectorAll("[data-act]").forEach(el=>el.addEventListener("click",()=>{
