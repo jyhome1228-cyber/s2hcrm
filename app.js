@@ -261,11 +261,12 @@ function activityModal(sellerId=null){
  if(!state.sellers.length){notify("셀러를 먼저 등록해주세요.");return;}
  const choices=state.sellers.map(s=>[s.id,s.name]);
  openModal("연락·영업 활동 기록",
- select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["기타","기타"]],"카카오톡")+f("nextFollowUpAt","다음 연락 예정일","date")+textarea("memo","활동 내용 (필수)"),
+ select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["기타","기타"]],"카카오톡")+f("contactOwner","담당자 이름","text",state.staff?.name||"",true)+f("nextFollowUpAt","다음 연락 예정일","date")+textarea("memo","활동 내용 (필수)"),
  async data=>{
  const seller=state.sellers.find(s=>s.id===data.sellerId);
  if(!seller||!data.memo.trim())throw new Error("셀러와 활동 내용을 입력해주세요.");
- await addDoc(collection(db,"activities"),{sellerId:seller.id,sellerName:seller.name,type:data.type,memo:data.memo.trim(),nextFollowUpAt:data.nextFollowUpAt||null,actorUid:state.user.uid,actorName:state.staff.name||state.user.email,createdAt:serverTimestamp()});
+ if(!data.contactOwner?.trim())throw new Error("담당자 이름을 입력해주세요.");
+ await addDoc(collection(db,"activities"),{sellerId:seller.id,sellerName:seller.name,type:data.type,contactOwner:data.contactOwner.trim(),memo:data.memo.trim(),nextFollowUpAt:data.nextFollowUpAt||null,actorUid:state.user.uid,actorName:state.staff.name||state.user.email,createdAt:serverTimestamp()});
  });
 }
 function latestBuy(sellerId){
@@ -410,14 +411,14 @@ function sellerDetailPage(){
  const buys=state.buys.filter(b=>b.sellerId===seller.id).sort((a,b)=>(b.startDate||"").localeCompare(a.startDate||""));
  const activities=state.activities.filter(a=>a.sellerId===seller.id);
  const history=buys.map(b=>'<tr><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.round||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.note||b.memo||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>');
- const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.actorName)+'</td></tr>');
+ const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName)+'</td></tr>');
  const ig=seller.instagramUrl;
  const link=ig?.startsWith("https://")?'<a target="_blank" rel="noopener noreferrer" href="'+h(ig)+'">인스타그램 열기</a>':h(seller.channel||seller.instagramId||"-");
  const summary='<div class="seller-summary"><div><span>셀러명</span><strong>'+h(seller.name)+'</strong></div><div><span>인스타그램</span>'+link+'</div><div><span>공구 진행 기록</span><strong>'+buys.length+'건</strong></div><div><span>마지막 공구 종료일</span><strong>'+h(buys[0]?.endDate||"-")+'</strong></div></div>';
  return '<div class="detail-nav"><button data-nav="sellers" class="mini-button">← 전체 셀러</button><button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div>'
  +wrap("셀러 정보",summary)
  +wrap("전체 공구 이력",'<p class="panel-description">2024년과 2025년 자료를 포함한 거래 이력입니다. 과거 기록은 자동 연락 알림을 생성하지 않습니다.</p>'+table(["상품","시작일","종료일","회차","결제창","정산","비고","수정"],history))
- +wrap("연락 기록",table(["일시","연락 방식","내용","기록자"],logs));
+ +wrap("연락 기록",table(["일시","연락 방식","내용","담당자","기록자"],logs));
 }
 function sellersPage(){
  const term=state.search.toLowerCase();
@@ -501,8 +502,8 @@ function reminderPage(){
   +wrap("최근 완료 기록",'<p class="panel-description">연락 완료로 기록한 셀러와 처리 직원, 다음 연락 예정일을 확인할 수 있습니다.</p>'+table(["처리일시","셀러","연락방법","연락내용","처리직원","다음 연락일"],completedRows));
 }
 function activityPage(){
- const rows=state.activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.actorName)+'</td></tr>');
- return wrap("전체 활동기록 · "+state.activities.length,table(["일시","셀러","유형","활동 내용","기록자"],rows));
+ const rows=state.activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName)+'</td></tr>');
+ return wrap("전체 활동기록 · "+state.activities.length,table(["일시","셀러","유형","활동 내용","담당자","기록자"],rows));
 }
 function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 초기 데이터 이전을 실행할 수 있습니다.</p>");
