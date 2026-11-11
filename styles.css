@@ -173,3 +173,10 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .monthly-tools{min-height:34px}
 .monthly-actions .panel-link{white-space:nowrap}
 @media(max-width:720px){.monthly-actions{gap:8px}.monthly-actions .primary{padding:8px 10px}}
+
+/* Catalog and linked seller information in groupbuy registration */
+#modal-fields [hidden]{display:none!important}
+.seller-linked-data{padding:12px 14px;border:1px solid #dbe9ef;background:#f2f8fa;border-radius:7px;color:#5d7b8c;font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+#seller-picker-search,#product-picker-search{background:#fff;border:1px solid #dce5eb;color:#293d48}
+#seller-picker-search:focus,#product-picker-search:focus{border-color:#0089b3;outline:none}
+#modal-form select[name="productId"],#modal-form select[name="sellerId"]{width:100%}
