@@ -103,7 +103,7 @@ function sellerModal(item=null){
 function buyModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다.");return;}
  if(!state.sellers.length){notify("공구 등록 전에 셀러를 먼저 등록해주세요.");return;}
- const choices=state.sellers.map(x=>[x.id,x.name]);
+ const choices=[...state.sellers].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR",{sensitivity:"base",numeric:true})).map(x=>[x.id,x.name]);
  const sellerId=item?.sellerId||choices[0][0];
  const defaultStart=item?.startDate||((state.selectedMonth||todayLocal().slice(0,7))===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
  const defaultEnd=item?.endDate||defaultStart;
@@ -144,7 +144,7 @@ function buyModal(item=null){
   sellerSearch.addEventListener("input",()=>{
    const word=sellerSearch.value.trim().toLowerCase();
    const previous=sellerSelect.value;
-   const matches=state.sellers.filter(x=>x.name.toLowerCase().includes(word)||String(x.instagramId||x.channel||"").toLowerCase().includes(word));
+   const matches=state.sellers.filter(x=>x.name.toLowerCase().includes(word)||String(x.instagramId||x.channel||"").toLowerCase().includes(word)).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR",{sensitivity:"base",numeric:true}));
    sellerSelect.replaceChildren();
    for(const seller of matches){
     const option=document.createElement("option");
