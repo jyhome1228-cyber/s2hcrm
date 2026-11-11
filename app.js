@@ -78,6 +78,18 @@ $("#login-form").addEventListener("submit",async e=>{
 });
 $("#logout").onclick=()=>{if(state.demo){location.reload();return;}signOut(auth);};
 $("#preview-button").onclick=()=>enterPreview();
+const togglePassword=$("#toggle-password");
+togglePassword.addEventListener("click",()=>{
+ const password=$("#password"),visible=password.type==="password";
+ password.type=visible?"text":"password";
+ togglePassword.setAttribute("aria-pressed",String(visible));
+ togglePassword.setAttribute("aria-label",visible?"비밀번호 숨기기":"비밀번호 표시");
+ togglePassword.setAttribute("title",visible?"비밀번호 숨기기":"비밀번호 표시");
+ togglePassword.innerHTML=visible
+ ?'<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.8 6.1A10.6 10.6 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.2 3.6M6.1 6.9C3.7 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1.1 0 2.2-.2 3.2-.6"/><path d="M10 10a3 3 0 0 0 4 4"/></svg>'
+ :'<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="3"/></svg>';
+});
+
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))closeModal();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{state.page=btn.dataset.page;state.search="";render();}));
