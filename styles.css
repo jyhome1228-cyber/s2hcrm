@@ -290,3 +290,13 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .password-toggle{position:absolute;top:50%;right:10px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:35px;height:35px;border:0;border-radius:6px;background:transparent;color:#82939f;cursor:pointer}
 .password-toggle:hover{background:#eef5f8;color:#0089b3}
 .password-toggle:focus-visible{outline:2px solid #0089b3;outline-offset:1px}
+
+/* Product master management */
+.product-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0 20px;flex-wrap:wrap}
+.product-toolbar>input{flex:1;max-width:420px;min-width:220px;min-height:42px;background:#fff;color:#283f4a;border:1px solid #dbe5ea;border-radius:8px;padding:10px 14px}
+.product-toolbar>input:focus{outline:none;border-color:#0089b3;box-shadow:0 0 0 3px #0089b314}
+.product-filters{display:flex;gap:3px;border-radius:8px;background:#f2f6f8;padding:4px}
+.product-filters button{padding:9px 13px;border:0;border-radius:6px;background:transparent;color:#738894;font-size:11px;cursor:pointer}
+.product-filters button.selected{background:#fff;color:#0089b3;box-shadow:0 1px 6px #294a5915;font-weight:700}
+.product-archive-label{display:inline-block;margin-left:8px;background:#f1f1f3;color:#88929b;border-radius:4px;font-size:10px;font-weight:500;padding:3px 6px}
+@media(max-width:780px){.product-toolbar{align-items:stretch;flex-direction:column}.product-toolbar>input{max-width:none;width:100%}.product-filters{width:max-content;max-width:100%;flex-wrap:wrap}}
