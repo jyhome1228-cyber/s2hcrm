@@ -493,9 +493,12 @@ function reminderPage(){
    ).join("")+'</div>':"";
   return '<div class="reminder-item"><div class="row"><div><strong>'+h(x.seller.name)+'</strong> <span class="status alert">연락 필요</span><p>최근 공구: '+h(x.buy.product||"-")+' · 종료 '+h(x.buy.endDate||"-")+' · 연락 예정 '+h(x.due)+' · '+x.overdue+'일 경과</p></div><div class="actions"><button class="mini-button" type="button" data-act="templates" data-id="'+h(x.seller.id)+'">'+(expanded?"문구 접기":"제안 문구 3종")+'</button><button class="primary" type="button" data-act="complete-reminder" data-id="'+h(x.seller.id)+'">연락 완료</button></div></div>'+templates+'</div>';
  }).join("");
+ const completed=state.activities.filter(a=>a.type==="리마인드 완료").slice(0,15);
+ const completedRows=completed.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.channel||"-")+'</td><td>'+h(a.memo||"-")+'</td><td>'+h(a.actorName||"-")+'</td><td>'+h(a.nextFollowUpAt||"없음")+'</td></tr>');
  return wrap("미처리 알림 · "+data.length,
   '<p class="detail-note">문구를 복사해 카카오톡이나 DM으로 직접 전달한 뒤, 연락 방법과 내용을 기록하면 완료 처리됩니다. 미처리 알림은 계속 표시됩니다.</p>'
-  +(cards||'<div class="empty">현재 연락이 필요한 셀러가 없습니다.</div>'));
+  +(cards||'<div class="empty">현재 연락이 필요한 셀러가 없습니다.</div>'))
+  +wrap("최근 완료 기록",'<p class="panel-description">연락 완료로 기록한 셀러와 처리 직원, 다음 연락 예정일을 확인할 수 있습니다.</p>'+table(["처리일시","셀러","연락방법","연락내용","처리직원","다음 연락일"],completedRows));
 }
 function activityPage(){
  const rows=state.activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.actorName)+'</td></tr>');
