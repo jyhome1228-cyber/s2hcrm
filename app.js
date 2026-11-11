@@ -166,10 +166,13 @@ function buyModal(item=null){
   const prod=[...products.values()].find(p=>p.id===data.productId);
   if(!prod)throw new Error("상품을 검색한 뒤 아래 목록에서 선택하거나 신규 등록해주세요.");
   if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
+  const oldProductLabel=String(item?.product||item?.productName||"").trim();
+  const originalProductUnchanged=Boolean(item&&productCanonicalName(oldProductLabel,state.products)===prod.name);
+  const savedProductLabel=originalProductUnchanged?oldProductLabel:prod.name;
   const record={
    sellerId:seller.id,sellerName:seller.name,
    productId:prod.id.startsWith("legacy:")?"":prod.id,
-   product:prod.name,productName:prod.name,
+   product:savedProductLabel,productName:savedProductLabel,
    startDate:data.startDate,endDate:data.endDate,status:data.status,
    followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
    paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
