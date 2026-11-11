@@ -137,11 +137,13 @@ function buyModal(item=null){
  }
  const initialProfile=sellerProfile(sellerId);
  openModal(item?"공구 수정":"새 공구 등록",
-   '<label class="full">셀러 검색<input id="seller-picker-search" type="search" placeholder="셀러명 또는 인스타그램 계정 검색" autocomplete="off"/></label>'
+   '<div class="full picker-inline"><div class="picker-main">'
    +select("sellerId","셀러",sellerOptions,sellerId)
+   +'</div><label class="picker-search">빠른 검색<input id="seller-picker-search" type="search" placeholder="셀러명 검색" autocomplete="off"/></label></div>'
    +'<div class="full seller-linked-data" id="linked-seller-info" aria-live="polite"></div>'
-   +'<label class="full">상품 검색<input id="product-picker-search" type="search" placeholder="상품명 검색" autocomplete="off"/></label>'
+   +'<div class="full picker-inline"><div class="picker-main">'
    +select("productId","상품명",productOptions,selectedProduct)
+   +'</div><label class="picker-search">빠른 검색<input id="product-picker-search" type="search" placeholder="상품명 검색" autocomplete="off"/></label></div>'
    +'<label class="full" id="new-product-wrap" hidden>새 상품명<input name="newProductName" type="text" placeholder="등록할 상품명 입력"/></label>'
    +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",defaultEnd,true)
    +select("status","진행 상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status==="기록"?"완료":item?.status||"예정")
