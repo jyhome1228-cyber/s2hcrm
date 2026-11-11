@@ -121,12 +121,13 @@ function buyModal(item=null){
  const productLabel=p=>String(p.standardName||p.productName||p.name||"").trim();
  const sellerMap=new Map(state.sellers.map(s=>[s.id,s]));
  const products=new Map();
+ const archivedNames=new Set(state.products.filter(p=>p.active===false).map(productLabel));
  for(const p of state.products){
-  const label=productLabel(p);if(label)products.set(label,{id:p.id,name:label});
+  const label=productLabel(p);if(label&&(p.active!==false||p.id===item?.productId))products.set(label,{id:p.id,name:label});
  }
  for(const b of state.buys){
   const label=String(b.product||b.productName||"").trim();
-  if(label&&!products.has(label))products.set(label,{id:"legacy:"+label,name:label});
+  if(label&&!products.has(label)&&(!archivedNames.has(label)||label===(item?.product||item?.productName)))products.set(label,{id:"legacy:"+label,name:label});
  }
  const sellerChoices=[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name));
  const productChoices=[...products.values()].sort((a,b)=>cmp(a.name,b.name));
@@ -258,6 +259,8 @@ function buyModal(item=null){
  $m("save-new-product").onclick=async()=>{
   const button=$m("save-new-product"),name=$m("new-product-name").value.trim();
   if(!name)return notify("상품명을 입력해주세요.");
+  const archived=state.products.find(p=>p.active===false&&productLabel(p)===name);
+  if(archived){notify("보관 중인 상품입니다. 상품 관리에서 먼저 복원해주세요.");return;}
   const dup=products.get(name);if(dup){chooseProduct(dup.id);$m("create-product").classList.add("hidden");return;}
   button.disabled=true;
   try{
@@ -647,8 +650,8 @@ function render(){
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
- $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"셀러 보기":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
- $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="products"?()=>productModal():state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
+ $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
+ $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
  if(state.page==="import"&&!state.demo&&state.staff?.role==="admin"){mountSeedImporter(db);mountBackupExport(db);}
