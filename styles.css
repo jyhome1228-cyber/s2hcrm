@@ -141,3 +141,14 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .nav{gap:3px}.nav-link{font-size:13px}
 .brand-logo{margin-bottom:28px}
 @media(max-width:720px){.content{padding-top:22px}.heading h1{font-size:24px}}
+
+/* Spreadsheet-like monthly management */
+.ledger-toolbar{display:flex;align-items:center;gap:12px;margin:12px 0 18px}
+.ledger-toolbar input{flex:1;max-width:340px;min-width:160px;border-radius:7px;padding:10px 12px;background:#fff;border:1px solid #dbe6ec;color:#283f4c;font-size:12px}
+.ledger-toolbar span{color:#84949f;font-size:12px}
+.ledger-toolbar .schedule-switch{margin-left:auto}
+.ledger-notes{max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel .table-wrap{overflow-x:auto}
+.panel .table-wrap table{min-width:790px}
+.panel .table-wrap table th,.panel .table-wrap table td{padding:13px 10px}
+.panel .table-wrap table a{color:#0089b3;text-decoration:underline}
