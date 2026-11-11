@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"" };
+const state = { user: null, staff: null, sellers: [], buys: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -281,11 +281,26 @@ function opportunitiesPage(){
 function proposalsPage(){
  return wrap("제안 파이프라인 · 준비 중",'<div class="pipeline-preview">'+["제안 준비","제안 완료","답변 대기","협의 중","일정 확정"].map((v,i)=>'<div><span class="pipeline-step">'+(i+1)+'</span><strong>'+v+'</strong><small>데이터 연동 예정</small></div>').join("")+'</div><p class="panel-note">현재 제안 DB는 아직 연결되지 않았습니다. 건수와 성과를 임의로 표시하지 않습니다.</p>');
 }
+function sellerDetailPage(){
+ const seller=state.sellers.find(x=>x.id===state.selectedSellerId);
+ if(!seller)return wrap("셀러 상세","<p>셀러를 선택해주세요.</p>");
+ const buys=state.buys.filter(b=>b.sellerId===seller.id).sort((a,b)=>(b.startDate||"").localeCompare(a.startDate||""));
+ const activities=state.activities.filter(a=>a.sellerId===seller.id);
+ const history=buys.map(b=>'<tr><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.round||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.note||b.memo||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>');
+ const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.actorName)+'</td></tr>');
+ const ig=seller.instagramUrl;
+ const link=ig?.startsWith("https://")?'<a target="_blank" rel="noopener noreferrer" href="'+h(ig)+'">인스타그램 열기</a>':h(seller.channel||seller.instagramId||"-");
+ const summary='<div class="seller-summary"><div><span>셀러명</span><strong>'+h(seller.name)+'</strong></div><div><span>인스타그램</span>'+link+'</div><div><span>공구 진행 기록</span><strong>'+buys.length+'건</strong></div><div><span>마지막 공구 종료일</span><strong>'+h(buys[0]?.endDate||"-")+'</strong></div></div>';
+ return '<div class="detail-nav"><button data-nav="sellers" class="mini-button">← 전체 셀러</button><button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div>'
+ +wrap("셀러 정보",summary)
+ +wrap("전체 공구 이력",'<p class="panel-description">2024년과 2025년 자료를 포함한 거래 이력입니다. 과거 기록은 자동 연락 알림을 생성하지 않습니다.</p>'+table(["상품","시작일","종료일","회차","결제창","정산","비고","수정"],history))
+ +wrap("연락 기록",table(["일시","연락 방식","내용","기록자"],logs));
+}
 function sellersPage(){
  const term=state.search.toLowerCase();
  const rows=state.sellers.filter(s=>(s.name+" "+s.channel+" "+s.contact).toLowerCase().includes(term)).map(s=>{
  const b=latestBuy(s.id);const a=latestActivity(s.id);
- return '<tr><td><strong>'+h(s.name)+'</strong></td><td>'+h(s.channel||"-")+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td><td><button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">상세·수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
+ return '<tr><td><strong>'+h(s.name)+'</strong></td><td>'+h(s.channel||"-")+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td><td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
  return wrap("전체 셀러 · "+state.sellers.length, '<div class="toolbar"><input id="seller-search" placeholder="셀러명, 채널, 연락처로 검색" value="'+h(state.search)+'"/></div>'+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows));
 }
@@ -312,12 +327,12 @@ function importerPage(){
 }
 function render(){
  if(!state.user)return;
- const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],opportunities:["영업 기회","OPPORTUNITIES","재접촉 및 휴면 셀러 후보",opportunitiesPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage]};
+ const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],opportunities:["영업 기회","OPPORTUNITIES","재접촉 및 휴면 셀러 후보",opportunitiesPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
- $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"셀러 보기":state.page==="products"||state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
- $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="products"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
+ $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"셀러 보기":state.page==="sellerDetail"?"셀러 목록":state.page==="products"||state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
+ $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="sellerDetail"||state.page==="products"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
  if(state.page==="import"&&!state.demo&&state.staff?.role==="admin")mountSeedImporter(db);
@@ -332,6 +347,7 @@ function render(){
  if(search){search.addEventListener("input",e=>{const pos=e.target.selectionStart;state.search=e.target.value;$("#page-body").innerHTML=sellersPage();const input=$("#seller-search");input.focus();input.setSelectionRange(pos,pos);});}
  $("#page-body").querySelectorAll("[data-act]").forEach(el=>el.addEventListener("click",()=>{
  const action=el.dataset.act,id=el.dataset.id;
+ if(action==="view-seller"){state.selectedSellerId=id;state.page="sellerDetail";render();}
  if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
  if(action==="edit-buy")buyModal(state.buys.find(x=>x.id===id));
  if(action==="contact")activityModal(id);
