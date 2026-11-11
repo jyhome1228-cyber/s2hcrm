@@ -300,3 +300,16 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .product-filters button.selected{background:#fff;color:#0089b3;box-shadow:0 1px 6px #294a5915;font-weight:700}
 .product-archive-label{display:inline-block;margin-left:8px;background:#f1f1f3;color:#88929b;border-radius:4px;font-size:10px;font-weight:500;padding:3px 6px}
 @media(max-width:780px){.product-toolbar{align-items:stretch;flex-direction:column}.product-toolbar>input{max-width:none;width:100%}.product-filters{width:max-content;max-width:100%;flex-wrap:wrap}}
+
+/* Product insights: click product to inspect participating sellers */
+.insight-product-link{border:0;background:transparent;color:#23536d;font-size:12px;font-weight:700;padding:4px 0;text-align:left;cursor:pointer}
+.insight-product-link:hover{color:#0089b3;text-decoration:underline;text-underline-offset:3px}
+.insight-seller-count{border:0;background:#e8f5fa;color:#007fa6;border-radius:5px;padding:6px 9px;font-size:11px;cursor:pointer}
+.insight-seller-count:hover{background:#d9eff7}
+.insight-summary{background:#f4f9fb;padding:17px;border-radius:8px;display:flex;flex-direction:column;gap:5px}
+.insight-summary span{font-size:11px;color:#82949e}
+.insight-summary strong{font-size:18px;color:#294b5e}
+.insight-summary p{margin:5px 0 0;font-size:12px;color:#748e9c}
+.insight-seller-table{overflow-x:auto;max-height:50vh;overflow-y:auto}
+.insight-seller-table table{min-width:460px}
+.insight-seller-table td,.insight-seller-table th{padding:12px 10px}
