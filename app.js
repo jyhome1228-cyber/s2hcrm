@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list" };
+const state = { user: null, staff: null, sellers: [], buys: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"" };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -101,31 +101,50 @@ function sellerModal(item=null){
     });
 }
 function buyModal(item=null){
- if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
+ if(state.demo){notify("미리보기에서는 저장할 수 없습니다.");return;}
  if(!state.sellers.length){notify("공구 등록 전에 셀러를 먼저 등록해주세요.");return;}
- const choices=state.sellers.map(s=>[s.id,s.name]);
- const sellerId=item?.sellerId || choices[0][0];
+ const choices=state.sellers.map(x=>[x.id,x.name]);
+ const sellerId=item?.sellerId||choices[0][0];
+ const categoryOptions=[["","선택 안 함"],["마이크로","마이크로"],["일반","일반"]];
+ const detail=(item?.note??item?.memo)??"";
  openModal(item?"공구 수정":"새 공구 등록",
-   select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product,true)+f("startDate","시작일","date",item?.startDate,true)+f("endDate","종료일","date",item?.endDate,true)+select("status","진행상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status||"예정")+textarea("memo","구성 및 특이사항",item?.memo),
- async data=>{
-   if(data.endDate<data.startDate)throw new Error("종료일은 시작일보다 빠를 수 없습니다.");
-   const seller=state.sellers.find(s=>s.id===data.sellerId);
+  select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product||item?.productName,true)
+  +f("startDate","시작일","date",item?.startDate,true)+f("endDate","종료일","date",item?.endDate,true)
+  +f("followers","팔로워 수","number",item?.followers??"")
+  +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||"")
+  +f("paymentWindow","결제창","text",item?.paymentWindow||"")
+  +f("settlementRequest","정산 요청","text",item?.settlementRequest||"")
+  +f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||state.sellers.find(x=>x.id===sellerId)?.instagramUrl||"",false,true)
+  +f("round","진행 회차","text",item?.round||"")
+  +textarea("note","비고 및 특이사항",detail)
+  +textarea("event","이벤트",item?.event||""),
+  async data=>{
+   if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
+   const seller=state.sellers.find(x=>x.id===data.sellerId);
    if(!seller)throw new Error("셀러를 선택해주세요.");
-   const record={sellerId:seller.id,sellerName:seller.name,product:data.product.trim(),startDate:data.startDate,endDate:data.endDate,status:data.status,memo:data.memo.trim(),updatedAt:serverTimestamp()};
+   const record={
+     sellerId:seller.id,sellerName:seller.name,product:data.product.trim(),productName:data.product.trim(),
+     startDate:data.startDate,endDate:data.endDate,
+     followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
+     paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
+     instagramUrl:data.instagramUrl.trim(),round:data.round.trim(),
+     note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),
+     updatedAt:serverTimestamp()
+   };
    if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
-   else await addDoc(collection(db,"groupbuys"),{...record,createdAt:serverTimestamp()});
- });
+   else await addDoc(collection(db,"groupbuys"),{...record,status:"예정",source:"manual",createdAt:serverTimestamp()});
+  });
 }
 function activityModal(sellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
  if(!state.sellers.length){notify("셀러를 먼저 등록해주세요.");return;}
  const choices=state.sellers.map(s=>[s.id,s.name]);
  openModal("연락·영업 활동 기록",
- select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["기타","기타"]],"카카오톡")+textarea("memo","활동 내용 (필수)"),
+ select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["기타","기타"]],"카카오톡")+f("nextFollowUpAt","다음 연락 예정일","date")+textarea("memo","활동 내용 (필수)"),
  async data=>{
  const seller=state.sellers.find(s=>s.id===data.sellerId);
  if(!seller||!data.memo.trim())throw new Error("셀러와 활동 내용을 입력해주세요.");
- await addDoc(collection(db,"activities"),{sellerId:seller.id,sellerName:seller.name,type:data.type,memo:data.memo.trim(),actorUid:state.user.uid,actorName:state.staff.name||state.user.email,createdAt:serverTimestamp()});
+ await addDoc(collection(db,"activities"),{sellerId:seller.id,sellerName:seller.name,type:data.type,memo:data.memo.trim(),nextFollowUpAt:data.nextFollowUpAt||null,actorUid:state.user.uid,actorName:state.staff.name||state.user.email,createdAt:serverTimestamp()});
  });
 }
 function latestBuy(sellerId){
@@ -137,14 +156,18 @@ function latestActivity(sellerId){
 function reminders(){
  const today=todayLocal();
  return state.sellers.map(s=>{
-  const b=latestBuy(s.id);if(!b)return null;
-  const due=datePlus(b.endDate,s.cycleDays||30);
-  const a=latestActivity(s.id);
-  // 마지막 공구 이후 기록된 영업 활동이 있다면 해당 시점부터 다시 주기를 계산
-  const contactDate=a?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
-  const nextDate=contactDate&&contactDate>b.endDate?datePlus(contactDate,s.cycleDays||30):due;
-  if(nextDate>today)return null;
-  return {seller:s,buy:b,due:nextDate,overdue:daysBetween(nextDate,today)};
+   const b=latestBuy(s.id), a=latestActivity(s.id);
+   const manual=a?.nextFollowUpAt||s.nextFollowUpAt;
+   const isImported=b?.source==="excel-2026-11-11";
+   // 과거 엑셀 이력을 업로드했다고 수백 건의 알림을 소급 생성하지 않는다.
+   if(!manual&&(!b||isImported))return null;
+   const activityDate=a?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
+   const completedAfterBuy=activityDate&&b&&activityDate>b.endDate;
+   // 후속 연락을 마쳤고 다음 연락일을 지정하지 않았다면 알림 종료.
+   if(!manual&&completedAfterBuy)return null;
+   const due=manual||(b?datePlus(b.endDate,s.cycleDays||30):null);
+   if(!due||due>today)return null;
+   return {seller:s,buy:b||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
  }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue);
 }
 function metric(title,value,description){return '<div class="metric"><div class="label">'+title+'</div><div class="number">'+value+'</div><div class="sub">'+description+'</div></div>';}
@@ -158,10 +181,20 @@ function monthlyBuys(){const m=shownMonth();return state.buys.filter(b=>b.startD
 function monthPicker(){
  return '<div class="month-controls"><div class="month-title"><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="2024-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
 }
+function scheduleStatus(b){
+ if(b.status==="취소")return "취소";
+ const today=todayLocal();
+ return b.startDate>today?"예정":b.endDate<today?"완료":"진행 중";
+}
 function monthlyRows(list,detail=false){
  return list.map(b=>{
- const now=todayLocal(),status=b.status==="취소"?"취소":b.startDate>now?"예정":b.endDate<now?"완료":"진행 중";
- return '<tr><td><strong>'+h(b.sellerName||"미확인")+'</strong></td><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate)+'</td><td>'+h(b.endDate)+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td>'+(detail?'<td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.memo||b.note||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td>':"")+'</tr>';
+  const status=scheduleStatus(b);
+  const common='<tr><td><strong>'+h(b.sellerName||"미확인")+'</strong></td><td>'+h(b.product||b.productName||"-")+'</td>';
+  if(!detail)return common+'<td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td></tr>';
+  const seller=state.sellers.find(x=>x.id===b.sellerId);
+  const ig=b.instagramUrl||seller?.instagramUrl||"";
+  const insta=ig.startsWith("https://")?'<a href="'+h(ig)+'" target="_blank" rel="noopener noreferrer">열기</a>':h(ig||"-");
+  return common+'<td>'+h(b.followers??seller?.followerCountLatestRecorded??"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.legacyCategory||"-")+'</td><td>'+insta+'</td><td class="ledger-notes">'+h(b.note||b.memo||"-")+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td><td><button data-act="edit-buy" data-id="'+h(b.id)+'" class="mini-button">수정</button></td></tr>';
  });
 }
 function monthGrid(list){
@@ -259,10 +292,11 @@ function sellersPage(){
 }
 
 function schedulePage(){
- const list=monthlyBuys();
- const chooser='<div class="schedule-switch"><button data-view="list" class="'+(state.scheduleView==="list"?"selected":"")+'">목록형</button><button data-view="calendar" class="'+(state.scheduleView==="calendar"?"selected":"")+'">캘린더형</button></div>';
- const content=state.scheduleView==="calendar"?monthGrid(list):table(["셀러명","상품","시작일","종료일","상태","결제창","정산 요청","비고","관리"],monthlyRows(list,true));
- return wrap("공구 일정 · "+shownMonth(),'<p class="panel-description">월별로 공구를 조회하고 관리합니다. 월을 넘기는 공구는 양쪽 월에 표시됩니다.</p>'+monthPicker()+'<div class="monthly-tools"><span>조회 결과 '+list.length+'건</span>'+chooser+'</div>'+content);
+ const list=monthlyBuys().filter(b=>([b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase())));
+ const chooser='<div class="schedule-switch"><button data-view="list" class="'+(state.scheduleView==="list"?"selected":"")+'">목록</button><button data-view="calendar" class="'+(state.scheduleView==="calendar"?"selected":"")+'">달력</button></div>';
+ const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>'+list.length+'건</span>'+chooser+'</div>';
+ const content=state.scheduleView==="calendar"?monthGrid(list):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
+ return wrap("월별 공구 대장",monthPicker()+toolbar+content);
 }
 function reminderPage(){
  const data=reminders();
@@ -275,11 +309,11 @@ function activityPage(){
 }
 function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 초기 데이터 이전을 실행할 수 있습니다.</p>");
- return wrap("기존 엑셀 데이터 → Firebase 이전",'<p class="panel-description">로컬 ZIP 파일은 브라우저에서만 읽으며 GitHub에 업로드하지 않습니다. Firebase로 직접 저장됩니다. <strong>최초 데이터 이전용</strong>으로만 사용하세요.</p><div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 셀러·상품·공구 관계 검사</div><div>3. Firebase 업로드 후 건수 검수</div></div><label class="import-label">S2H CRM 초기 데이터 ZIP<input type="file" id="seed-zip" accept=".zip,application/zip"/></label><div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button><button class="primary" id="seed-run" type="button" disabled>Firebase로 이전</button></div><progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status">비공개 ZIP 파일을 선택해주세요.</p><p class="panel-note">관리자 전용 화면입니다. 같은 ID 재업로드 시 문서가 갱신될 수 있으므로, 운영 중인 데이터를 수정한 후에는 초기 ZIP을 재업로드하지 마세요.</p>');
+ return wrap("초기 데이터 백업 및 복원",'<p class="panel-description">로컬 ZIP 파일은 브라우저에서만 읽으며 GitHub에 업로드하지 않습니다. Firebase로 직접 저장됩니다. <strong>최초 데이터 이전용</strong>으로만 사용하세요.</p><div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 셀러·상품·공구 관계 검사</div><div>3. Firebase 업로드 후 건수 검수</div></div><label class="import-label">S2H CRM 초기 데이터 ZIP<input type="file" id="seed-zip" accept=".zip,application/zip"/></label><div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button><button class="primary" id="seed-run" type="button" disabled>Firebase로 이전</button></div><progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status">비공개 ZIP 파일을 선택해주세요.</p><p class="panel-note">관리자 전용 화면입니다. 같은 ID 재업로드 시 문서가 갱신될 수 있으므로, 운영 중인 데이터를 수정한 후에는 초기 ZIP을 재업로드하지 마세요.</p>');
 }
 function render(){
  if(!state.user)return;
- const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],opportunities:["영업 기회","OPPORTUNITIES","재접촉 및 휴면 셀러 후보",opportunitiesPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["데이터 이전","DATA MIGRATION","초기 엑셀 데이터를 Firebase로 가져오기",importerPage]};
+ const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],opportunities:["영업 기회","OPPORTUNITIES","재접촉 및 휴면 셀러 후보",opportunitiesPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage]};
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
@@ -292,6 +326,7 @@ function render(){
 
  $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);render();}else changeMonth(Number(el.dataset.move));}));
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;render();});
+ const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("change",e=>{state.monthSearch=e.target.value;render();});
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")buyModal();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
