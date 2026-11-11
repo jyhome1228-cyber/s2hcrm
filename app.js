@@ -7,6 +7,24 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
+let screenBusyCount=0;
+function showLoading(label="데이터를 불러오는 중입니다"){
+ const layer=document.getElementById("app-loading");
+ if(!layer)return;
+ screenBusyCount++;layer.querySelector("[data-loading-message]").textContent=label;
+ layer.classList.remove("hidden");layer.setAttribute("aria-busy","true");
+}
+function hideLoading(){
+ const layer=document.getElementById("app-loading");
+ if(!layer)return;
+ screenBusyCount=Math.max(0,screenBusyCount-1);
+ if(!screenBusyCount){layer.classList.add("hidden");layer.setAttribute("aria-busy","false");}
+}
+function navigateTo(page){
+ showLoading("화면을 준비하고 있습니다");
+ setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
+}
+
 const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
@@ -37,6 +55,8 @@ function start() {
         await signOut(auth);return;
       }
       state.user=user;state.staff=userDoc.data();
+      const pendingInitial=new Set(["sellers","groupbuys","products","activities"]);
+      showLoading("S2H 데이터를 불러오는 중입니다");
       const importNav=document.querySelector("[data-page=import]");
       if(importNav)importNav.classList.toggle("hidden",state.staff.role!=="admin");
       $("#whoami").textContent=state.staff.name || user.email;
@@ -49,8 +69,10 @@ function start() {
           if(kind==="groupbuys")state.buys=records;
           if(kind==="products")state.products=records;
           if(kind==="activities")state.activities=records;
+          pendingInitial.delete(kind);
+          if(pendingInitial.size===0)hideLoading();
           render();
-        },err=>notify("데이터 조회 실패: "+err.message));
+        },err=>{pendingInitial.delete(kind);if(pendingInitial.size===0)hideLoading();notify("데이터 조회 실패: "+err.message);});
         state.unsubs.push(off);
       });
       render();
@@ -93,7 +115,7 @@ togglePassword.addEventListener("click",()=>{
 
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))closeModal();});
-document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{state.page=btn.dataset.page;state.search="";render();}));
+document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>navigateTo(btn.dataset.page)));
 $("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
 $("#add-button").onclick=()=>state.page==="schedule"?buyModal():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
@@ -884,7 +906,13 @@ function render(){
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")buyModal();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
- if(search){search.addEventListener("input",e=>{const pos=e.target.selectionStart;state.search=e.target.value;$("#page-body").innerHTML=sellersPage();const input=$("#seller-search");input.focus();input.setSelectionRange(pos,pos);});}
+ if(search)search.addEventListener("input",e=>{
+  const pos=e.target.selectionStart;state.search=e.target.value;
+  render();
+  const input=$("#seller-search");if(input){input.focus();input.setSelectionRange(pos,pos);}
+ });
+ const exportSellers=$("#page-body [data-export-sellers]");
+ if(exportSellers)exportSellers.addEventListener("click",sellerCSV);
  $("#page-body").querySelectorAll("[data-act]").forEach(el=>el.addEventListener("click",()=>{
  const action=el.dataset.act,id=el.dataset.id;
  if(action==="view-seller"){state.selectedSellerId=id;state.page="sellerDetail";render();}
