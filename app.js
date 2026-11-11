@@ -253,7 +253,7 @@ function dashboard(){
  const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록 ↗</button></td></tr>');
  const monthly=monthlyBuys();
  const monthlyPanel=wrap("월별 공구 현황",monthPicker()+'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><button class="panel-link" data-nav="schedule">전체 보기</button></div>'+table(["셀러","상품","시작일","종료일","진행 상태"],monthlyRows(monthly.slice(0,7))));
- const actionPanel=wrap("오늘 할 일",'<p class="panel-description">연락 처리 기록이 필요한 재공구 대상입니다. 완료 기록 전까지 유지됩니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
+ const actionPanel=wrap("오늘 할 일",'<p class="panel-description">최근 공구와 직접 등록한 후속 연락 일정만 표시합니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
  const scheduleRows=[...running,...upcoming].slice(0,6).map(b=>'<tr><td><strong>'+h(b.sellerName)+'</strong></td><td>'+h(b.product)+'</td><td>'+h(b.startDate.slice(5))+' ~ '+h(b.endDate.slice(5))+'</td><td><span class="status '+(b.startDate<=today?"good":"")+'">'+(b.startDate<=today?"진행 중":"예정")+'</span></td></tr>');
  const schedule=wrap("예정 공구",table(["셀러","상품","일정","상태"],scheduleRows),'<button data-nav="schedule" class="panel-link">전체 보기</button>');
  const high=opp.filter(x=>x.rank<=2).slice(0,5);
@@ -291,9 +291,9 @@ function sellersPage(){
 }
 
 function schedulePage(){
- const list=monthlyBuys().filter(b=>([b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase())));
+ const list=monthlyBuys().filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
  const chooser='<div class="schedule-switch"><button data-view="list" class="'+(state.scheduleView==="list"?"selected":"")+'">목록</button><button data-view="calendar" class="'+(state.scheduleView==="calendar"?"selected":"")+'">달력</button></div>';
- const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>'+list.length+'건</span>'+chooser+'</div>';
+ const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>총 '+list.length+'건</span>'+chooser+'<button type="button" class="primary" data-quick="buy">+ 공구 등록</button></div>';
  const content=state.scheduleView==="calendar"?monthGrid(list):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
  return wrap("월별 공구 대장",monthPicker()+toolbar+content);
 }
