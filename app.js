@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -39,12 +39,13 @@ function start() {
       if(importNav)importNav.classList.toggle("hidden",state.staff.role!=="admin");
       $("#whoami").textContent=state.staff.name || user.email;
       $("#login").classList.add("hidden");$("#app").classList.remove("hidden");
-      ["sellers","groupbuys","activities"].forEach(kind=>{
-        const ref=query(collection(db,kind),orderBy("createdAt","desc"));
+      ["sellers","groupbuys","products","activities"].forEach(kind=>{
+        const ref=kind==="products"?collection(db,kind):query(collection(db,kind),orderBy("createdAt","desc"));
         const off=onSnapshot(ref,snapshot=>{
           const records=snapshot.docs.map(d=>({id:d.id,...d.data()}));
           if(kind==="sellers")state.sellers=records;
           if(kind==="groupbuys")state.buys=records;
+          if(kind==="products")state.products=records;
           if(kind==="activities")state.activities=records;
           render();
         },err=>notify("데이터 조회 실패: "+err.message));
@@ -54,7 +55,7 @@ function start() {
     } catch(err){$("#login-error").textContent=err.message;await signOut(auth);}
   });
 }
-function clearListeners(){state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.activities=[];}
+function clearListeners(){state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];}
 $("#login-form").addEventListener("submit",async e=>{
   e.preventDefault();$("#login-error").textContent="";
   try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}
@@ -103,59 +104,155 @@ function sellerModal(item=null){
 function buyModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다.");return;}
  if(!state.sellers.length){notify("공구 등록 전에 셀러를 먼저 등록해주세요.");return;}
- const choices=[...state.sellers].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR",{sensitivity:"base",numeric:true})).map(x=>[x.id,x.name]);
- const sellerId=item?.sellerId||choices[0][0];
+ const compare=(a,b)=>String(a||"").localeCompare(String(b||""),"ko-KR",{sensitivity:"base",numeric:true});
+ const allSellers=[...state.sellers].sort((a,b)=>compare(a.name,b.name));
+ const sellerOptions=allSellers.map(x=>[x.id,x.name]);
+ const sellerId=item?.sellerId||sellerOptions[0][0];
  const defaultStart=item?.startDate||((state.selectedMonth||todayLocal().slice(0,7))===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
  const defaultEnd=item?.endDate||defaultStart;
  const categoryOptions=[["","선택 안 함"],["마이크로","마이크로"],["일반","일반"]];
+ const historicalProductNames=[...new Set(state.buys.map(b=>(b.product||b.productName||"").trim()).filter(Boolean))];
+ const productName=(p)=>String(p.standardName||p.name||p.productName||"").trim();
+ const master=state.products.filter(p=>productName(p)).sort((a,b)=>compare(productName(a),productName(b)));
+ const nameMap=new Map(master.map(p=>[productName(p),p]));
+ const productOptions=master.map(p=>[p.id,productName(p)]);
+ for(const name of historicalProductNames.sort(compare)){
+  if(!nameMap.has(name)){const fallback="legacy:"+name;productOptions.push([fallback,name]);}
+ }
+ productOptions.sort((a,b)=>compare(a[1],b[1]));
+ productOptions.push(["__new__","새 상품 직접 입력"]);
+ const previousName=(item?.product||item?.productName||"").trim();
+ const selectedProduct=item?.productId&&productOptions.some(p=>p[0]===item.productId)
+  ?item.productId:(productOptions.find(p=>p[1]===previousName)?.[0]||productOptions[0]?.[0]||"__new__");
  const detail=(item?.note??item?.memo)??"";
+
+ function sellerProfile(id){
+  const seller=state.sellers.find(x=>x.id===id);
+  const history=state.buys.filter(b=>b.sellerId===id).sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""));
+  const recentWithFollowers=history.find(b=>b.followers!==null&&b.followers!==undefined&&String(b.followers).trim()!=="");
+  const follower=seller?.followerCountLatestRecorded??seller?.followers??recentWithFollowers?.followers??"";
+  const url=seller?.instagramUrl||history.find(b=>b.instagramUrl)?.instagramUrl||"";
+  const category=history.find(b=>categoryOptions.some(option=>option[0]&&option[0]===b.legacyCategory))?.legacyCategory||"";
+  return {seller,history,follower,url,category};
+ }
+ const initialProfile=sellerProfile(sellerId);
  openModal(item?"공구 수정":"새 공구 등록",
-  '<label class="full">셀러 검색<input id="seller-picker-search" type="search" placeholder="셀러명을 입력하면 목록이 좁혀집니다." autocomplete="off"/></label>'+select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product||item?.productName,true)
-  +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",defaultEnd,true)
-  +select("status","진행 상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status==="기록"?"완료":item?.status||"예정")
-  +f("followers","팔로워 수","number",item?.followers??"")
-  +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||"")
-  +f("paymentWindow","결제창","text",item?.paymentWindow||"")
-  +f("settlementRequest","정산 요청","text",item?.settlementRequest||"")
-  +f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||state.sellers.find(x=>x.id===sellerId)?.instagramUrl||"",false,true)
-  +f("round","진행 회차","text",item?.round||"")
-  +textarea("note","비고 및 특이사항",detail)
-  +textarea("event","이벤트",item?.event||""),
-  async data=>{
-   if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
-   const seller=state.sellers.find(x=>x.id===data.sellerId);
-   if(!seller)throw new Error("등록된 셀러를 선택해주세요.");
-   const record={
-     sellerId:seller.id,sellerName:seller.name,product:data.product.trim(),productName:data.product.trim(),
-     startDate:data.startDate,endDate:data.endDate,
-     followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
-     paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
-     instagramUrl:data.instagramUrl.trim(),round:data.round.trim(),
-     note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),status:data.status,
-     updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email,
-     updatedAt:serverTimestamp()
-   };
-   if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
-   else await addDoc(collection(db,"groupbuys"),{...record,source:"manual",createdByUid:state.user.uid,createdByName:state.staff?.name||state.user.email,createdAt:serverTimestamp()});
-  });
+   '<label class="full">셀러 검색<input id="seller-picker-search" type="search" placeholder="셀러명 또는 인스타그램 계정 검색" autocomplete="off"/></label>'
+   +select("sellerId","셀러",sellerOptions,sellerId)
+   +'<div class="full seller-linked-data" id="linked-seller-info" aria-live="polite"></div>'
+   +'<label class="full">상품 검색<input id="product-picker-search" type="search" placeholder="상품명 검색" autocomplete="off"/></label>'
+   +select("productId","상품명",productOptions,selectedProduct)
+   +'<label class="full" id="new-product-wrap" hidden>새 상품명<input name="newProductName" type="text" placeholder="등록할 상품명 입력"/></label>'
+   +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",defaultEnd,true)
+   +select("status","진행 상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status==="기록"?"완료":item?.status||"예정")
+   +f("followers","팔로워 수","number",item?.followers??initialProfile.follower)
+   +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||initialProfile.category)
+   +f("paymentWindow","결제창","text",item?.paymentWindow||"")
+   +f("settlementRequest","정산 요청","text",item?.settlementRequest||"")
+   +f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||initialProfile.url,false,true)
+   +f("round","진행 회차","text",item?.round||"")
+   +textarea("note","비고 및 특이사항",detail)
+   +textarea("event","이벤트",item?.event||""),
+   async data=>{
+     if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
+     const seller=state.sellers.find(x=>x.id===data.sellerId);
+     if(!seller)throw new Error("등록된 셀러를 선택해주세요.");
+     const selected=productOptions.find(p=>p[0]===data.productId);
+     if(!selected)throw new Error("등록된 상품을 선택해주세요.");
+     let resolvedProductId=data.productId;
+     let resolvedProductName=selected[1];
+     if(data.productId==="__new__"){
+       resolvedProductName=(data.newProductName||"").trim();
+       if(!resolvedProductName)throw new Error("새 상품명을 입력해주세요.");
+       const existing=state.products.find(p=>productName(p)===resolvedProductName);
+       if(existing)resolvedProductId=existing.id;
+       else {
+         const result=await addDoc(collection(db,"products"),{
+           standardName:resolvedProductName,aliases:[],source:"manual",createdByUid:state.user.uid,
+           createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+         });
+         resolvedProductId=result.id;
+       }
+     }
+     if(resolvedProductId.startsWith("legacy:"))resolvedProductId="";
+     const record={
+       sellerId:seller.id,sellerName:seller.name,productId:resolvedProductId,
+       product:resolvedProductName,productName:resolvedProductName,
+       startDate:data.startDate,endDate:data.endDate,
+       followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
+       paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
+       instagramUrl:data.instagramUrl.trim(),round:data.round.trim(),
+       note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),status:data.status,
+       updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email,
+       updatedAt:serverTimestamp()
+     };
+     if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
+     else await addDoc(collection(db,"groupbuys"),{
+       ...record,source:"manual",createdByUid:state.user.uid,
+       createdByName:state.staff?.name||state.user.email,createdAt:serverTimestamp()
+     });
+   }
+ );
+
  const sellerSearch=$("#seller-picker-search");
  const sellerSelect=$("#modal-form select[name=sellerId]");
- if(sellerSearch&&sellerSelect){
-  sellerSearch.addEventListener("input",()=>{
-   const word=sellerSearch.value.trim().toLowerCase();
-   const previous=sellerSelect.value;
-   const matches=state.sellers.filter(x=>x.name.toLowerCase().includes(word)||String(x.instagramId||x.channel||"").toLowerCase().includes(word)).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR",{sensitivity:"base",numeric:true}));
-   sellerSelect.replaceChildren();
-   for(const seller of matches){
-    const option=document.createElement("option");
-    option.value=seller.id;option.textContent=seller.name;
-    sellerSelect.appendChild(option);
+ const productSearch=$("#product-picker-search");
+ const productSelect=$("#modal-form select[name=productId]");
+ const newProductWrap=$("#new-product-wrap");
+ const profileInfo=$("#linked-seller-info");
+ const form=$("#modal-form");
+ const setter=(name,value)=>{const input=form.elements.namedItem(name);if(input)input.value=value??"";};
+ const refreshProfile=(id,overwrite=true)=>{
+   const profile=sellerProfile(id);
+   if(!profile.seller)return;
+   if(overwrite){
+     setter("followers",profile.follower);
+     setter("instagramUrl",profile.url);
+     setter("legacyCategory",profile.category);
    }
-   if(matches.some(x=>x.id===previous))sellerSelect.value=previous;
-   if(!matches.length)notify("일치하는 셀러가 없습니다.");
-  });
- }
-
+   const latest=profile.history[0];
+   const recentNames=[...new Set(profile.history.slice(0,5).map(b=>b.product||b.productName).filter(Boolean))].slice(0,3);
+   profileInfo.textContent="등록된 공구 "+profile.history.length+"건"+(latest?.endDate?" · 최근 종료 "+latest.endDate:"")+(recentNames.length?" · 진행 상품 "+recentNames.join(", "):"");
+ };
+ const updateProductFields=()=>{
+   newProductWrap.hidden=productSelect.value!=="__new__";
+   const newName=form.elements.namedItem("newProductName");
+   if(newName)newName.required=!newProductWrap.hidden;
+ };
+ const filterOptions=(selectElement,entries,keyword,previous)=>{
+   const matches=entries.filter(([,name])=>String(name).toLocaleLowerCase().includes(keyword.toLocaleLowerCase()));
+   selectElement.replaceChildren(...matches.map(([value,label])=>{
+     const option=document.createElement("option");option.value=value;option.textContent=label;return option;
+   }));
+   if(matches.some(([v])=>v===previous))selectElement.value=previous;
+   else if(matches.length)selectElement.value=matches[0][0];
+   return matches.length;
+ };
+ sellerSearch.addEventListener("input",()=>{
+   const last=sellerSelect.value;
+   const word=sellerSearch.value.trim().toLowerCase();
+   const matches=allSellers.filter(x=>x.name.toLowerCase().includes(word)||String(x.instagramId||x.channel||"").toLowerCase().includes(word));
+   const entries=matches.map(x=>[x.id,x.name]);
+   sellerSelect.replaceChildren(...entries.map(([id,name])=>{
+     const option=document.createElement("option");option.value=id;option.textContent=name;return option;
+   }));
+   if(matches.some(x=>x.id===last))sellerSelect.value=last;
+   if(!matches.length){profileInfo.textContent="일치하는 셀러가 없습니다.";return;}
+   refreshProfile(sellerSelect.value);
+ });
+ sellerSelect.addEventListener("change",()=>refreshProfile(sellerSelect.value));
+ productSearch.addEventListener("input",()=>{
+   const prior=productSelect.value,word=productSearch.value.trim();
+   const choices=productOptions.filter(p=>p[0]==="__new__"||p[1].toLocaleLowerCase().includes(word.toLocaleLowerCase()));
+   productSelect.replaceChildren(...choices.map(([id,name])=>{
+     const option=document.createElement("option");option.value=id;option.textContent=name;return option;
+   }));
+   if(choices.some(p=>p[0]===prior))productSelect.value=prior;
+   updateProductFields();
+ });
+ productSelect.addEventListener("change",updateProductFields);
+ updateProductFields();
+ refreshProfile(sellerId,false);
 }
 function activityModal(sellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
