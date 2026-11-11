@@ -313,3 +313,8 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .insight-seller-table{overflow-x:auto;max-height:50vh;overflow-y:auto}
 .insight-seller-table table{min-width:460px}
 .insight-seller-table td,.insight-seller-table th{padding:12px 10px}
+
+/* Verified product aliases and identical-account seller names */
+.product-alias,.seller-alias{display:block;font-size:10px;font-weight:400;color:#8a9da9;margin-top:6px;white-space:normal;line-height:1.5}
+.insight-alias-count{display:block;font-size:10px;color:#8b9ba5;margin-top:6px}
+.seller-summary small{display:block;font-size:11px;color:#8b9ca6;margin-top:4px;line-height:1.5}
