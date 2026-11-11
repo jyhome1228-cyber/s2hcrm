@@ -93,9 +93,9 @@ function closeModal(){$("#modal").classList.add("hidden");state.modalSave=null;$
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
   openModal(item?"셀러 정보 수정":"새 셀러 등록",
-    f("name","셀러명","text",item?.name,true)+f("channel","인스타그램 계정","text",item?.channel)+f("contact","연락처","text",item?.contact)+f("cycleDays","리마인드 주기 (일)","number",item?.cycleDays??30,true)+textarea("note","셀러 메모",item?.note),
+    f("name","셀러명","text",item?.name,true)+f("channel","인스타그램 계정","text",item?.channel||item?.instagramId)+f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||"",false,true)+f("followerCountLatestRecorded","최근 기록된 팔로워 수","number",item?.followerCountLatestRecorded??"")+f("contact","연락처","text",item?.contact)+f("cycleDays","리마인드 주기 (일)","number",item?.cycleDays??30,true)+textarea("note","셀러 메모",item?.note||item?.notes),
     async data=>{
-      const record={name:data.name.trim(),channel:data.channel.trim(),contact:data.contact.trim(),note:data.note.trim(),cycleDays:Math.max(1,Number(data.cycleDays)||30),updatedAt:serverTimestamp()};
+      const record={name:data.name.trim(),channel:data.channel.trim(),instagramUrl:data.instagramUrl.trim(),followerCountLatestRecorded:data.followerCountLatestRecorded?Number(data.followerCountLatestRecorded):null,contact:data.contact.trim(),note:data.note.trim(),cycleDays:Math.max(1,Number(data.cycleDays)||30),updatedAt:serverTimestamp()};
       if(!record.name)throw new Error("셀러명을 입력해주세요.");
       if(item)await updateDoc(doc(db,"sellers",item.id),record);
       else await addDoc(collection(db,"sellers"),{...record,createdAt:serverTimestamp()});
