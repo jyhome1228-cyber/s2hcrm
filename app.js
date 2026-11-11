@@ -461,11 +461,9 @@ function masterProductName(product){
  return String(product.standardName||product.productName||product.name||"").trim();
 }
 function productStats(product){
- const name=masterProductName(product);
- const records=state.buys.filter(b=>
-  b.productId===product.id ||
-  (!b.productId&&(b.product||b.productName||"").trim()===name));
- return {count:records.length,sellers:new Set(records.map(b=>b.sellerId)).size,
+ const name=productCanonicalName(masterProductName(product),state.products);
+ const records=state.buys.filter(b=>productCanonicalName(b.product||b.productName,state.products)===name&&b.status!=="취소");
+ return {count:records.length,sellers:new Set(records.map(b=>sellerIdentity(state.sellers.find(x=>x.id===b.sellerId),b))).size,
   last:[...records].map(b=>b.endDate||"").sort().pop()||"-"};
 }
 function productModal(product=null){
@@ -506,31 +504,57 @@ function setProductActive(id,active){
  }).then(()=>notify(active?"상품이 복원되었습니다.":"상품이 보관되었습니다."))
  .catch(e=>notify("변경 실패: "+e.message));
 }
+function productMasterGroups(){
+ const groups=new Map();
+ for(const p of state.products){
+  const canonical=productCanonicalName(masterProductName(p),state.products);
+  if(!canonical)continue;
+  if(!groups.has(canonical))groups.set(canonical,{name:canonical,members:[]});
+  groups.get(canonical).members.push(p);
+ }
+ return [...groups.values()].map(g=>{
+  const primary=g.members.find(p=>masterProductName(p)===g.name)||g.members[0];
+  const active=g.members.some(p=>p.active!==false);
+  return {...g,primary,active,aliases:productDisplayAliases(g.name,state.products,state.buys)};
+ });
+}
+function productGroupToggle(canonical,active){
+ if(state.demo)return notify("미리보기에서는 변경할 수 없습니다.");
+ const group=productMasterGroups().find(g=>g.name===canonical);
+ if(!group)return notify("상품을 찾을 수 없습니다.");
+ const message=active?("‘"+canonical+"’ 상품을 복원할까요?"):("‘"+canonical+"’ 상품을 보관할까요? 기존 공구 이력은 보존됩니다.");
+ if(!confirm(message))return;
+ Promise.all(group.members.map(p=>updateDoc(doc(db,"products",p.id),{
+  active,updatedAt:serverTimestamp(),updatedByUid:state.user.uid,
+  updatedByName:state.staff?.name||state.user.email
+ }))).then(()=>notify(active?"상품이 복원되었습니다.":"상품이 보관되었습니다."))
+  .catch(e=>notify("상품 상태 변경 중 오류: "+e.message));
+}
 function productsPage(){
- const master=state.products;
+ const groups=productMasterGroups();
  const q=state.productSearch.trim().toLocaleLowerCase();
- const filtered=master.filter(p=>{
-  const inactive=p.active===false;
-  if(state.productStatus==="active"&&inactive)return false;
-  if(state.productStatus==="archived"&&!inactive)return false;
-  const terms=[masterProductName(p),p.brand,p.category,p.supplier,...(p.aliases||[])].filter(Boolean).join(" ").toLocaleLowerCase();
+ const filtered=groups.filter(g=>{
+  if(state.productStatus==="active"&&!g.active)return false;
+  if(state.productStatus==="archived"&&g.active)return false;
+  const terms=[g.name,...g.aliases,...g.members.flatMap(p=>[p.brand,p.category,p.supplier])].filter(Boolean).join(" ").toLocaleLowerCase();
   return !q||terms.includes(q);
- }).sort((a,b)=>masterProductName(a).localeCompare(masterProductName(b),"ko-KR",{numeric:true}));
- const countActive=master.filter(p=>p.active!==false).length;
- const countArchived=master.length-countActive;
- const controls='<div class="product-toolbar"><input id="product-search" type="search" placeholder="상품명, 브랜드, 공급사 검색" value="'+h(state.productSearch)+'"/>'+
-  '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","보관 상품 ("+countArchived+")"],["all","전체 ("+master.length+")"]]
-  .map(([key,label])=>'<button type="button" data-product-status="'+key+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
- const rows=filtered.map(p=>{
-  const stats=productStats(p),inactive=p.active===false;
-  return '<tr><td><strong>'+h(masterProductName(p))+'</strong>'+(inactive?'<span class="product-archive-label">보관</span>':'')+'</td>'+
+ }).sort((a,b)=>a.name.localeCompare(b.name,"ko-KR",{numeric:true}));
+ const countActive=groups.filter(g=>g.active).length;
+ const countArchived=groups.length-countActive;
+ const controls='<div class="product-toolbar"><input id="product-search" type="search" placeholder="상품명, 기존 표기, 브랜드 검색" value="'+h(state.productSearch)+'"/>'+
+ '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","보관 상품 ("+countArchived+")"],["all","전체 ("+groups.length+")"]]
+ .map(([key,label])=>'<button type="button" data-product-status="'+key+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
+ const rows=filtered.map(g=>{
+  const p=g.primary,stats=productStats(p),inactive=!g.active;
+  return '<tr><td><strong>'+h(g.name)+'</strong>'+(inactive?'<span class="product-archive-label">보관</span>':'')+
+   (g.aliases.length?'<small class="product-alias">기존 표기 '+h(g.aliases.join(" · "))+'</small>':'')+'</td>'+
    '<td>'+h(p.brand||"-")+'</td><td>'+h(p.category||"-")+'</td><td>'+stats.sellers+'명</td>'+
    '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
    '<button class="mini-button" data-act="edit-product" data-id="'+h(p.id)+'">수정</button> '+
-   '<button class="mini-button" data-act="toggle-product" data-id="'+h(p.id)+'">'+(inactive?"복원":"보관")+'</button></td></tr>';
+   '<button class="mini-button" data-act="toggle-product-group" data-canonical="'+h(g.name)+'">'+(inactive?"복원":"보관")+'</button></td></tr>';
  });
- return wrap("상품 목록 · "+filtered.length+'건',
-  '<p class="panel-description">등록된 상품을 관리합니다. 보관 상품은 신규 공구 선택 목록에서 제외되며 과거 공구 이력은 유지됩니다.</p>'+
+ return wrap("상품 목록 · "+filtered.length+"건",
+  '<p class="panel-description">같은 상품의 확인된 표기는 하나로 표시합니다. 원래 상품명과 과거 공구 기록은 변경하지 않습니다.</p>'+
   controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows));
 }
 function productInsightSellers(productName){
@@ -746,6 +770,7 @@ function render(){
  if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
  if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
  if(action==="toggle-product"){const product=state.products.find(x=>x.id===id);if(product)setProductActive(id,product.active===false);}
+ if(action==="toggle-product-group"){const group=productMasterGroups().find(g=>g.name===el.dataset.canonical);if(group)productGroupToggle(group.name,!group.active);}
  if(action==="edit-buy")buyModal(state.buys.find(x=>x.id===id));
  if(action==="contact")activityModal(id);
  if(action==="templates"){state.expandedReminderId=state.expandedReminderId===id?null:id;render();}
