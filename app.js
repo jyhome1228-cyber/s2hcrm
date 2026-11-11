@@ -92,7 +92,7 @@ function closeModal(){$("#modal").classList.add("hidden");state.modalSave=null;$
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
   openModal(item?"셀러 정보 수정":"새 셀러 등록",
-    f("name","셀러명","text",item?.name,true)+f("channel","인스타그램 / 채널","text",item?.channel)+f("contact","연락처","text",item?.contact)+f("cycleDays","리마인드 주기 (일)","number",item?.cycleDays??30,true)+textarea("note","셀러 메모",item?.note),
+    f("name","셀러명","text",item?.name,true)+f("channel","인스타그램 계정","text",item?.channel)+f("contact","연락처","text",item?.contact)+f("cycleDays","리마인드 주기 (일)","number",item?.cycleDays??30,true)+textarea("note","셀러 메모",item?.note),
     async data=>{
       const record={name:data.name.trim(),channel:data.channel.trim(),contact:data.contact.trim(),note:data.note.trim(),cycleDays:Math.max(1,Number(data.cycleDays)||30),updatedAt:serverTimestamp()};
       if(!record.name)throw new Error("셀러명을 입력해주세요.");
@@ -106,7 +106,7 @@ function buyModal(item=null){
  const choices=state.sellers.map(s=>[s.id,s.name]);
  const sellerId=item?.sellerId || choices[0][0];
  openModal(item?"공구 수정":"새 공구 등록",
-   select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product,true)+f("startDate","시작일","date",item?.startDate,true)+f("endDate","종료일","date",item?.endDate,true)+select("status","진행상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status||"예정")+textarea("memo","구성 / 특이사항",item?.memo),
+   select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product,true)+f("startDate","시작일","date",item?.startDate,true)+f("endDate","종료일","date",item?.endDate,true)+select("status","진행상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status||"예정")+textarea("memo","구성 및 특이사항",item?.memo),
  async data=>{
    if(data.endDate<data.startDate)throw new Error("종료일은 시작일보다 빠를 수 없습니다.");
    const seller=state.sellers.find(s=>s.id===data.sellerId);
