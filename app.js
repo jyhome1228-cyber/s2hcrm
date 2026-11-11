@@ -105,158 +105,157 @@ function sellerModal(item=null){
 }
 function buyModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다.");return;}
- if(!state.sellers.length){notify("공구 등록 전에 셀러를 먼저 등록해주세요.");return;}
- const compare=(a,b)=>String(a||"").localeCompare(String(b||""),"ko-KR",{sensitivity:"base",numeric:true});
- const allSellers=[...state.sellers].sort((a,b)=>compare(a.name,b.name));
- const sellerOptions=allSellers.map(x=>[x.id,x.name]);
- const sellerId=item?.sellerId||sellerOptions[0][0];
- const defaultStart=item?.startDate||((state.selectedMonth||todayLocal().slice(0,7))===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
- const defaultEnd=item?.endDate||defaultStart;
+ const cmp=(a,b)=>String(a||"").localeCompare(String(b||""),"ko-KR",{sensitivity:"base",numeric:true});
+ const productLabel=p=>String(p.standardName||p.productName||p.name||"").trim();
+ const sellerMap=new Map(state.sellers.map(s=>[s.id,s]));
+ const products=new Map();
+ for(const p of state.products){
+  const label=productLabel(p);if(label)products.set(label,{id:p.id,name:label});
+ }
+ for(const b of state.buys){
+  const label=String(b.product||b.productName||"").trim();
+  if(label&&!products.has(label))products.set(label,{id:"legacy:"+label,name:label});
+ }
+ const sellerChoices=[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name));
+ const productChoices=[...products.values()].sort((a,b)=>cmp(a.name,b.name));
+ const originalSeller=sellerMap.get(item?.sellerId);
+ const initialProduct=(item?.product||item?.productName||"").trim();
+ const initialProductChoice=productChoices.find(p=>p.id===item?.productId||p.name===initialProduct);
+ let selectedSellerId=originalSeller?.id||"";
+ let selectedProduct=initialProductChoice||null;
+ const defaultDate=(state.selectedMonth&&state.selectedMonth!==todayLocal().slice(0,7))?shownMonth()+"-01":todayLocal();
+ const defaultStart=item?.startDate||defaultDate;
  const categoryOptions=[["","선택 안 함"],["마이크로","마이크로"],["일반","일반"]];
- const historicalProductNames=[...new Set(state.buys.map(b=>(b.product||b.productName||"").trim()).filter(Boolean))];
- const productName=(p)=>String(p.standardName||p.name||p.productName||"").trim();
- const master=state.products.filter(p=>productName(p)).sort((a,b)=>compare(productName(a),productName(b)));
- const nameMap=new Map(master.map(p=>[productName(p),p]));
- const productOptions=master.map(p=>[p.id,productName(p)]);
- for(const name of historicalProductNames.sort(compare)){
-  if(!nameMap.has(name)){const fallback="legacy:"+name;productOptions.push([fallback,name]);}
- }
- productOptions.sort((a,b)=>compare(a[1],b[1]));
- productOptions.push(["__new__","새 상품 직접 입력"]);
- const previousName=(item?.product||item?.productName||"").trim();
- const selectedProduct=item?.productId&&productOptions.some(p=>p[0]===item.productId)
-  ?item.productId:(productOptions.find(p=>p[1]===previousName)?.[0]||productOptions[0]?.[0]||"__new__");
- const detail=(item?.note??item?.memo)??"";
-
- function sellerProfile(id){
-  const seller=state.sellers.find(x=>x.id===id);
-  const history=state.buys.filter(b=>b.sellerId===id).sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""));
-  const recentWithFollowers=history.find(b=>b.followers!==null&&b.followers!==undefined&&String(b.followers).trim()!=="");
-  const follower=seller?.followerCountLatestRecorded??seller?.followers??recentWithFollowers?.followers??"";
-  const url=seller?.instagramUrl||history.find(b=>b.instagramUrl)?.instagramUrl||"";
-  const category=history.find(b=>categoryOptions.some(option=>option[0]&&option[0]===b.legacyCategory))?.legacyCategory||"";
-  return {seller,history,follower,url,category};
- }
- const initialProfile=sellerProfile(sellerId);
- openModal(item?"공구 수정":"새 공구 등록",
-   '<div class="full picker-inline"><div class="picker-main">'
-   +select("sellerId","셀러",sellerOptions,sellerId)
-   +'</div><label class="picker-search">빠른 검색<input id="seller-picker-search" type="search" placeholder="셀러명 검색" autocomplete="off"/></label></div>'
-   +'<div class="full seller-linked-data" id="linked-seller-info" aria-live="polite"></div>'
-   +'<div class="full picker-inline"><div class="picker-main">'
-   +select("productId","상품명",productOptions,selectedProduct)
-   +'</div><label class="picker-search">빠른 검색<input id="product-picker-search" type="search" placeholder="상품명 검색" autocomplete="off"/></label></div>'
-   +'<label class="full" id="new-product-wrap" hidden>새 상품명<input name="newProductName" type="text" placeholder="등록할 상품명 입력"/></label>'
-   +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",defaultEnd,true)
-   +select("status","진행 상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status==="기록"?"완료":item?.status||"예정")
-   +f("followers","팔로워 수","number",item?.followers??initialProfile.follower)
-   +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||initialProfile.category)
-   +f("paymentWindow","결제창","text",item?.paymentWindow||"")
-   +f("settlementRequest","정산 요청","text",item?.settlementRequest||"")
-   +f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||initialProfile.url,false,true)
-   +f("round","진행 회차","text",item?.round||"")
-   +textarea("note","비고 및 특이사항",detail)
-   +textarea("event","이벤트",item?.event||""),
-   async data=>{
-     if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
-     const seller=state.sellers.find(x=>x.id===data.sellerId);
-     if(!seller)throw new Error("등록된 셀러를 선택해주세요.");
-     const selected=productOptions.find(p=>p[0]===data.productId);
-     if(!selected)throw new Error("등록된 상품을 선택해주세요.");
-     let resolvedProductId=data.productId;
-     let resolvedProductName=selected[1];
-     if(data.productId==="__new__"){
-       resolvedProductName=(data.newProductName||"").trim();
-       if(!resolvedProductName)throw new Error("새 상품명을 입력해주세요.");
-       const existing=state.products.find(p=>productName(p)===resolvedProductName);
-       if(existing)resolvedProductId=existing.id;
-       else {
-         const result=await addDoc(collection(db,"products"),{
-           standardName:resolvedProductName,aliases:[],source:"manual",createdByUid:state.user.uid,
-           createdAt:serverTimestamp(),updatedAt:serverTimestamp()
-         });
-         resolvedProductId=result.id;
-       }
-     }
-     if(resolvedProductId.startsWith("legacy:"))resolvedProductId="";
-     const record={
-       sellerId:seller.id,sellerName:seller.name,productId:resolvedProductId,
-       product:resolvedProductName,productName:resolvedProductName,
-       startDate:data.startDate,endDate:data.endDate,
-       followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
-       paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
-       instagramUrl:data.instagramUrl.trim(),round:data.round.trim(),
-       note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),status:data.status,
-       updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email,
-       updatedAt:serverTimestamp()
-     };
-     if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
-     else await addDoc(collection(db,"groupbuys"),{
-       ...record,source:"manual",createdByUid:state.user.uid,
-       createdByName:state.staff?.name||state.user.email,createdAt:serverTimestamp()
-     });
-   }
- );
-
- const sellerSearch=$("#seller-picker-search");
- const sellerSelect=$("#modal-form select[name=sellerId]");
- const productSearch=$("#product-picker-search");
- const productSelect=$("#modal-form select[name=productId]");
- const newProductWrap=$("#new-product-wrap");
- const profileInfo=$("#linked-seller-info");
+ const fields=
+  '<div class="full combo-wrap"><label for="seller-combo">셀러</label><input id="seller-combo" type="text" autocomplete="off" placeholder="셀러명 또는 인스타그램 계정 검색" value="'+h(originalSeller?.name||"")+'" aria-autocomplete="list" aria-expanded="false"/><input id="seller-id" name="sellerId" type="hidden" value="'+h(selectedSellerId)+'"/><div id="seller-suggestions" class="combo-options hidden" role="listbox"></div></div>'
+ +'<div class="full inline-create hidden" id="create-seller"><strong>신규 셀러 등록</strong><div class="inline-create-grid"><label>셀러명<input id="new-seller-name" type="text"/></label><label>인스타그램 계정<input id="new-seller-handle" type="text" placeholder="@계정"/></label><label>팔로워 수<input id="new-seller-followers" type="number" min="0"/></label><label>연락처<input id="new-seller-contact" type="text"/></label></div><div class="inline-create-buttons"><button type="button" class="secondary" id="cancel-new-seller">취소</button><button type="button" class="primary" id="save-new-seller">셀러 등록</button></div></div>'
+ +'<div class="full seller-linked-data hidden" id="linked-seller-info" aria-live="polite"></div>'
+ +'<div class="full combo-wrap"><label for="product-combo">상품명</label><input id="product-combo" type="text" autocomplete="off" placeholder="상품명 검색" value="'+h(selectedProduct?.name||initialProduct)+'" aria-autocomplete="list" aria-expanded="false"/><input id="product-id" name="productId" type="hidden" value="'+h(selectedProduct?.id||"")+'"/><div id="product-suggestions" class="combo-options hidden" role="listbox"></div></div>'
+ +'<div class="full inline-create hidden" id="create-product"><strong>신규 상품 등록</strong><label>상품명<input id="new-product-name" type="text"/></label><div class="inline-create-buttons"><button type="button" class="secondary" id="cancel-new-product">취소</button><button type="button" class="primary" id="save-new-product">상품 등록</button></div></div>'
+ +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",item?.endDate||defaultStart,true)
+ +select("status","진행 상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status==="기록"?"완료":item?.status||"예정")
+ +f("followers","팔로워 수","number",item?.followers??"")
+ +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||"")
+ +f("paymentWindow","결제창","text",item?.paymentWindow||"")
+ +f("settlementRequest","정산 요청","text",item?.settlementRequest||"")
+ +f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||"",false,true)
+ +f("round","진행 회차","text",item?.round||"")
+ +textarea("note","비고 및 특이사항",item?.note??item?.memo??"")
+ +textarea("event","이벤트",item?.event||"");
+ openModal(item?"공구 수정":"새 공구 등록",fields,async data=>{
+  const seller=sellerMap.get(data.sellerId);
+  if(!seller)throw new Error("셀러를 검색한 뒤 아래 목록에서 선택하거나 신규 등록해주세요.");
+  const prod=[...products.values()].find(p=>p.id===data.productId);
+  if(!prod)throw new Error("상품을 검색한 뒤 아래 목록에서 선택하거나 신규 등록해주세요.");
+  if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
+  const record={
+   sellerId:seller.id,sellerName:seller.name,
+   productId:prod.id.startsWith("legacy:")?"":prod.id,
+   product:prod.name,productName:prod.name,
+   startDate:data.startDate,endDate:data.endDate,status:data.status,
+   followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
+   paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
+   instagramUrl:data.instagramUrl.trim(),round:data.round.trim(),
+   note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),
+   updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email,updatedAt:serverTimestamp()
+  };
+  if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
+  else await addDoc(collection(db,"groupbuys"),{...record,source:"manual",createdByUid:state.user.uid,createdByName:state.staff?.name||state.user.email,createdAt:serverTimestamp()});
+ });
  const form=$("#modal-form");
- const setter=(name,value)=>{const input=form.elements.namedItem(name);if(input)input.value=value??"";};
- const refreshProfile=(id,overwrite=true)=>{
-   const profile=sellerProfile(id);
-   if(!profile.seller)return;
-   if(overwrite){
-     setter("followers",profile.follower);
-     setter("instagramUrl",profile.url);
-     setter("legacyCategory",profile.category);
-   }
-   const latest=profile.history[0];
-   const recentNames=[...new Set(profile.history.slice(0,5).map(b=>b.product||b.productName).filter(Boolean))].slice(0,3);
-   profileInfo.textContent="등록된 공구 "+profile.history.length+"건"+(latest?.endDate?" · 최근 종료 "+latest.endDate:"")+(recentNames.length?" · 진행 상품 "+recentNames.join(", "):"");
+ const $m=id=>document.getElementById(id);
+ const sellerInput=$m("seller-combo"),productInput=$m("product-combo");
+ const fieldsValue=(name,value)=>{const el=form.elements.namedItem(name);if(el)el.value=value??"";};
+ const sellerProfile=(sellerId,overwrite)=>{
+  const seller=sellerMap.get(sellerId);
+  if(!seller)return;
+  const history=state.buys.filter(b=>b.sellerId===sellerId).sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""));
+  const recent=history.find(b=>b.followers!=null&&b.followers!=="");
+  const followers=seller.followerCountLatestRecorded??recent?.followers??"";
+  const url=seller.instagramUrl||history.find(b=>b.instagramUrl)?.instagramUrl||"";
+  if(overwrite){
+   fieldsValue("followers",followers);
+   fieldsValue("instagramUrl",url);
+   const category=history.find(b=>b.legacyCategory)?.legacyCategory||"";
+   fieldsValue("legacyCategory",category);
+  }
+  const info=$m("linked-seller-info");
+  info.classList.remove("hidden");
+  info.textContent="기존 공구 "+history.length+"건"+(history[0]?.endDate?" · 최근 종료 "+history[0].endDate:"");
  };
- const updateProductFields=()=>{
-   newProductWrap.hidden=productSelect.value!=="__new__";
-   const newName=form.elements.namedItem("newProductName");
-   if(newName)newName.required=!newProductWrap.hidden;
+ const chooseSeller=id=>{
+  const seller=sellerMap.get(id);if(!seller)return;
+  selectedSellerId=id;$m("seller-id").value=id;sellerInput.value=seller.name;
+  $m("seller-suggestions").classList.add("hidden");sellerInput.setAttribute("aria-expanded","false");
+  sellerProfile(id,true);
  };
- const filterOptions=(selectElement,entries,keyword,previous)=>{
-   const matches=entries.filter(([,name])=>String(name).toLocaleLowerCase().includes(keyword.toLocaleLowerCase()));
-   selectElement.replaceChildren(...matches.map(([value,label])=>{
-     const option=document.createElement("option");option.value=value;option.textContent=label;return option;
-   }));
-   if(matches.some(([v])=>v===previous))selectElement.value=previous;
-   else if(matches.length)selectElement.value=matches[0][0];
-   return matches.length;
+ const chooseProduct=id=>{
+  const product=[...products.values()].find(p=>p.id===id);if(!product)return;
+  selectedProduct=product;$m("product-id").value=id;productInput.value=product.name;
+  $m("product-suggestions").classList.add("hidden");productInput.setAttribute("aria-expanded","false");
  };
- sellerSearch.addEventListener("input",()=>{
-   const last=sellerSelect.value;
-   const word=sellerSearch.value.trim().toLowerCase();
-   const matches=allSellers.filter(x=>x.name.toLowerCase().includes(word)||String(x.instagramId||x.channel||"").toLowerCase().includes(word));
-   const entries=matches.map(x=>[x.id,x.name]);
-   sellerSelect.replaceChildren(...entries.map(([id,name])=>{
-     const option=document.createElement("option");option.value=id;option.textContent=name;return option;
-   }));
-   if(matches.some(x=>x.id===last))sellerSelect.value=last;
-   if(!matches.length){profileInfo.textContent="일치하는 셀러가 없습니다.";return;}
-   refreshProfile(sellerSelect.value);
- });
- sellerSelect.addEventListener("change",()=>refreshProfile(sellerSelect.value));
- productSearch.addEventListener("input",()=>{
-   const prior=productSelect.value,word=productSearch.value.trim();
-   const choices=productOptions.filter(p=>p[0]==="__new__"||p[1].toLocaleLowerCase().includes(word.toLocaleLowerCase()));
-   productSelect.replaceChildren(...choices.map(([id,name])=>{
-     const option=document.createElement("option");option.value=id;option.textContent=name;return option;
-   }));
-   if(choices.some(p=>p[0]===prior))productSelect.value=prior;
-   updateProductFields();
- });
- productSelect.addEventListener("change",updateProductFields);
- updateProductFields();
- refreshProfile(sellerId,false);
+ const setupCombo=(input,dropdown,listFn,selectFn,onCreate,clearFn)=>{
+  let currentItems=[];
+  const show=()=>{
+   const word=input.value.trim().toLocaleLowerCase();
+   currentItems=listFn().filter(x=>x.name.toLocaleLowerCase().includes(word)||x.search?.toLocaleLowerCase().includes(word)).slice(0,30);
+   const matches=currentItems.map((x,i)=>'<button type="button" class="combo-option" role="option" data-combo-index="'+i+'">'+h(x.name)+'</button>').join("");
+   const heading=currentItems.length?matches:'<p class="combo-empty">검색 결과가 없습니다.</p>';
+   dropdown.innerHTML=heading+'<button type="button" class="combo-create" data-combo-create>+ 새 '+(input===sellerInput?"셀러":"상품")+' 등록</button>';
+   dropdown.classList.remove("hidden");input.setAttribute("aria-expanded","true");
+   dropdown.querySelectorAll("[data-combo-index]").forEach(el=>el.addEventListener("click",()=>selectFn(currentItems[Number(el.dataset.comboIndex)].id)));
+   dropdown.querySelector("[data-combo-create]").onclick=()=>{dropdown.classList.add("hidden");onCreate(input.value.trim());};
+  };
+  input.addEventListener("input",()=>{clearFn();show();});
+  input.addEventListener("focus",show);
+  input.addEventListener("keydown",event=>{
+   if(event.key==="Escape"){dropdown.classList.add("hidden");return;}
+   if(event.key==="Enter"&&currentItems.length&& !dropdown.classList.contains("hidden")){event.preventDefault();selectFn(currentItems[0].id);}
+  });
+  input.addEventListener("blur",()=>setTimeout(()=>{dropdown.classList.add("hidden");input.setAttribute("aria-expanded","false");},160));
+ };
+ setupCombo(sellerInput,$m("seller-suggestions"),
+  ()=>[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name)).map(x=>({id:x.id,name:x.name,search:[x.instagramId,x.channel].filter(Boolean).join(" ")})),
+  chooseSeller,name=>{$m("create-seller").classList.remove("hidden");$m("new-seller-name").value=name;$m("new-seller-name").focus();},
+  ()=>{selectedSellerId="";$m("seller-id").value="";$m("linked-seller-info").classList.add("hidden");}
+ );
+ setupCombo(productInput,$m("product-suggestions"),
+  ()=>[...products.values()].sort((a,b)=>cmp(a.name,b.name)),
+  chooseProduct,name=>{$m("create-product").classList.remove("hidden");$m("new-product-name").value=name;$m("new-product-name").focus();},
+  ()=>{selectedProduct=null;$m("product-id").value="";}
+ );
+ $m("cancel-new-seller").onclick=()=>$m("create-seller").classList.add("hidden");
+ $m("cancel-new-product").onclick=()=>$m("create-product").classList.add("hidden");
+ $m("save-new-seller").onclick=async()=>{
+  const button=$m("save-new-seller"),name=$m("new-seller-name").value.trim();
+  if(!name)return notify("셀러명을 입력해주세요.");
+  const handle=$m("new-seller-handle").value.trim();
+  const dup=[...sellerMap.values()].find(x=>x.name===name||handle&&(x.instagramId===handle.replace(/^@/,"")||x.channel===handle));
+  if(dup)return notify("이미 등록된 셀러입니다. 검색 목록에서 선택해주세요.");
+  button.disabled=true;
+  try{
+   const record={name,channel:handle,instagramId:handle.replace(/^@/,""),instagramUrl:handle?"https://www.instagram.com/"+encodeURIComponent(handle.replace(/^@/,""))+"/":"",
+     followerCountLatestRecorded:$m("new-seller-followers").value?Number($m("new-seller-followers").value):null,
+     contact:$m("new-seller-contact").value.trim(),cycleDays:30,note:"",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+   const ref=await addDoc(collection(db,"sellers"),record);
+   sellerMap.set(ref.id,{id:ref.id,...record});
+   chooseSeller(ref.id);$m("create-seller").classList.add("hidden");
+   notify("셀러가 등록되었습니다. 공구 입력을 이어서 진행하세요.");
+  }catch(error){notify("셀러 등록 실패: "+error.message);}finally{button.disabled=false;}
+ };
+ $m("save-new-product").onclick=async()=>{
+  const button=$m("save-new-product"),name=$m("new-product-name").value.trim();
+  if(!name)return notify("상품명을 입력해주세요.");
+  const dup=products.get(name);if(dup){chooseProduct(dup.id);$m("create-product").classList.add("hidden");return;}
+  button.disabled=true;
+  try{
+   const result=await addDoc(collection(db,"products"),{standardName:name,aliases:[],source:"manual",createdByUid:state.user.uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+   const choice={id:result.id,name};products.set(name,choice);chooseProduct(choice.id);
+   $m("create-product").classList.add("hidden");
+   notify("상품이 등록되었습니다. 공구 입력을 이어서 진행하세요.");
+  }catch(error){notify("상품 등록 실패: "+error.message);}finally{button.disabled=false;}
+ };
+ if(selectedSellerId)sellerProfile(selectedSellerId,false);
 }
 function activityModal(sellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
