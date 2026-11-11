@@ -625,32 +625,77 @@ function productsPage(){
   controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows));
 }
 function productInsightSellers(productName){
+ const sellersById=new Map(state.sellers.map(s=>[s.id,s]));
  const records=state.buys.filter(b=>b.status!=="취소"&&productCanonicalName(b.product||b.productName,state.products)===productName);
  const grouped=new Map();
  for(const b of records){
-  const seller=state.sellers.find(x=>x.id===b.sellerId);
+  const seller=sellersById.get(b.sellerId);
   const key=sellerIdentity(seller,b);
-  if(!grouped.has(key))grouped.set(key,{sellerId:b.sellerId||null,name:b.sellerName||"미확인",count:0,last:"",history:[]});
-  const row=grouped.get(key);row.count++;row.history.push(b);
-  if((b.endDate||"")>row.last)row.last=b.endDate;
+  if(!grouped.has(key))grouped.set(key,{
+   sellerId:b.sellerId||null,name:seller?.name||b.sellerName||"미확인",
+   names:new Set(),instagram:seller?.instagramUrl||seller?.instagramId||seller?.channel||b.instagramUrl||"",
+   count:0,last:"",latestStart:"",history:[]
+  });
+  const row=grouped.get(key);
+  row.names.add(b.sellerName||row.name);
+  row.count++;row.history.push(b);
+  if((b.endDate||"")>row.last){row.last=b.endDate;row.latestStart=b.startDate||"";}
  }
  const list=[...grouped.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"ko-KR"));
- const rows=list.map(x=>'<tr><td>'+(x.sellerId?'<button class="insight-product-link" type="button" data-act="view-seller" data-id="'+h(x.sellerId)+'">'+h(x.name)+'</button>':'<strong>'+h(x.name)+'</strong>')+'</td><td>'+x.count+'건</td><td>'+h(x.last||"-")+'</td><td>'+h(x.history.sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""))[0]?.startDate||"-")+'</td></tr>');
- return {count:list.length,records:records.length,table:table(["셀러명","진행 횟수","최근 종료일","최근 시작일"],rows)};
+ return {list,records:records.length};
 }
 function showProductInsightSellers(productName){
- const detail=productInsightSellers(productName);
+ // Query the in-memory Firestore snapshot once. Search and export reuse the result.
+ const data=productInsightSellers(productName);
  const aliases=productDisplayAliases(productName,state.products,state.buys);
- const fields='<div class="full insight-summary"><span>상품명</span><strong>'+h(productName)+'</strong><p>진행 셀러 '+detail.count+'명 · 공구 이력 '+detail.records+'건</p>'+(aliases.length?'<p>통합 표기: '+h(aliases.join(" · "))+"</p>":"") +'</div><div class="full insight-seller-table">'+detail.table+'</div><p class="full panel-note">셀러명을 클릭하면 해당 셀러의 전체 공구 이력을 확인할 수 있습니다.</p>';
+ const fields='<div class="full insight-summary"><span>상품명</span><strong>'+h(productName)+'</strong>'+
+   '<p>진행 셀러 '+data.list.length+'명 · 공구 이력 '+data.records+'건</p>'+
+   (aliases.length?'<p>통합 표기: '+h(aliases.join(" · "))+'</p>':"")+'</div>'+
+   '<div class="full insight-list-toolbar"><input id="insight-seller-search" type="search" placeholder="셀러명, 예전 셀러명, 인스타그램 검색" autocomplete="off" aria-label="상품 진행 셀러 검색"/>'+
+   '<span id="insight-seller-count">'+data.list.length+'명</span>'+
+   '<button id="insight-seller-export" class="secondary" type="button">CSV 내보내기</button></div>'+
+   '<div class="full insight-seller-table" id="insight-seller-results"></div>'+
+   '<p class="full panel-note">셀러명을 누르면 해당 셀러의 전체 공구 이력을 볼 수 있습니다. CSV는 현재 검색된 목록 기준입니다.</p>';
  openModal("상품 진행 셀러",fields,async()=>{});
  const form=$("#modal-form"),save=form.querySelector('[type="submit"]');
  if(save)save.classList.add("hidden");
- form.querySelectorAll('[data-act="view-seller"]').forEach(button=>button.addEventListener("click",()=>{
+ const input=$("#insight-seller-search"),count=$("#insight-seller-count"),out=$("#insight-seller-results");
+ let filtered=data.list;
+ const bindRows=()=>{
+  out.querySelectorAll('[data-act="view-seller"]').forEach(button=>button.addEventListener("click",()=>{
    const id=button.dataset.id;
    if(!state.sellers.some(x=>x.id===id)){notify("셀러 정보를 찾을 수 없습니다.");return;}
-   closeModal();
-   state.selectedSellerId=id;state.page="sellerDetail";render();
- }));
+   closeModal();state.selectedSellerId=id;state.page="sellerDetail";render();
+  }));
+ };
+ const draw=()=>{
+  const q=input.value.trim().toLocaleLowerCase();
+  filtered=data.list.filter(x=>!q||[x.name,...x.names,x.instagram].join(" ").toLocaleLowerCase().includes(q));
+  count.textContent=filtered.length+'명';
+  const rows=filtered.map(x=>'<tr><td>'+(x.sellerId?'<button class="insight-product-link" type="button" data-act="view-seller" data-id="'+h(x.sellerId)+'">'+h(x.name)+'</button>':'<strong>'+h(x.name)+'</strong>')+
+   (x.names.size>1?'<small class="seller-alias">'+h([...x.names].filter(n=>n!==x.name).join(" · "))+'</small>':"")+
+   '</td><td>'+x.count+'건</td><td>'+h(x.last||"-")+'</td><td>'+h(x.latestStart||"-")+'</td></tr>');
+  out.innerHTML=table(["셀러명","진행 횟수","최근 종료일","최근 시작일"],rows);
+  bindRows();
+ };
+ input.addEventListener("input",draw);
+ $("#insight-seller-export").addEventListener("click",()=>{
+  if(!filtered.length){notify("내보낼 셀러가 없습니다.");return;}
+  const headings=["상품명","셀러명","기존 셀러명","인스타그램","공구 횟수","최근 시작일","최근 종료일","셀러 ID"];
+  const records=filtered.map(x=>[productName,x.name,[...x.names].join(" / "),x.instagram,x.count,x.latestStart,x.last,x.sellerId||""]);
+  const csvCell=value=>{
+   let text=String(value??"");
+   if(/^\s*[=+\-@\t\r]/.test(text))text="'"+text;
+   return '"'+text.replace(/"/g,'""')+'"';
+  };
+  const csv="\uFEFF"+[headings,...records].map(row=>row.map(csvCell).join(",")).join("\r\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const a=document.createElement("a");a.href=url;
+  a.download="S2H_"+productName.replace(/[\\/:*?"<>|]/g,"_")+"_진행셀러_"+todayLocal()+".csv";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+  notify(filtered.length+"명의 셀러 목록을 내려받았습니다.");
+ });
+ draw();
 }
 function productInsightsPage(){
  const productsByName=new Map();
