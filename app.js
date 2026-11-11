@@ -105,11 +105,13 @@ function buyModal(item=null){
  if(!state.sellers.length){notify("공구 등록 전에 셀러를 먼저 등록해주세요.");return;}
  const choices=state.sellers.map(x=>[x.id,x.name]);
  const sellerId=item?.sellerId||choices[0][0];
+ const defaultStart=item?.startDate||((state.selectedMonth||todayLocal().slice(0,7))===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
+ const defaultEnd=item?.endDate||defaultStart;
  const categoryOptions=[["","선택 안 함"],["마이크로","마이크로"],["일반","일반"]];
  const detail=(item?.note??item?.memo)??"";
  openModal(item?"공구 수정":"새 공구 등록",
-  select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product||item?.productName,true)
-  +f("startDate","시작일","date",item?.startDate,true)+f("endDate","종료일","date",item?.endDate,true)
+  '<label class="full">셀러 검색<input id="seller-picker-search" type="search" placeholder="셀러명을 입력하면 목록이 좁혀집니다." autocomplete="off"/></label>'+select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product||item?.productName,true)
+  +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",defaultEnd,true)
   +f("followers","팔로워 수","number",item?.followers??"")
   +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||"")
   +f("paymentWindow","결제창","text",item?.paymentWindow||"")
@@ -121,7 +123,7 @@ function buyModal(item=null){
   async data=>{
    if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
    const seller=state.sellers.find(x=>x.id===data.sellerId);
-   if(!seller)throw new Error("셀러를 선택해주세요.");
+   if(!seller)throw new Error("등록된 셀러를 선택해주세요.");
    const record={
      sellerId:seller.id,sellerName:seller.name,product:data.product.trim(),productName:data.product.trim(),
      startDate:data.startDate,endDate:data.endDate,
@@ -134,6 +136,24 @@ function buyModal(item=null){
    if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
    else await addDoc(collection(db,"groupbuys"),{...record,status:"예정",source:"manual",createdAt:serverTimestamp()});
   });
+ const sellerSearch=$("#seller-picker-search");
+ const sellerSelect=$("#modal-form select[name=sellerId]");
+ if(sellerSearch&&sellerSelect){
+  sellerSearch.addEventListener("input",()=>{
+   const word=sellerSearch.value.trim().toLowerCase();
+   const previous=sellerSelect.value;
+   const matches=state.sellers.filter(x=>x.name.toLowerCase().includes(word)||String(x.instagramId||x.channel||"").toLowerCase().includes(word));
+   sellerSelect.replaceChildren();
+   for(const seller of matches){
+    const option=document.createElement("option");
+    option.value=seller.id;option.textContent=seller.name;
+    sellerSelect.appendChild(option);
+   }
+   if(matches.some(x=>x.id===previous))sellerSelect.value=previous;
+   if(!matches.length)notify("일치하는 셀러가 없습니다.");
+  });
+ }
+
 }
 function activityModal(sellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
@@ -187,8 +207,8 @@ function scheduleStatus(b){
 function monthlyRows(list,detail=false){
  return list.map(b=>{
   const status=scheduleStatus(b);
-  const common='<tr><td><strong>'+h(b.sellerName||"미확인")+'</strong></td><td>'+h(b.product||b.productName||"-")+'</td>';
-  if(!detail)return common+'<td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td></tr>';
+  const common='<tr><td><button type="button" class="seller-cell" data-act="view-seller" data-id="'+h(b.sellerId)+'">'+h(b.sellerName||"미확인")+'</button></td><td>'+h(b.product||b.productName||"-")+'</td>';
+  if(!detail)return common+'<td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td><td><button type="button" class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>';
   const seller=state.sellers.find(x=>x.id===b.sellerId);
   const ig=b.instagramUrl||seller?.instagramUrl||"";
   const insta=ig.startsWith("https://")?'<a href="'+h(ig)+'" target="_blank" rel="noopener noreferrer">열기</a>':h(ig||"-");
@@ -252,7 +272,7 @@ function dashboard(){
  const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",state.sellers.length.toLocaleString("ko-KR"),"등록된 셀러")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("선택한 달 공구",monthlyBuys().length,"월별 등록된 일정")+'</div>';
  const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록 ↗</button></td></tr>');
  const monthly=monthlyBuys();
- const monthlyPanel=wrap("월별 공구 현황",monthPicker()+'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><button class="panel-link" data-nav="schedule">전체 보기</button></div>'+table(["셀러","상품","시작일","종료일","진행 상태"],monthlyRows(monthly.slice(0,7))));
+ const monthlyPanel=wrap("월별 공구 현황",monthPicker()+'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><div class="monthly-actions"><button type="button" class="primary" data-quick="buy">+ 공구 등록</button><button class="panel-link" data-nav="schedule">전체 보기</button></div></div>'+table(["셀러","상품","시작일","종료일","상태","수정"],monthlyRows(monthly.slice(0,10))));
  const actionPanel=wrap("오늘 할 일",'<p class="panel-description">최근 공구와 직접 등록한 후속 연락 일정만 표시합니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
  const scheduleRows=[...running,...upcoming].slice(0,6).map(b=>'<tr><td><strong>'+h(b.sellerName)+'</strong></td><td>'+h(b.product)+'</td><td>'+h(b.startDate.slice(5))+' ~ '+h(b.endDate.slice(5))+'</td><td><span class="status '+(b.startDate<=today?"good":"")+'">'+(b.startDate<=today?"진행 중":"예정")+'</span></td></tr>');
  const schedule=wrap("예정 공구",table(["셀러","상품","일정","상태"],scheduleRows),'<button data-nav="schedule" class="panel-link">전체 보기</button>');
