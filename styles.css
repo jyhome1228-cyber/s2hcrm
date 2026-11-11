@@ -162,3 +162,14 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .ledger-toolbar>.primary{white-space:nowrap;padding:10px 15px}
 @media(max-width:900px){.seller-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.seller-summary{grid-template-columns:1fr}.ledger-toolbar{flex-wrap:wrap}.ledger-toolbar>.primary{width:100%}}
+
+/* Monthly groupbuy actions — compact, operational UI */
+.monthly-actions{display:flex;align-items:center;gap:14px}
+.monthly-actions .primary{font-size:11px;padding:9px 13px;white-space:nowrap}
+.seller-cell{border:0;padding:0;background:transparent;text-align:left;color:#24465b;font-size:12px;font-weight:650;cursor:pointer}
+.seller-cell:hover{color:#0089b3;text-decoration:underline;text-underline-offset:3px}
+#seller-picker-search{width:100%;background:#f8fafb;border:1px solid #dce4e9;color:#22343f;padding:12px;border-radius:7px;outline:none}
+#seller-picker-search:focus{border-color:#0089b3}
+.monthly-tools{min-height:34px}
+.monthly-actions .panel-link{white-space:nowrap}
+@media(max-width:720px){.monthly-actions{gap:8px}.monthly-actions .primary{padding:8px 10px}}
