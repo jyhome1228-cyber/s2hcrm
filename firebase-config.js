@@ -1,11 +1,11 @@
-// Firebase Console > Project settings > Your apps > Web app configuration
-// 이 파일에는 Firebase 웹 앱 설정값만 넣으세요. 서비스 계정의 개인키를 넣지 마세요.
+// Firebase web app configuration (public client identifiers, NOT service-account credentials).
+// Data access is protected by Firebase Authentication and Firestore Security Rules.
 export const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_WEB_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.firebasestorage.app",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyClopvJ8IvZiGDoUdShtreZ5-0f7JXipw",
+  authDomain: "s2hcrm-2026.firebaseapp.com",
+  projectId: "s2hcrm-2026",
+  storageBucket: "s2hcrm-2026.firebasestorage.app",
+  messagingSenderId: "939376977695",
+  appId: "1:939376977695:web:295fa82f5430f76989b22a"
 };
-export const firebaseConfigured = !firebaseConfig.apiKey.startsWith("YOUR_");
+export const firebaseConfigured = true;
