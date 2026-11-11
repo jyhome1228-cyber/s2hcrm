@@ -156,7 +156,7 @@ function shownMonth(){return state.selectedMonth||todayLocal().slice(0,7);}
 function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);state.selectedMonth=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);render();}
 function monthlyBuys(){const m=shownMonth();return state.buys.filter(b=>b.startDate&&b.endDate&&b.startDate.slice(0,7)<=m&&b.endDate.slice(0,7)>=m).sort((a,b)=>a.startDate.localeCompare(b.startDate));}
 function monthPicker(){
- return '<div class="month-controls"><div class="month-title"><span class="eyebrow">GROUPBUY / MONTHLY</span><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="2024-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
+ return '<div class="month-controls"><div class="month-title"><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="2024-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
 }
 function monthlyRows(list,detail=false){
  return list.map(b=>{
@@ -216,26 +216,26 @@ function dashboard(){
  const upcoming=state.buys.filter(b=>b.status!=="취소"&&b.startDate>today).sort((a,b)=>a.startDate.localeCompare(b.startDate));
  const month=state.buys.filter(b=>b.status!=="취소"&&b.startDate?.slice(0,7)===today.slice(0,7));
  const alertCount=rem.length, dormant=opp.filter(x=>["관심 필요","재접촉 우선","장기 공백"].includes(x.level)).length;
- const hero='<div class="dashboard-heading"><div><span class="eyebrow">SELLER INTELLIGENCE / OVERVIEW</span><h2>오늘의 영업 현황을 한눈에.</h2><p>셀러와 상품의 거래 이력을 연결하고, 놓치기 쉬운 다음 영업 기회를 확인하세요.</p></div><span class="date-pill">기준일 '+h(today)+'</span></div>';
- const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",state.sellers.length.toLocaleString("ko-KR"),"등록된 셀러 DB")+metric("오늘 연락 필요",alertCount,"후속 연락 예정일 도래")+metric("진행 중 공구",running.length,"현재 운영 중인 일정")+metric("재접촉 후보",dormant,"90일 이상 공백 후보")+'</div>';
+
+ const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",state.sellers.length.toLocaleString("ko-KR"),"등록된 셀러")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("재접촉 후보",dormant,"거래 공백 90일 이상")+'</div>';
  const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록 ↗</button></td></tr>');
  const monthly=monthlyBuys();
- const monthlyPanel=wrap("월별 공구 현황",monthPicker()+'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><button class="panel-link" data-nav="schedule">전체 월별 대장 →</button></div>'+table(["셀러","상품","시작일","종료일","진행 상태"],monthlyRows(monthly.slice(0,7))));
- const actionPanel=wrap("오늘의 우선 업무",'<p class="panel-description">연락 처리 기록이 필요한 재공구 대상입니다. 완료 기록 전까지 유지됩니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 알림 보기 →</button>');
+ const monthlyPanel=wrap("월별 공구 현황",monthPicker()+'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><button class="panel-link" data-nav="schedule">전체 보기</button></div>'+table(["셀러","상품","시작일","종료일","진행 상태"],monthlyRows(monthly.slice(0,7))));
+ const actionPanel=wrap("오늘 할 일",'<p class="panel-description">연락 처리 기록이 필요한 재공구 대상입니다. 완료 기록 전까지 유지됩니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
  const scheduleRows=[...running,...upcoming].slice(0,6).map(b=>'<tr><td><strong>'+h(b.sellerName)+'</strong></td><td>'+h(b.product)+'</td><td>'+h(b.startDate.slice(5))+' ~ '+h(b.endDate.slice(5))+'</td><td><span class="status '+(b.startDate<=today?"good":"")+'">'+(b.startDate<=today?"진행 중":"예정")+'</span></td></tr>');
- const schedule=wrap("공구 진행 및 예정 일정",table(["셀러","상품","일정","상태"],scheduleRows),'<button data-nav="schedule" class="panel-link">전체 일정 →</button>');
+ const schedule=wrap("예정 공구",table(["셀러","상품","일정","상태"],scheduleRows),'<button data-nav="schedule" class="panel-link">전체 보기</button>');
  const high=opp.filter(x=>x.rank<=2).slice(0,5);
  const opportunityRows=high.map(x=>'<div class="opportunity-row"><div><strong>'+h(x.seller.name)+'</strong><small>최근 공구 '+h(x.last.product)+' · '+x.count+'회 진행</small></div><div class="opportunity-right"><span class="status '+(x.rank===0?"alert":"")+'">'+h(x.level)+'</span><small>'+x.gap+'일 공백</small></div></div>').join("");
- const opportunities=wrap("재접촉 · 영업 기회",'<p class="panel-description">과거 진행 이력과 공구 공백을 기반으로 분류한 후보입니다.</p>'+(opportunityRows||'<div class="empty">해당되는 후보가 없습니다.</div>')+'<p class="panel-note">※ 제안·협의 데이터 연동 전의 참고 분류입니다.</p>','<button data-nav="opportunities" class="panel-link">전체 후보 →</button>');
+ const opportunities=wrap("재접촉 대상",'<p class="panel-description">과거 진행 이력과 공구 공백을 기반으로 분류한 후보입니다.</p>'+(opportunityRows||'<div class="empty">해당되는 후보가 없습니다.</div>')+'<p class="panel-note">※ 현재 거래 이력을 기준으로 분류했습니다.</p>','<button data-nav="opportunities" class="panel-link">전체 보기</button>');
  const recent=state.activities.slice(0,5).map(a=>'<div class="activity-row"><span class="activity-dot"></span><div><strong>'+h(a.sellerName)+'</strong><p>'+h(a.type)+' · '+h(a.memo)+'</p></div><small>'+h(dt(a.createdAt))+'</small></div>').join("");
- const activity=wrap("최근 팀 활동",recent||'<div class="empty">아직 기록된 활동이 없습니다.</div>','<button data-nav="activity" class="panel-link">전체 기록 →</button>');
+ const activity=wrap("최근 팀 활동",recent||'<div class="empty">아직 기록된 활동이 없습니다.</div>','<button data-nav="activity" class="panel-link">전체 보기</button>');
  const productCounts={};state.buys.filter(b=>b.status!=="취소").forEach(b=>{productCounts[b.product]=(productCounts[b.product]||0)+1;});
  const topProducts=Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).slice(0,5),max=Math.max(1,...topProducts.map(x=>x[1]));
- const products=wrap("상품별 공구 진행 이력",'<p class="panel-description">기록된 공구 건수 기준 · 매출 성과 아님</p>'+(topProducts.map(([name,count])=>'<div class="product-bar-row"><div><span>'+h(name)+'</span><strong>'+count+'건</strong></div><div class="product-track"><span style="width:'+(count/max*100)+'%"></span></div></div>').join("")||'<div class="empty">상품 이력이 없습니다.</div>'),'<button data-nav="products" class="panel-link">상품 인사이트 →</button>');
- const distribution=[["최근 활성",active],["재접촉 후보",dormant],["공구 예정 / 최근 연락",opp.filter(x=>["공구 예정","최근 연락"].includes(x.level)).length],["과거 공구 없음",Math.max(0,state.sellers.length-opp.length)]];
- const distributionUI=wrap("셀러 관계 현황",'<div class="distribution-chart"><div class="donut" style="--p:'+(state.sellers.length?(active/state.sellers.length*100):0)+'%"><div><strong>'+state.sellers.length+'</strong><small>전체 셀러</small></div></div><div class="distribution-legend">'+distribution.map((x,i)=>'<div><span class="legend-dot legend-'+i+'"></span><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join("")+'</div></div><p class="panel-note">※ 등록된 데이터 기준의 참고 집계입니다.</p>');
- const quick='<div class="dashboard-actions"><div><strong>Quick Actions</strong><span>주요 업무를 빠르게 등록하세요.</span></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
- return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+hero+quick+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+opportunities+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
+ const products=wrap("상품별 공구 진행 이력",'<p class="panel-description">공구 진행 횟수 기준</p>'+(topProducts.map(([name,count])=>'<div class="product-bar-row"><div><span>'+h(name)+'</span><strong>'+count+'건</strong></div><div class="product-track"><span style="width:'+(count/max*100)+'%"></span></div></div>').join("")||'<div class="empty">상품 이력이 없습니다.</div>'),'<button data-nav="products" class="panel-link">상품 보기</button>');
+ const distribution=[["최근 활성",active],["재접촉 후보",dormant],["공구 예정 및 최근 연락",opp.filter(x=>["공구 예정","최근 연락"].includes(x.level)).length],["과거 공구 없음",Math.max(0,state.sellers.length-opp.length)]];
+ const distributionUI=wrap("셀러 현황",'<div class="distribution-chart"><div class="donut" style="--p:'+(state.sellers.length?(active/state.sellers.length*100):0)+'%"><div><strong>'+state.sellers.length+'</strong><small>전체 셀러</small></div></div><div class="distribution-legend">'+distribution.map((x,i)=>'<div><span class="legend-dot legend-'+i+'"></span><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join("")+'</div></div><p class="panel-note">※ 등록된 데이터 기준의 참고 집계입니다.</p>');
+ const quick='<div class="dashboard-actions"><div><strong>빠른 등록</strong></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
+ return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+quick+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+opportunities+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
 }
 function productsPage(){
  const counts={};state.buys.filter(b=>b.status!=="취소").forEach(b=>{if(!counts[b.product])counts[b.product]={sellers:new Set(),count:0,last:""};counts[b.product].count++;counts[b.product].sellers.add(b.sellerId);if((b.endDate||"")>counts[b.product].last)counts[b.product].last=b.endDate;});
@@ -244,7 +244,7 @@ function productsPage(){
 }
 function opportunitiesPage(){
  const rows=opportunitiesData().map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong></td><td>'+h(x.last.product)+'</td><td>'+x.count+'회</td><td>'+h(x.last.endDate)+'</td><td>'+x.gap+'일</td><td><span class="status '+(x.rank<=1?"alert":"")+'">'+h(x.level)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
- return wrap("재접촉 · 영업 기회",'<p class="panel-description">90일 이상 공백, 180일 이상+3회 진행, 365일 장기 공백 등 기획서 초기 규칙 기반의 참고 분류입니다.</p>'+table(["셀러","최근 상품","공구 횟수","최근 종료","공백","분류","액션"],rows));
+ return wrap("재접촉 대상",'<p class="panel-description">90일 이상 공백, 180일 이상+3회 진행, 365일 장기 공백 등 기획서 초기 규칙 기반의 참고 분류입니다.</p>'+table(["셀러","최근 상품","공구 횟수","최근 종료","공백","분류","액션"],rows));
 }
 function proposalsPage(){
  return wrap("제안 파이프라인 · 준비 중",'<div class="pipeline-preview">'+["제안 준비","제안 완료","답변 대기","협의 중","일정 확정"].map((v,i)=>'<div><span class="pipeline-step">'+(i+1)+'</span><strong>'+v+'</strong><small>데이터 연동 예정</small></div>').join("")+'</div><p class="panel-note">현재 제안 DB는 아직 연결되지 않았습니다. 건수와 성과를 임의로 표시하지 않습니다.</p>');
@@ -279,10 +279,10 @@ function importerPage(){
 }
 function render(){
  if(!state.user)return;
- const views={dashboard:["메인 대시보드","WORKSPACE OVERVIEW","셀러 중심의 S2H 통합 영업 현황",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],opportunities:["영업 기회","OPPORTUNITIES","재접촉 및 휴면 셀러 후보",opportunitiesPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["데이터 이전","DATA MIGRATION","초기 엑셀 데이터를 Firebase로 가져오기",importerPage]};
+ const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],opportunities:["영업 기회","OPPORTUNITIES","재접촉 및 휴면 셀러 후보",opportunitiesPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["데이터 이전","DATA MIGRATION","초기 엑셀 데이터를 Firebase로 가져오기",importerPage]};
  const [title,kicker,caption,view]=views[state.page];
- $("#page-title").textContent=title;$("#section-kicker").textContent=kicker;$("#page-caption").textContent=caption;
- $("#breadcrumb").textContent="Workspace / "+title;$("#today").textContent=todayLocal();
+ $("#page-title").textContent=title;
+ $("#today").textContent=todayLocal();
  $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"셀러 보기":state.page==="products"||state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
  $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="products"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
