@@ -55,7 +55,21 @@ function clearListeners(){state.unsubs.forEach(fn=>fn());state.unsubs=[];state.s
 $("#login-form").addEventListener("submit",async e=>{
   e.preventDefault();$("#login-error").textContent="";
   try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}
-  catch(err){$("#login-error").textContent="로그인 실패: 이메일 또는 비밀번호를 확인해주세요.";}
+  catch(err){
+    const messages={
+      "auth/invalid-credential":"이메일 또는 비밀번호가 일치하지 않습니다. Authentication에 등록한 계정인지 확인해주세요.",
+      "auth/user-not-found":"Authentication에 등록된 사용자가 아닙니다.",
+      "auth/wrong-password":"비밀번호가 일치하지 않습니다.",
+      "auth/invalid-email":"이메일 주소 형식이 올바르지 않습니다.",
+      "auth/operation-not-allowed":"Firebase Authentication에서 이메일/비밀번호 로그인을 활성화해주세요.",
+      "auth/unauthorized-domain":"Firebase Authentication 승인된 도메인에 jyhome1228-cyber.github.io를 추가해주세요.",
+      "auth/too-many-requests":"로그인 시도가 많아 일시적으로 제한되었습니다. 잠시 뒤 다시 시도해주세요.",
+      "auth/network-request-failed":"네트워크 연결에 실패했습니다. 인터넷 연결과 브라우저 설정을 확인해주세요.",
+      "auth/user-disabled":"비활성화된 계정입니다. 관리자에게 문의해주세요."
+    };
+    $("#login-error").textContent=(messages[err.code]||"로그인 오류가 발생했습니다.")+" ("+(err.code||"unknown")+")";
+    console.error("S2H sign-in error code:",err.code);
+  }
 });
 $("#logout").onclick=()=>{if(state.demo){location.reload();return;}signOut(auth);};
 $("#preview-button").onclick=()=>enterPreview();
