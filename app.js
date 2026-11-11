@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null, expandedReminderId:null, reminderCopied:{} };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -433,10 +433,67 @@ function schedulePage(){
  const content=state.scheduleView==="calendar"?monthGrid(list):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
  return wrap("월별 공구 대장",monthPicker()+toolbar+content);
 }
+function reminderTemplates(seller,buy){
+ const name=(seller?.name||"셀러").trim();
+ const product=(buy?.product||buy?.productName||"이전 상품").trim();
+ return [
+  {title:"재공구 제안",message:"안녕하세요, "+name+"님. 지난번 "+product+" 공구 관련해서 연락드립니다. 재진행 일정 검토가 가능하실지 여쭤보고 싶습니다. 편하실 때 의견 부탁드립니다."},
+  {title:"새 상품 제안",message:"안녕하세요, "+name+"님. 이전 공구 진행 이력을 참고해 새로운 상품을 제안드리고 싶어 연락드렸습니다. 관심 있으신 상품군이나 희망하시는 일정이 있다면 알려주세요. 그에 맞춰 자료 준비하겠습니다."},
+  {title:"안부 및 일정 확인",message:"안녕하세요, "+name+"님. 잘 지내셨나요? 다음 공동구매 계획이나 검토 중인 일정이 있으실지 여쭤보려고 연락드렸습니다. 편하실 때 회신 주시면 맞춰서 제안드리겠습니다."}
+ ];
+}
+function reminderCompleteModal(sellerId){
+ if(state.demo){notify("미리보기에서는 기록을 저장할 수 없습니다.");return;}
+ const reminder=reminders().find(x=>x.seller.id===sellerId);
+ if(!reminder){notify("해당 리마인드가 이미 처리되었거나 대상이 아닙니다.");return;}
+ const picked=state.reminderCopied[sellerId];
+ const textInfo=picked===undefined?"":("복사한 문구: "+reminderTemplates(reminder.seller,reminder.buy)[picked]?.title);
+ openModal("리마인드 완료 기록",
+  '<div class="full reminder-complete-intro"><strong>'+h(reminder.seller.name)+'</strong><span>'+h(reminder.buy.product||"-")+' · 연락 예정일 '+h(reminder.due)+'</span></div>'
+  +select("channel","연락 방법",[["카카오톡","카카오톡"],["DM","인스타그램 DM"],["전화","전화"],["이메일","이메일"],["기타","기타"]],"카카오톡")
+  +f("nextFollowUpAt","다음 연락일 (선택)","date","",false)
+  +textarea("memo","연락 내용 및 결과",textInfo)
+  +'<label class="full reminder-ack"><input id="reminder-confirmed" name="confirmed" type="checkbox" value="yes" required/> <span>셀러에게 실제 연락한 후 완료를 기록합니다.</span></label>',
+  async data=>{
+   if(data.confirmed!=="yes")throw new Error("실제 연락 후 완료 여부를 확인해주세요.");
+   const memo=data.memo?.trim();
+   if(!memo)throw new Error("연락 내용이나 결과를 입력해주세요.");
+   // Re-check the pending reminder before recording; do not dismiss by merely viewing or copying.
+   const current=reminders().find(x=>x.seller.id===sellerId);
+   if(!current)throw new Error("다른 직원이 먼저 처리한 알림입니다. 목록을 새로 확인해주세요.");
+   await addDoc(collection(db,"activities"),{
+    sellerId:reminder.seller.id,
+    sellerName:reminder.seller.name,
+    type:"리마인드 완료",
+    channel:data.channel,
+    memo,
+    completedReminderDue:reminder.due,
+    completedGroupbuyId:reminder.buy.id||null,
+    nextFollowUpAt:data.nextFollowUpAt||null,
+    copiedTemplate:picked===undefined?null:reminderTemplates(reminder.seller,reminder.buy)[picked]?.title,
+    actorUid:state.user.uid,
+    actorName:state.staff?.name||state.user.email,
+    createdAt:serverTimestamp()
+   });
+   delete state.reminderCopied[sellerId];
+   state.expandedReminderId=null;
+  });
+ const submit=$("#modal-form button[type=submit]");
+ if(submit)submit.textContent="연락 완료 저장";
+}
 function reminderPage(){
  const data=reminders();
- const cards=data.map(x=>'<div class="reminder-item"><div class="row"><div><strong>'+h(x.seller.name)+'</strong> <span class="status alert">연락 필요</span><p>최근 공구: '+h(x.buy.product)+' · 종료 '+h(x.buy.endDate)+' · 연락 기준 '+h(x.due)+' · '+x.overdue+'일 경과</p></div><div class="actions"><button class="mini-button" data-act="copy" data-id="'+h(x.seller.id)+'">문구 복사</button><button class="primary" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></div></div></div>').join("");
- return wrap("미처리 알림 · "+data.length,'<p class="detail-note">알림은 임의로 닫을 수 없습니다. 실제 연락 후 활동 내용을 저장하면 해당 셀러의 다음 연락 시점이 갱신됩니다.</p>'+(cards||'<div class="empty">현재 연락이 필요한 셀러가 없습니다.</div>'));
+ const cards=data.map(x=>{
+  const expanded=state.expandedReminderId===x.seller.id;
+  const list=reminderTemplates(x.seller,x.buy);
+  const templates=expanded?'<div class="reminder-templates">'+list.map((t,index)=>
+    '<div class="reminder-template"><div><strong>'+h(t.title)+'</strong><p>'+h(t.message)+'</p></div><button class="mini-button" type="button" data-act="copy-template" data-template="'+index+'" data-id="'+h(x.seller.id)+'">복사</button></div>'
+   ).join("")+'</div>':"";
+  return '<div class="reminder-item"><div class="row"><div><strong>'+h(x.seller.name)+'</strong> <span class="status alert">연락 필요</span><p>최근 공구: '+h(x.buy.product||"-")+' · 종료 '+h(x.buy.endDate||"-")+' · 연락 예정 '+h(x.due)+' · '+x.overdue+'일 경과</p></div><div class="actions"><button class="mini-button" type="button" data-act="templates" data-id="'+h(x.seller.id)+'">'+(expanded?"문구 접기":"제안 문구 3종")+'</button><button class="primary" type="button" data-act="complete-reminder" data-id="'+h(x.seller.id)+'">연락 완료</button></div></div>'+templates+'</div>';
+ }).join("");
+ return wrap("미처리 알림 · "+data.length,
+  '<p class="detail-note">문구를 복사해 카카오톡이나 DM으로 직접 전달한 뒤, 연락 방법과 내용을 기록하면 완료 처리됩니다. 미처리 알림은 계속 표시됩니다.</p>'
+  +(cards||'<div class="empty">현재 연락이 필요한 셀러가 없습니다.</div>'));
 }
 function activityPage(){
  const rows=state.activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.actorName)+'</td></tr>');
@@ -472,11 +529,18 @@ function render(){
  if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
  if(action==="edit-buy")buyModal(state.buys.find(x=>x.id===id));
  if(action==="contact")activityModal(id);
- if(action==="copy"){
-  const seller=state.sellers.find(s=>s.id===id);
-  const buy=latestBuy(id);
-  const msg='대표님 안녕하세요 :) 지난번 '+(buy?.product||"공구")+' 진행 이후 연락드립니다. 새로운 공구 진행을 제안드리고 싶어 연락드렸습니다. 편하실 때 검토 부탁드립니다!';
-  navigator.clipboard?.writeText(msg).then(()=>notify("문구를 복사했습니다.")).catch(()=>notify("클립보드 복사가 허용되지 않았습니다."));
+ if(action==="templates"){state.expandedReminderId=state.expandedReminderId===id?null:id;render();}
+ if(action==="complete-reminder")reminderCompleteModal(id);
+ if(action==="copy-template"){
+  const reminder=reminders().find(x=>x.seller.id===id);
+  const index=Number(el.dataset.template);
+  const template=reminder&&reminderTemplates(reminder.seller,reminder.buy)[index];
+  if(!template)return notify("복사할 문구를 찾을 수 없습니다.");
+  if(!navigator.clipboard?.writeText)return notify("브라우저에서 클립보드 복사를 사용할 수 없습니다.");
+  navigator.clipboard.writeText(template.message).then(()=>{
+    state.reminderCopied[id]=index;
+    notify(template.title+" 문구를 복사했습니다. 실제 전송 후 연락 완료를 기록해주세요.");
+  }).catch(()=>notify("문구 복사에 실패했습니다."));
  }
  }));
 }
