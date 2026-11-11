@@ -1,4 +1,5 @@
 import { firebaseConfig, firebaseConfigured } from "./firebase-config.js";
+import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js";
 import { mountSeedImporter } from "./import-seed-ui.js";
 import { mountBackupExport } from "./backup-export.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -533,10 +534,11 @@ function productsPage(){
   controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows));
 }
 function productInsightSellers(productName){
- const records=state.buys.filter(b=>b.status!=="취소"&&String(b.product||b.productName||"").trim()===productName);
+ const records=state.buys.filter(b=>b.status!=="취소"&&productCanonicalName(b.product||b.productName,state.products)===productName);
  const grouped=new Map();
  for(const b of records){
-  const key=b.sellerId||("name:"+String(b.sellerName||"미확인"));
+  const seller=state.sellers.find(x=>x.id===b.sellerId);
+  const key=sellerIdentity(seller,b);
   if(!grouped.has(key))grouped.set(key,{sellerId:b.sellerId||null,name:b.sellerName||"미확인",count:0,last:"",history:[]});
   const row=grouped.get(key);row.count++;row.history.push(b);
   if((b.endDate||"")>row.last)row.last=b.endDate;
@@ -547,7 +549,8 @@ function productInsightSellers(productName){
 }
 function showProductInsightSellers(productName){
  const detail=productInsightSellers(productName);
- const fields='<div class="full insight-summary"><span>상품명</span><strong>'+h(productName)+'</strong><p>진행 셀러 '+detail.count+'명 · 공구 이력 '+detail.records+'건</p></div><div class="full insight-seller-table">'+detail.table+'</div><p class="full panel-note">셀러명을 클릭하면 해당 셀러의 전체 공구 이력을 확인할 수 있습니다.</p>';
+ const aliases=productDisplayAliases(productName,state.products,state.buys);
+ const fields='<div class="full insight-summary"><span>상품명</span><strong>'+h(productName)+'</strong><p>진행 셀러 '+detail.count+'명 · 공구 이력 '+detail.records+'건</p>'+(aliases.length?'<p>통합 표기: '+h(aliases.join(" · "))+"</p>":"") +'</div><div class="full insight-seller-table">'+detail.table+'</div><p class="full panel-note">셀러명을 클릭하면 해당 셀러의 전체 공구 이력을 확인할 수 있습니다.</p>';
  openModal("상품 진행 셀러",fields,async()=>{});
  const form=$("#modal-form"),save=form.querySelector('[type="submit"]');
  if(save)save.classList.add("hidden");
@@ -561,12 +564,13 @@ function showProductInsightSellers(productName){
 function productInsightsPage(){
  const productsByName=new Map();
  for(const b of state.buys.filter(x=>x.status!=="취소")){
-  const label=String(b.product||b.productName||"").trim();
+  const label=productCanonicalName(b.product||b.productName,state.products);
   if(!label)continue;
   if(!productsByName.has(label))productsByName.set(label,{name:label,count:0,sellers:new Set(),last:"",months:new Set()});
   const row=productsByName.get(label);
   row.count++;
-  if(b.sellerId)row.sellers.add(b.sellerId);
+  const seller=state.sellers.find(x=>x.id===b.sellerId);
+  row.sellers.add(sellerIdentity(seller,b));
   if((b.endDate||"")>row.last)row.last=b.endDate;
   if(b.startDate)row.months.add(b.startDate.slice(0,7));
  }
@@ -578,15 +582,15 @@ function productInsightsPage(){
  }
  const monthlyRows=[...monthly.entries()].sort((a,b)=>b[0].localeCompare(a[0])).slice(0,12);
  const ranking=table(["상품명","공구 횟수","진행 셀러","최근 종료"],top.map(p=>
-  '<tr><td><button type="button" class="insight-product-link" data-insight-product="'+h(p.name)+'">'+h(p.name)+'</button></td><td>'+p.count+'건</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(p.name)+'">'+p.sellers.size+'명 보기</button></td><td>'+h(p.last||"-")+'</td></tr>'));
+  '<tr><td><button type="button" class="insight-product-link" data-insight-product="'+h(p.name)+'">'+h(p.name)+'</button>'+(productDisplayAliases(p.name,state.products,state.buys).length?'<small class="insight-alias-count">기존 표기 '+productDisplayAliases(p.name,state.products,state.buys).length+'종 통합</small>':'')+'</td><td>'+p.count+'건</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(p.name)+'">'+p.sellers.size+'명 보기</button></td><td>'+h(p.last||"-")+'</td></tr>'));
  const trend=table(["월","공구 건수"],monthlyRows.map(([month,count])=>
   '<tr><td>'+h(month)+'</td><td>'+count+'건</td></tr>'));
  return '<div class="metrics">'+metric("진행 상품",all.length,"공구 이력이 있는 상품")+
   metric("전체 공구 이력",all.reduce((n,p)=>n+p.count,0),"취소 제외 기록")+
-  metric("진행 셀러",new Set(state.buys.filter(b=>b.status!=="취소").map(b=>b.sellerId).filter(Boolean)).size,"중복 제외")+
+  metric("진행 셀러",new Set(state.buys.filter(b=>b.status!=="취소").map(b=>sellerIdentity(state.sellers.find(x=>x.id===b.sellerId),b))).size,"중복 제외")+
   metric("최근 12개월",state.buys.filter(b=>b.status!=="취소"&&b.startDate>=datePlus(todayLocal(),-365)&&b.startDate<=todayLocal()).length,"시작일 기준")+'</div>'+
   '<div class="layout-two">'+wrap("상품별 공구 현황",ranking)+wrap("월별 공구 추이",trend)+'</div>'+
-  '<p class="panel-note">공구 이력 기준 집계이며 매출 실적이 아닙니다. 상품명 표준화 전에는 유사한 이름이 별도 집계될 수 있습니다.</p>';
+  '<p class="panel-note">공구 이력 기준 집계이며 매출 실적이 아닙니다. 확인된 상품 별칭만 통합합니다. 확인되지 않은 표기는 별도 집계됩니다.</p>';
 }
 function opportunitiesPage(){
  const rows=opportunitiesData().map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong></td><td>'+h(x.last.product)+'</td><td>'+x.count+'회</td><td>'+h(x.last.endDate)+'</td><td>'+x.gap+'일</td><td><span class="status '+(x.rank<=1?"alert":"")+'">'+h(x.level)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
