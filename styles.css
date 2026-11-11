@@ -125,3 +125,19 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .import-status{color:#45748a}.import-error{color:#d65c53!important}
 #seed-progress{height:9px;width:100%;accent-color:#0089b3}
 @media(max-width:720px){.import-guide{grid-template-columns:1fr}}
+
+/* Concise S2H business UI */
+.topbar{justify-content:flex-end;min-height:58px;height:58px}
+.content{padding-top:32px}
+.heading{margin-bottom:24px}
+.heading h1{font-size:28px;letter-spacing:-.8px;margin:0;font-weight:700}
+.heading .eyebrow,.heading p{display:none}
+.dashboard-heading{display:none}
+.dashboard-actions{padding:14px 20px;margin-bottom:18px}
+.dashboard-actions strong{font-size:13px}
+.dashboard-actions>div:first-child>span{display:none}
+.month-title .eyebrow{display:none}
+.month-title strong{font-size:15px}
+.nav{gap:3px}.nav-link{font-size:13px}
+.brand-logo{margin-bottom:28px}
+@media(max-width:720px){.content{padding-top:22px}.heading h1{font-size:24px}}
