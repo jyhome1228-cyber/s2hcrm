@@ -225,3 +225,27 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .cal-event-start{border-left-color:#0089b3;background:#e1f3f9}
 .cal-more{border:0;background:transparent;padding:5px 0;color:#0089b3;font-size:10px;text-align:left;cursor:pointer}
 @media(max-width:720px){.home-calendar-sub{gap:8px}.home-calendar-sub .panel-link{margin-left:0}.cal-cell{min-height:110px}}
+
+/* Continuous groupbuy calendar — one event spans its start/end dates */
+.cal-scroll{width:100%;overflow-x:auto;border:1px solid #dfe9ee;border-radius:10px;background:#fff}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:840px;background:#f5f8fa}
+.cal-weekdays .cal-week{border:0;border-bottom:1px solid #dfe9ee;padding:13px 5px;text-align:center;font-size:11px;color:#7d8e9a}
+.cal-weeks{min-width:840px}
+.cal-week-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:38px repeat(var(--cal-visible-rows),28px) 27px;position:relative;min-height:var(--cal-row-height);background:#fff;border-bottom:1px solid #e4ecf0}
+.cal-week-row:last-child{border-bottom:0}
+.cal-bg-day{z-index:0;min-width:0;border-right:1px solid #eaf0f3;padding:0 7px;background:#fff}
+.cal-bg-day:nth-child(7){border-right:0}
+.cal-bg-day.cal-outside{background:#f8fafb}
+.cal-bg-day.cal-today{background:#eaf6fb}
+.cal-date-head{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 3px}
+.cal-date-head b{font-size:12px;color:#425a69}
+.cal-today .cal-date-head b{display:grid;place-items:center;width:23px;height:23px;background:#0089b3;border-radius:50%;color:#fff}
+.cal-date-head small{font-size:10px;color:#9cacb6}
+.cal-range{z-index:1;min-width:0;height:23px;align-self:center;position:relative;border:0;border-left:3px solid #0089b3;border-radius:4px;background:#d9f0f8;padding:3px 9px;color:#176585;text-align:left;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;margin:0 3px;box-shadow:0 1px 2px #1f597015}
+.cal-range:hover{background:#bee5f2;z-index:2}
+.cal-range-continue{border-left:0;border-radius:0 4px 4px 0;background:#e1f2f8}
+.cal-range-end{border-top-right-radius:5px;border-bottom-right-radius:5px}
+.cal-range-start{border-top-left-radius:5px;border-bottom-left-radius:5px}
+.cal-expand{z-index:2;justify-self:start;align-self:center;margin-left:10px;padding:4px 7px;border:0;background:transparent;color:#0089b3;text-align:left;font-size:11px;font-weight:700;cursor:pointer}
+.cal-expand:hover{text-decoration:underline}
+@media(max-width:850px){.cal-weekdays,.cal-weeks{min-width:840px}}
