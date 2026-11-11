@@ -263,3 +263,23 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 #backup-export-status{margin-top:12px;font-size:11px}
 .backup-import-separator{border-top:1px solid #e5ebef;padding:22px 0 8px}
 @media(max-width:720px){.cal-display-controls{align-items:flex-start}.backup-export-panel .import-buttons{flex-wrap:wrap}}
+
+/* Single-field autocomplete with matching suggestions and inline new records */
+.combo-wrap{position:relative;min-width:0;margin:5px 0 9px}
+.combo-wrap>label{display:block;font-size:12px;color:#536d7d;margin:0 0 7px}
+.combo-wrap>input[type=text]{width:100%;margin:0;height:45px;background:#fff;border:1px solid #d9e3e9;border-radius:8px;padding:12px 14px;color:#1c3441;font-size:13px;outline:none}
+.combo-wrap>input[type=text]:focus{border-color:#0089b3;box-shadow:0 0 0 3px #0089b313}
+.combo-options{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:90;background:white;border:1px solid #d7e5eb;border-radius:9px;box-shadow:0 12px 30px #233e4c22;max-height:255px;overflow-y:auto;padding:5px}
+.combo-option,.combo-create{display:block;width:100%;border:0;text-align:left;background:#fff;color:#344f5d;padding:11px 13px;font-size:12px;border-radius:5px;cursor:pointer}
+.combo-option:hover,.combo-option:focus{background:#eaf6fa;color:#007da3}
+.combo-empty{margin:0;padding:13px;color:#8a9ba5;font-size:12px}
+.combo-create{color:#0089b3;font-weight:750;border-top:1px solid #ebf0f3;border-radius:0;margin-top:4px;padding-top:13px}
+.combo-create:hover{background:#e9f6fa}
+.inline-create{background:#f6fafb;border:1px solid #dceaf0;border-radius:10px;padding:17px;margin:0 0 9px}
+.inline-create>strong{font-size:13px;color:#325a6b}
+.inline-create-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px}
+.inline-create label{display:block;color:#667d89;font-size:11px;margin:12px 0 0}
+.inline-create input{display:block;width:100%;height:40px;padding:10px;margin-top:7px;border:1px solid #d9e5eb;border-radius:6px;background:#fff;color:#2a414d}
+.inline-create-buttons{display:flex;gap:7px;justify-content:flex-end;margin-top:13px}
+.inline-create-buttons button{font-size:12px;padding:9px 13px}
+@media(max-width:540px){.inline-create-grid{grid-template-columns:1fr}}
