@@ -154,20 +154,18 @@ function latestActivity(sellerId){
  return state.activities.filter(a=>a.sellerId===sellerId).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
 }
 function reminders(){
- const today=todayLocal();
+ const today=todayLocal(), yearStart=today.slice(0,4)+"-01-01";
  return state.sellers.map(s=>{
-   const b=latestBuy(s.id), a=latestActivity(s.id);
-   const manual=a?.nextFollowUpAt||s.nextFollowUpAt;
-   const isImported=b?.source==="excel-2026-11-11";
-   // 과거 엑셀 이력을 업로드했다고 수백 건의 알림을 소급 생성하지 않는다.
-   if(!manual&&(!b||isImported))return null;
-   const activityDate=a?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
-   const completedAfterBuy=activityDate&&b&&activityDate>b.endDate;
-   // 후속 연락을 마쳤고 다음 연락일을 지정하지 않았다면 알림 종료.
-   if(!manual&&completedAfterBuy)return null;
-   const due=manual||(b?datePlus(b.endDate,s.cycleDays||30):null);
-   if(!due||due>today)return null;
-   return {seller:s,buy:b||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
+  const b=latestBuy(s.id),a=latestActivity(s.id);
+  const manual=a?.nextFollowUpAt||s.nextFollowUpAt;
+  const activityDate=a?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
+  const completedAfterBuy=activityDate&&b&&activityDate>b.endDate;
+  if(!manual&&(!b||b.endDate<yearStart))return null;
+  if(!manual&&completedAfterBuy)return null;
+  const due=manual||(b?datePlus(b.endDate,s.cycleDays||30):null);
+  if(!due||due>today)return null;
+  if(!manual&&daysBetween(due,today)>30)return null;
+  return {seller:s,buy:b||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
  }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue);
 }
 function metric(title,value,description){return '<div class="metric"><div class="label">'+title+'</div><div class="number">'+value+'</div><div class="sub">'+description+'</div></div>';}
@@ -176,10 +174,10 @@ function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'
 
 
 function shownMonth(){return state.selectedMonth||todayLocal().slice(0,7);}
-function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);state.selectedMonth=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);render();}
+function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);const next=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);if(next<todayLocal().slice(0,4)+"-01")return;state.selectedMonth=next;render();}
 function monthlyBuys(){const m=shownMonth();return state.buys.filter(b=>b.startDate&&b.endDate&&b.startDate.slice(0,7)<=m&&b.endDate.slice(0,7)>=m).sort((a,b)=>a.startDate.localeCompare(b.startDate));}
 function monthPicker(){
- return '<div class="month-controls"><div class="month-title"><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="2024-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
+ return '<div class="month-controls"><div class="month-title"><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="'+todayLocal().slice(0,4)+'-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
 }
 function scheduleStatus(b){
  if(b.status==="취소")return "취소";
@@ -226,12 +224,13 @@ function enterPreview(){
  render();
 }
 function opportunitiesData(){
- const today=todayLocal();
+ const today=todayLocal(),yearStart=today.slice(0,4)+'-01-01';
  return state.sellers.map(s=>{
   const buys=state.buys.filter(b=>b.sellerId===s.id&&b.status!=="취소"&&b.endDate&&b.endDate<=today);
   if(!buys.length)return null;
   const last=[...buys].sort((a,b)=>b.endDate.localeCompare(a.endDate))[0];
   const gap=daysBetween(last.endDate,today);
+  if(last.endDate<yearStart)return null;
   const hasUpcoming=state.buys.some(b=>b.sellerId===s.id&&b.status!=="취소"&&b.endDate>=today);
   const recent=latestActivity(s.id);
   const recentDate=recent?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
