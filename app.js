@@ -468,11 +468,57 @@ function dashboard(){
 function masterProductName(product){
  return String(product.standardName||product.productName||product.name||"").trim();
 }
+// Build the product summary once for each Firestore snapshot, not once per row or search keystroke.
+let productIndexCache=null;
+function productIndex(){
+ if(productIndexCache&&productIndexCache.products===state.products&&
+    productIndexCache.buys===state.buys&&productIndexCache.sellers===state.sellers)
+    return productIndexCache;
+ const canonicalCache=new Map();
+ const canonical=value=>{
+   const raw=String(value??"").trim();
+   if(!canonicalCache.has(raw))canonicalCache.set(raw,productCanonicalName(raw,state.products));
+   return canonicalCache.get(raw);
+ };
+ const groups=new Map(),stats=new Map(),sellerById=new Map(state.sellers.map(x=>[x.id,x]));
+ const getStats=name=>{
+   if(!stats.has(name))stats.set(name,{count:0,sellers:new Set(),last:"-",aliases:new Set()});
+   return stats.get(name);
+ };
+ for(const product of state.products){
+  const original=masterProductName(product),name=canonical(original);
+  if(!name)continue;
+  if(!groups.has(name))groups.set(name,{name,members:[],aliases:new Set()});
+  const g=groups.get(name);
+  g.members.push(product);
+  if(original!==name)g.aliases.add(original);
+  for(const alias of product.aliases||[]){
+    const label=String(alias||"").trim();
+    if(label&&label!==name)g.aliases.add(label);
+  }
+ }
+ for(const b of state.buys){
+  const raw=String(b.product||b.productName||"").trim(),name=canonical(raw);
+  if(!name)continue;
+  if(groups.has(name)&&raw!==name)groups.get(name).aliases.add(raw);
+  if(b.status==="취소")continue;
+  const stat=getStats(name);
+  stat.count++;
+  if(b.sellerId)stat.sellers.add(sellerIdentity(sellerById.get(b.sellerId),b));
+  if(b.endDate&&b.endDate>stat.last)stat.last=b.endDate;
+ }
+ const computed=[...groups.values()].map(g=>{
+  const primary=g.members.find(p=>masterProductName(p)===g.name)||g.members[0];
+  const active=g.members.some(p=>p.active!==false);
+  return {...g,primary,active,aliases:[...g.aliases].sort((a,b)=>a.localeCompare(b,"ko-KR"))};
+ });
+ productIndexCache={products:state.products,buys:state.buys,sellers:state.sellers,groups:computed,stats};
+ return productIndexCache;
+}
 function productStats(product){
  const name=productCanonicalName(masterProductName(product),state.products);
- const records=state.buys.filter(b=>productCanonicalName(b.product||b.productName,state.products)===name&&b.status!=="취소");
- return {count:records.length,sellers:new Set(records.map(b=>sellerIdentity(state.sellers.find(x=>x.id===b.sellerId),b))).size,
-  last:[...records].map(b=>b.endDate||"").sort().pop()||"-"};
+ const result=productIndex().stats.get(name);
+ return {count:result?.count||0,sellers:result?.sellers.size||0,last:result?.last||"-"};
 }
 function productModal(product=null){
  if(state.demo){notify("미리보기에서 상품을 저장할 수 없습니다.");return;}
@@ -515,18 +561,7 @@ function setProductActive(id,active){
  .catch(e=>notify("변경 실패: "+e.message));
 }
 function productMasterGroups(){
- const groups=new Map();
- for(const p of state.products){
-  const canonical=productCanonicalName(masterProductName(p),state.products);
-  if(!canonical)continue;
-  if(!groups.has(canonical))groups.set(canonical,{name:canonical,members:[]});
-  groups.get(canonical).members.push(p);
- }
- return [...groups.values()].map(g=>{
-  const primary=g.members.find(p=>masterProductName(p)===g.name)||g.members[0];
-  const active=g.members.some(p=>p.active!==false);
-  return {...g,primary,active,aliases:productDisplayAliases(g.name,state.products,state.buys)};
- });
+ return productIndex().groups;
 }
 function productGroupToggle(canonical,active){
  if(state.demo)return notify("미리보기에서는 변경할 수 없습니다.");
