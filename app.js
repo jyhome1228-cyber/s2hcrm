@@ -112,6 +112,7 @@ function buyModal(item=null){
  openModal(item?"공구 수정":"새 공구 등록",
   '<label class="full">셀러 검색<input id="seller-picker-search" type="search" placeholder="셀러명을 입력하면 목록이 좁혀집니다." autocomplete="off"/></label>'+select("sellerId","셀러",choices,sellerId)+f("product","상품명","text",item?.product||item?.productName,true)
   +f("startDate","시작일","date",defaultStart,true)+f("endDate","종료일","date",defaultEnd,true)
+  +select("status","진행 상태",[["예정","예정"],["진행중","진행중"],["완료","완료"],["취소","취소"]],item?.status==="기록"?"완료":item?.status||"예정")
   +f("followers","팔로워 수","number",item?.followers??"")
   +select("legacyCategory","마이크로 및 일반",categoryOptions,item?.legacyCategory||"")
   +f("paymentWindow","결제창","text",item?.paymentWindow||"")
@@ -130,11 +131,12 @@ function buyModal(item=null){
      followers:data.followers?Number(data.followers):null,legacyCategory:data.legacyCategory,
      paymentWindow:data.paymentWindow.trim(),settlementRequest:data.settlementRequest.trim(),
      instagramUrl:data.instagramUrl.trim(),round:data.round.trim(),
-     note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),
+     note:data.note.trim(),memo:data.note.trim(),event:data.event.trim(),status:data.status,
+     updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email,
      updatedAt:serverTimestamp()
    };
    if(item)await updateDoc(doc(db,"groupbuys",item.id),record);
-   else await addDoc(collection(db,"groupbuys"),{...record,status:"예정",source:"manual",createdAt:serverTimestamp()});
+   else await addDoc(collection(db,"groupbuys"),{...record,source:"manual",createdByUid:state.user.uid,createdByName:state.staff?.name||state.user.email,createdAt:serverTimestamp()});
   });
  const sellerSearch=$("#seller-picker-search");
  const sellerSelect=$("#modal-form select[name=sellerId]");
