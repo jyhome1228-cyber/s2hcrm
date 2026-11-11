@@ -6,7 +6,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -453,10 +453,81 @@ function dashboard(){
  const quick='<div class="dashboard-actions"><div><strong>빠른 등록</strong></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
  return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+mainCalendar+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
 }
+function masterProductName(product){
+ return String(product.standardName||product.productName||product.name||"").trim();
+}
+function productStats(product){
+ const name=masterProductName(product);
+ const records=state.buys.filter(b=>
+  b.productId===product.id ||
+  (!b.productId&&(b.product||b.productName||"").trim()===name));
+ return {count:records.length,sellers:new Set(records.map(b=>b.sellerId)).size,
+  last:[...records].map(b=>b.endDate||"").sort().pop()||"-"};
+}
+function productModal(product=null){
+ if(state.demo){notify("미리보기에서 상품을 저장할 수 없습니다.");return;}
+ const title=product?"상품 정보 수정":"새 상품 등록";
+ const fields=f("standardName","상품명","text",masterProductName(product),true,true)
+  +f("brand","브랜드","text",product?.brand||"")
+  +f("category","카테고리","text",product?.category||"")
+  +f("supplier","공급사","text",product?.supplier||"")
+  +f("productUrl","상품 링크","url",product?.productUrl||"",false,true)
+  +textarea("notes","상품 메모",product?.notes||"");
+ openModal(title,fields,async data=>{
+  const name=data.standardName.trim();
+  if(!name)throw Error("상품명을 입력해주세요.");
+  const dup=state.products.find(p=>p.id!==product?.id&&masterProductName(p).toLocaleLowerCase()===name.toLocaleLowerCase());
+  if(dup)throw Error("동일한 이름의 상품이 이미 등록되어 있습니다.");
+  const record={standardName:name,brand:data.brand.trim(),category:data.category.trim(),
+   supplier:data.supplier.trim(),productUrl:data.productUrl.trim(),notes:data.notes.trim(),
+   updatedAt:serverTimestamp(),updatedByUid:state.user.uid,
+   updatedByName:state.staff?.name||state.user.email};
+  if(product)await updateDoc(doc(db,"products",product.id),record);
+  else await addDoc(collection(db,"products"),{...record,source:"manual",active:true,
+    createdAt:serverTimestamp(),createdByUid:state.user.uid});
+ });
+}
+function setProductActive(id,active){
+ if(state.demo){notify("미리보기에서는 변경할 수 없습니다.");return;}
+ const product=state.products.find(p=>p.id===id);
+ if(!product)return notify("상품을 찾을 수 없습니다.");
+ const label=masterProductName(product);
+ const message=active?
+  "‘"+label+"’ 상품을 다시 목록에 표시할까요?":
+  "‘"+label+"’ 상품을 보관 처리할까요? 기존 공구 거래 이력은 그대로 유지됩니다.";
+ if(!confirm(message))return;
+ updateDoc(doc(db,"products",id),{
+  active,updatedAt:serverTimestamp(),updatedByUid:state.user.uid,
+  updatedByName:state.staff?.name||state.user.email
+ }).then(()=>notify(active?"상품이 복원되었습니다.":"상품이 보관되었습니다."))
+ .catch(e=>notify("변경 실패: "+e.message));
+}
 function productsPage(){
- const counts={};state.buys.filter(b=>b.status!=="취소").forEach(b=>{if(!counts[b.product])counts[b.product]={sellers:new Set(),count:0,last:""};counts[b.product].count++;counts[b.product].sellers.add(b.sellerId);if((b.endDate||"")>counts[b.product].last)counts[b.product].last=b.endDate;});
- const rows=Object.entries(counts).sort((a,b)=>b[1].count-a[1].count).map(([name,x])=>'<tr><td><strong>'+h(name)+'</strong></td><td>'+x.sellers.size+'명</td><td>'+x.count+'건</td><td>'+h(x.last)+'</td></tr>');
- return wrap("상품별 공구 이력 · "+rows.length, '<p class="panel-description">현재 공구 기록에서 집계합니다. 상품 마스터·표준명 매핑은 다음 개발 단계입니다.</p>'+table(["상품명","진행 셀러","공구 건수","최근 종료일"],rows));
+ const master=state.products;
+ const q=state.productSearch.trim().toLocaleLowerCase();
+ const filtered=master.filter(p=>{
+  const inactive=p.active===false;
+  if(state.productStatus==="active"&&inactive)return false;
+  if(state.productStatus==="archived"&&!inactive)return false;
+  const terms=[masterProductName(p),p.brand,p.category,p.supplier,...(p.aliases||[])].filter(Boolean).join(" ").toLocaleLowerCase();
+  return !q||terms.includes(q);
+ }).sort((a,b)=>masterProductName(a).localeCompare(masterProductName(b),"ko-KR",{numeric:true}));
+ const countActive=master.filter(p=>p.active!==false).length;
+ const countArchived=master.length-countActive;
+ const controls='<div class="product-toolbar"><input id="product-search" type="search" placeholder="상품명, 브랜드, 공급사 검색" value="'+h(state.productSearch)+'"/>'+
+  '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","보관 상품 ("+countArchived+")"],["all","전체 ("+master.length+")"]]
+  .map(([key,label])=>'<button type="button" data-product-status="'+key+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
+ const rows=filtered.map(p=>{
+  const stats=productStats(p),inactive=p.active===false;
+  return '<tr><td><strong>'+h(masterProductName(p))+'</strong>'+(inactive?'<span class="product-archive-label">보관</span>':'')+'</td>'+
+   '<td>'+h(p.brand||"-")+'</td><td>'+h(p.category||"-")+'</td><td>'+stats.sellers+'명</td>'+
+   '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
+   '<button class="mini-button" data-act="edit-product" data-id="'+h(p.id)+'">수정</button> '+
+   '<button class="mini-button" data-act="toggle-product" data-id="'+h(p.id)+'">'+(inactive?"복원":"보관")+'</button></td></tr>';
+ });
+ return wrap("상품 목록 · "+filtered.length+'건',
+  '<p class="panel-description">등록된 상품을 관리합니다. 보관 상품은 신규 공구 선택 목록에서 제외되며 과거 공구 이력은 유지됩니다.</p>'+
+  controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows));
 }
 function opportunitiesPage(){
  const rows=opportunitiesData().map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong></td><td>'+h(x.last.product)+'</td><td>'+x.count+'회</td><td>'+h(x.last.endDate)+'</td><td>'+x.gap+'일</td><td><span class="status '+(x.rank<=1?"alert":"")+'">'+h(x.level)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
@@ -572,12 +643,12 @@ function importerPage(){
 }
 function render(){
  if(!state.user)return;
- const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 인사이트","PRODUCT INTELLIGENCE","상품별 공구 이력 및 진행 셀러",productsPage],proposals:["제안 현황","PROPOSAL PIPELINE","상품 제안 진행 현황",proposalsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
+ const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·보관",productsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
- $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"셀러 보기":state.page==="sellerDetail"?"셀러 목록":state.page==="products"||state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
- $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="sellerDetail"||state.page==="products"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
+ $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"셀러 보기":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
+ $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="products"?()=>productModal():state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
  if(state.page==="import"&&!state.demo&&state.staff?.role==="admin"){mountSeedImporter(db);mountBackupExport(db);}
@@ -586,6 +657,13 @@ function render(){
  $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;render();}else{state.weekStart=null;changeMonth(Number(el.dataset.move));}}));
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("change",e=>{state.monthSearch=e.target.value;render();});
+ const productSearch=$("#product-search");if(productSearch)productSearch.addEventListener("input",e=>{
+  const pos=e.target.selectionStart;
+  state.productSearch=e.target.value;render();
+  const field=$("#product-search");if(field){field.focus();field.setSelectionRange(pos,pos);}
+ });
+ $("#page-body").querySelectorAll("[data-product-status]").forEach(el=>el.addEventListener("click",()=>{state.productStatus=el.dataset.productStatus;render();}));
+
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
  $("#page-body").querySelectorAll("[data-calendar-mode]").forEach(el=>el.addEventListener("click",()=>{
   const next=el.dataset.calendarMode;
@@ -602,6 +680,8 @@ function render(){
  const action=el.dataset.act,id=el.dataset.id;
  if(action==="view-seller"){state.selectedSellerId=id;state.page="sellerDetail";render();}
  if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
+ if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
+ if(action==="toggle-product"){const product=state.products.find(x=>x.id===id);if(product)setProductActive(id,product.active===false);}
  if(action==="edit-buy")buyModal(state.buys.find(x=>x.id===id));
  if(action==="contact")activityModal(id);
  if(action==="templates"){state.expandedReminderId=state.expandedReminderId===id?null:id;render();}
