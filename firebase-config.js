@@ -1,7 +1,7 @@
 // Firebase web app configuration (public client identifiers, NOT service-account credentials).
 // Data access is protected by Firebase Authentication and Firestore Security Rules.
 export const firebaseConfig = {
-  apiKey: "AIzaSyClopvJ8IvZiGDoUdShtreZ5-0f7JXipw",
+  apiKey: "AIzaSyClopvJ8IvZiGDoUdShhtreZ5-0f7JXipw",
   authDomain: "s2hcrm-2026.firebaseapp.com",
   projectId: "s2hcrm-2026",
   storageBucket: "s2hcrm-2026.firebasestorage.app",
