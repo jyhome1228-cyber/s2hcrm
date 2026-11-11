@@ -278,7 +278,9 @@ function reminders(){
  const today=todayLocal(), yearStart=today.slice(0,4)+"-01-01";
  return state.sellers.map(s=>{
   const b=latestBuy(s.id),a=latestActivity(s.id);
-  const manual=a?.nextFollowUpAt||s.nextFollowUpAt;
+  // A completed reminder remains closed unless a new follow-up date was deliberately set.
+  if(a?.type==="리마인드 완료"&&!a.nextFollowUpAt)return null;
+  const manual=a?.type==="리마인드 완료"?a.nextFollowUpAt:(a?.nextFollowUpAt||s.nextFollowUpAt);
   const activityDate=a?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
   const completedAfterBuy=activityDate&&b&&activityDate>b.endDate;
   if(!manual&&(!b||b.endDate<yearStart))return null;
