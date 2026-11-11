@@ -668,22 +668,31 @@ function opportunitiesPage(){
 function proposalsPage(){
  return wrap("제안 파이프라인 · 준비 중",'<div class="pipeline-preview">'+["제안 준비","제안 완료","답변 대기","협의 중","일정 확정"].map((v,i)=>'<div><span class="pipeline-step">'+(i+1)+'</span><strong>'+v+'</strong><small>데이터 연동 예정</small></div>').join("")+'</div><p class="panel-note">현재 제안 DB는 아직 연결되지 않았습니다. 건수와 성과를 임의로 표시하지 않습니다.</p>');
 }
+let sellerGroupCache=null;
 function sellerGroups(){
- const groups=new Map();
+ if(sellerGroupCache&&sellerGroupCache.sellers===state.sellers&&sellerGroupCache.buys===state.buys)
+   return sellerGroupCache.groups;
+ const groups=new Map(),histories=new Map();
  for(const seller of state.sellers){
   const key=sellerIdentity(seller);
-  if(!groups.has(key))groups.set(key,{id:key,members:[]});
+  if(!groups.has(key))groups.set(key,{id:key,members:[],histories:[]});
   groups.get(key).members.push(seller);
+  histories.set(seller.id,key);
  }
- return [...groups.values()].map(group=>{
+ for(const b of state.buys){
+  const key=histories.get(b.sellerId);
+  if(key)groups.get(key).histories.push(b);
+ }
+ const result=[...groups.values()].map(group=>{
   const members=group.members.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-  const selected=members[0],ids=new Set(members.map(s=>s.id));
-  const histories=state.buys.filter(b=>ids.has(b.sellerId));
-  const recent=[...histories].sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""))[0]||null;
+  const selected=members[0],ids=new Set(members.map(x=>x.id));
+  const recent=[...group.histories].sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""))[0]||null;
   const names=[...new Set(members.map(m=>m.name).filter(Boolean))];
   const channel=selected.instagramUrl||selected.instagramId||selected.channel||"";
-  return {...group,selected,ids,names,histories,recent,channel};
+  return {...group,selected,ids,names,recent,channel};
  });
+ sellerGroupCache={sellers:state.sellers,buys:state.buys,groups:result};
+ return result;
 }
 function matchingSellerGroup(sellerId){
  return sellerGroups().find(g=>g.ids.has(sellerId))||null;
@@ -704,21 +713,59 @@ function sellerDetailPage(){
  +wrap("전체 공구 이력",'<p class="panel-description">2024년과 2025년 자료를 포함한 거래 이력입니다. 과거 기록은 자동 연락 알림을 생성하지 않습니다.</p>'+table(["상품","시작일","종료일","회차","결제창","정산","비고","수정"],history))
  +wrap("연락 기록",table(["일시","연락 방식","내용","담당자","기록자"],logs));
 }
-function sellersPage(){
- const term=state.search.toLowerCase();
- const groups=sellerGroups();
- const rows=groups.filter(g=>{
+function filteredSellerGroups(){
+ const search=state.search.trim().toLocaleLowerCase();
+ return sellerGroups().filter(g=>{
   const s=g.selected;
-  return [g.names.join(" "),g.channel,s.contact||""].join(" ").toLowerCase().includes(term);
- }).sort((a,b)=>a.selected.name.localeCompare(b.selected.name,"ko-KR")).map(g=>{
+  return !search||[g.names.join(" "),g.channel,s.contact||"",...g.members.map(x=>x.instagramId||"")].join(" ").toLocaleLowerCase().includes(search);
+ }).sort((a,b)=>a.selected.name.localeCompare(b.selected.name,"ko-KR"));
+}
+function sellerCSV(){
+ if(state.demo)return notify("미리보기 데이터는 내보낼 수 없습니다.");
+ const rows=filteredSellerGroups().map(g=>{
   const s=g.selected,b=g.recent;
-  const activities=state.activities.filter(a=>g.ids.has(a.sellerId));
-  const a=[...activities].sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
+  const count=g.histories.length;
+  const lastActivity=state.activities.filter(a=>g.ids.has(a.sellerId)).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
+  return [s.name,g.names.join(" / "),g.channel,
+    s.followerCountLatestRecorded??"",s.contact||"",
+    count,b?.product||b?.productName||"",b?.endDate||"",
+    lastActivity?dt(lastActivity.createdAt):"",
+    [...g.ids].join(" / ")];
+ });
+ const head=["셀러명","기존 셀러명","인스타그램","팔로워 수","연락처","공구 횟수","최근 상품","최근 종료일","최근 활동일","셀러 ID"];
+ const cell=value=>{
+  let str=String(value??"");
+  if(/^[\s]*[=+\-@\t\r]/.test(str))str="'"+str;
+  return '"'+str.replace(/"/g,'""')+'"';
+ };
+ const csv="\uFEFF"+[head,...rows].map(row=>row.map(cell).join(",")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");a.href=url;
+ a.download="S2H_셀러목록_"+todayLocal()+(state.search?"_검색결과":"")+".csv";
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+ notify(rows.length+"명의 셀러 목록을 CSV로 내려받았습니다.");
+}
+function sellersPage(){
+ const groups=filteredSellerGroups();
+ const lastActivities=new Map();
+ for(const activity of state.activities){
+  if(!activity.sellerId||lastActivities.has(activity.sellerId))continue;
+  lastActivities.set(activity.sellerId,activity);
+ }
+ const rows=groups.map(g=>{
+  const s=g.selected,b=g.recent;
+  const activities=g.members.map(x=>lastActivities.get(x.id)).filter(Boolean);
+  const a=activities.sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
   return '<tr><td><strong>'+h(s.name)+'</strong>'+(g.names.length>1?'<small class="seller-alias">다른 기록명: '+h(g.names.filter(n=>n!==s.name).join(", "))+'</small>':"")+'</td>'+
   '<td>'+h(g.channel||"-")+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
   '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
- return wrap("전체 셀러 · "+groups.length,'<p class="panel-description">같은 인스타그램 계정으로 확인되는 셀러는 하나로 조회합니다. 원본 기록은 보존하며, 서로 다른 계정은 자동 병합하지 않습니다.</p><div class="toolbar"><input id="seller-search" placeholder="셀러명, 채널, 연락처로 검색" value="'+h(state.search)+'"/></div>'+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows));
+ const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div><span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>CSV 내보내기</button></div>';
+ return wrap("셀러 목록 · "+sellerGroups().length,
+  '<p class="panel-description">동일 인스타그램 계정은 하나로 표시하고 과거 이름과 이력은 보존합니다.</p>'+
+  tools+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows));
 }
 
 function schedulePage(){
