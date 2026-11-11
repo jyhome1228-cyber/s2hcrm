@@ -5,7 +5,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null, expandedReminderId:null, reminderCopied:{} };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{} };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -322,22 +322,49 @@ function monthlyRows(list,detail=false){
 }
 function monthGrid(list,options={}){
  const [y,m]=shownMonth().split("-").map(Number);
- const start=new Date(Date.UTC(y,m-1,1)).getUTCDay();
- const days=new Date(Date.UTC(y,m,0)).getUTCDate();
- const calendarItems=list.filter(b=>b.startDate&&b.endDate&&b.status!=="취소");
+ const monthStart=shownMonth()+"-01";
+ const monthEnd=datePlus(new Date(Date.UTC(y,m,0)).toISOString().slice(0,10),0);
+ const firstWeekStart=datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
+ const lastWeekEnd=datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
+ const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=monthEnd&&b.endDate>=monthStart&&b.status!=="취소");
  const maxVisible=options.compact?3:4;
- const cells=Array.from({length:start},()=>'<div class="cal-cell cal-blank"></div>');
- for(let d=1;d<=days;d++){
-  const date=shownMonth()+"-"+String(d).padStart(2,"0");
-  const events=calendarItems.filter(b=>b.startDate<=date&&b.endDate>=date)
-     .sort((a,b)=>(a.startDate||"").localeCompare(b.startDate||""));
-  const chips=events.slice(0,maxVisible).map(b=>{
-   const label=(b.sellerName||"미확인")+" · "+(b.product||b.productName||"상품 미확인");
-   return '<button type="button" class="cal-event '+(b.startDate===date?"cal-event-start":"")+'" data-act="edit-buy" data-id="'+h(b.id)+'" title="'+h(label)+'">'+h(label)+'</button>';
+ const weekCount=Math.round(daysBetween(firstWeekStart,lastWeekEnd)+1)/7;
+ const weeks=[];
+ const fmt=date=>date.slice(5).replace("-",".");
+ for(let w=0;w<weekCount;w++){
+  const weekStart=datePlus(firstWeekStart,w*7),weekEnd=datePlus(weekStart,6);
+  // Each groupbuy is one horizontal bar for the intersecting portion of this week.
+  const events=allowed.filter(b=>b.startDate<=weekEnd&&b.endDate>=weekStart).map(b=>({
+    ...b,
+    from:b.startDate>weekStart?b.startDate:weekStart,
+    to:b.endDate<weekEnd?b.endDate:weekEnd
+  })).sort((a,b)=>a.from.localeCompare(b.from)||daysBetween(b.from,b.to)-daysBetween(a.from,a.to)||String(a.sellerName).localeCompare(String(b.sellerName),"ko-KR"));
+  const laneEnds=[];
+  for(const e of events){
+   let lane=laneEnds.findIndex(last=>last<e.from);
+   if(lane<0)lane=laneEnds.length;
+   laneEnds[lane]=e.to;e.lane=lane;
+  }
+  const weekId=shownMonth()+"-week-"+w;
+  const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
+  const height=38+Math.max(visible,1)*28+27;
+  const dayCells=Array.from({length:7},(_,day)=>{
+   const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
+   const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
+   return '<div class="cal-bg-day '+(!inMonth?'cal-outside ':'')+(date===todayLocal()?'cal-today':'')+'" style="grid-column:'+(day+1)+';grid-row:1 / -1"><div class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</div></div>';
   }).join("");
-  cells.push('<div class="cal-cell '+(date===todayLocal()?"cal-today":"")+'"><div class="cal-date-head"><b>'+d+'</b>'+(events.length?'<small>'+events.length+'건</small>':"")+'</div>'+chips+(events.length>maxVisible?'<button type="button" class="cal-more" data-nav="schedule">+'+(events.length-maxVisible)+'건 더보기</button>':"")+'</div>');
+  const bars=events.filter(e=>e.lane<visible).map(e=>{
+   const startCol=daysBetween(weekStart,e.from)+1,span=daysBetween(e.from,e.to)+1;
+   const startOfEvent=e.from===e.startDate,endOfEvent=e.to===e.endDate;
+   const tip=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인")+" ("+e.startDate+" ~ "+e.endDate+")";
+   const textLabel=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인");
+   return '<button type="button" class="cal-range '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'">'+h(textLabel)+'</button>';
+  }).join("");
+  const hiddenCount=events.filter(e=>e.lane>=maxVisible).length;
+  const more=laneEnds.length>maxVisible?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기 −':'+'+hiddenCount+'건 더보기')+'</button>':'';
+  weeks.push('<section class="cal-week-row" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
  }
- return '<div class="cal-scroll"><div class="cal-grid">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+cells.join("")+'</div></div>';
+ return '<div class="cal-scroll"><div class="cal-weekdays">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+'</div><div class="cal-weeks">'+weeks.join("")+'</div></div>';
 }
 
 function sampleDate(days){return datePlus(todayLocal(),days);}
@@ -539,6 +566,7 @@ function render(){
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;render();});
  const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("change",e=>{state.monthSearch=e.target.value;render();});
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
+ $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")buyModal();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
  if(search){search.addEventListener("input",e=>{const pos=e.target.selectionStart;state.search=e.target.value;$("#page-body").innerHTML=sellersPage();const input=$("#seller-search");input.focus();input.setSelectionRange(pos,pos);});}
