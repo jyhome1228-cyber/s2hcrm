@@ -1,0 +1,9 @@
+# Real customer/seller data must not be committed to the public repository.
+private-data/
+*.service-account.json
+service-account*.json
+firebase-admin-key*.json
+S2H_CRM_*비공개*.zip
+.env
+.env.*
+node_modules/
