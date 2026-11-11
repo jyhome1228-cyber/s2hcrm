@@ -40,13 +40,9 @@ export function instagramIdentity(value){
  let text=String(value??"").trim();
  if(!text)return "";
  text=text.replace(/^@/,"");
- try{
-  if(/^(https?:\/\/)?(www\.)?instagram\.com\//i.test(text)){
-   const url=new URL(/^https?:\/\//.test(text)?text:"https://"+text);
-   if(!/^(www\.)?instagram\.com$/i.test(url.hostname))return "";
-   text=url.pathname.split("/").filter(Boolean)[0]||"";
-  }
- }catch{return "";}
+ const profile=text.match(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
+ if(profile)text=profile[1];
+ else if(text.includes("/")||text.includes(":"))return "";
  if(["p","reel","reels","stories","explore","direct"].includes(text.toLowerCase()))return "";
  return /^[A-Za-z0-9._]{1,30}$/.test(text)?text.toLowerCase():"";
 }
