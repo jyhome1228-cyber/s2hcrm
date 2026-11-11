@@ -123,17 +123,21 @@ function buyModal(item=null){
  const sellerMap=new Map(state.sellers.map(s=>[s.id,s]));
  const products=new Map();
  const archivedNames=new Set(state.products.filter(p=>p.active===false).map(productLabel));
- for(const p of state.products){
-  const label=productLabel(p);if(label&&(p.active!==false||p.id===item?.productId))products.set(label,{id:p.id,name:label});
+ for(const p of [...state.products].sort((a,b)=>Number(productLabel(b)===productCanonicalName(productLabel(b),state.products))-Number(productLabel(a)===productCanonicalName(productLabel(a),state.products)))){
+  const raw=productLabel(p),label=productCanonicalName(raw,state.products);
+  if(label&&(p.active!==false||p.id===item?.productId)&&!products.has(label))
+    products.set(label,{id:p.id,name:label,search:productDisplayAliases(label,state.products,state.buys).join(" ")});
  }
  for(const b of state.buys){
-  const label=String(b.product||b.productName||"").trim();
-  if(label&&!products.has(label)&&(!archivedNames.has(label)||label===(item?.product||item?.productName)))products.set(label,{id:"legacy:"+label,name:label});
+  const raw=String(b.product||b.productName||"").trim();
+  const label=productCanonicalName(raw,state.products);
+  if(label&&!products.has(label)&&(!archivedNames.has(raw)||raw===(item?.product||item?.productName)))
+    products.set(label,{id:"legacy:"+label,name:label,search:productDisplayAliases(label,state.products,state.buys).join(" ")});
  }
  const sellerChoices=[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name));
  const productChoices=[...products.values()].sort((a,b)=>cmp(a.name,b.name));
  const originalSeller=sellerMap.get(item?.sellerId);
- const initialProduct=(item?.product||item?.productName||"").trim();
+ const initialProduct=productCanonicalName(item?.product||item?.productName||"",state.products);
  const initialProductChoice=productChoices.find(p=>p.id===item?.productId||p.name===initialProduct);
  let selectedSellerId=originalSeller?.id||"";
  let selectedProduct=initialProductChoice||null;
@@ -260,13 +264,14 @@ function buyModal(item=null){
  $m("save-new-product").onclick=async()=>{
   const button=$m("save-new-product"),name=$m("new-product-name").value.trim();
   if(!name)return notify("상품명을 입력해주세요.");
-  const archived=state.products.find(p=>p.active===false&&productLabel(p)===name);
+  const archived=state.products.find(p=>p.active===false&&productCanonicalName(productLabel(p),state.products)===productCanonicalName(name,state.products));
   if(archived){notify("보관 중인 상품입니다. 상품 관리에서 먼저 복원해주세요.");return;}
-  const dup=products.get(name);if(dup){chooseProduct(dup.id);$m("create-product").classList.add("hidden");return;}
+  const canonical=productCanonicalName(name,state.products);
+  const dup=products.get(canonical);if(dup){chooseProduct(dup.id);$m("create-product").classList.add("hidden");notify("기존 상품에 연결했습니다.");return;}
   button.disabled=true;
   try{
    const result=await addDoc(collection(db,"products"),{standardName:name,aliases:[],source:"manual",createdByUid:state.user.uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-   const choice={id:result.id,name};products.set(name,choice);chooseProduct(choice.id);
+   const choice={id:result.id,name,search:""};products.set(name,choice);chooseProduct(choice.id);
    $m("create-product").classList.add("hidden");
    notify("상품이 등록되었습니다. 공구 입력을 이어서 진행하세요.");
   }catch(error){notify("상품 등록 실패: "+error.message);}finally{button.disabled=false;}
@@ -474,13 +479,15 @@ function productModal(product=null){
   +f("category","카테고리","text",product?.category||"")
   +f("supplier","공급사","text",product?.supplier||"")
   +f("productUrl","상품 링크","url",product?.productUrl||"",false,true)
+  +textarea("aliases","기존 상품 표기 (줄바꿈으로 구분)",(product?.aliases||[]).join("\n"))
   +textarea("notes","상품 메모",product?.notes||"");
  openModal(title,fields,async data=>{
   const name=data.standardName.trim();
   if(!name)throw Error("상품명을 입력해주세요.");
   const dup=state.products.find(p=>p.id!==product?.id&&masterProductName(p).toLocaleLowerCase()===name.toLocaleLowerCase());
   if(dup)throw Error("동일한 이름의 상품이 이미 등록되어 있습니다.");
-  const record={standardName:name,brand:data.brand.trim(),category:data.category.trim(),
+  const aliases=[...new Set((data.aliases||"").split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&x!==name))];
+  const record={standardName:name,brand:data.brand.trim(),category:data.category.trim(),aliases,
    supplier:data.supplier.trim(),productUrl:data.productUrl.trim(),notes:data.notes.trim(),
    updatedAt:serverTimestamp(),updatedByUid:state.user.uid,
    updatedByName:state.staff?.name||state.user.email};
