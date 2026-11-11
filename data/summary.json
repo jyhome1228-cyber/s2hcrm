@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-11-11",
+  "source": "Uploaded S2H group-buy workbook",
+  "scope": "32 S2H sheets (vendor sheets and template excluded)",
+  "groupbuyRows": 3614,
+  "sellerProfilesPreliminary": 871,
+  "instagramAccountsIdentifiable": 845,
+  "productLabelGroupsUnnormalized": 338,
+  "rowsFlaggedForReview": 110,
+  "containsPersonalData": false,
+  "actualRecordsLocation": "Private Firestore only; never publish to GitHub"
+}
