@@ -80,6 +80,7 @@ $("#preview-button").onclick=()=>enterPreview();
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))closeModal();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{state.page=btn.dataset.page;state.search="";render();}));
+$("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
 $("#add-button").onclick=()=>state.page==="schedule"?buyModal():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
  e.preventDefault();const btn=e.target.querySelector("[type=submit]");btn.disabled=true;
@@ -319,11 +320,22 @@ function monthlyRows(list,detail=false){
   return common+'<td>'+h(b.followers??seller?.followerCountLatestRecorded??"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.legacyCategory||"-")+'</td><td>'+insta+'</td><td class="ledger-notes" title="'+h([b.round,b.note||b.memo,b.event].filter(Boolean).join(" · ")) +'">'+h([b.round,b.note||b.memo,b.event].filter(Boolean).join(" · ")||"-")+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td><td><button data-act="edit-buy" data-id="'+h(b.id)+'" class="mini-button">수정</button></td></tr>';
  });
 }
-function monthGrid(list){
- const [y,m]=shownMonth().split("-").map(Number),start=new Date(Date.UTC(y,m-1,1)).getUTCDay(),days=new Date(Date.UTC(y,m,0)).getUTCDate();
- let cells=Array(start).fill('<div class="cal-cell cal-blank"></div>');
- for(let d=1;d<=days;d++){const date=shownMonth()+"-"+String(d).padStart(2,"0"),events=list.filter(b=>b.startDate<=date&&b.endDate>=date);
- cells.push('<div class="cal-cell"><b>'+d+'</b>'+events.slice(0,3).map(b=>'<div class="cal-event" title="'+h((b.sellerName||"")+" / "+(b.product||b.productName||""))+'">'+h(b.sellerName||"")+'</div>').join("")+(events.length>3?'<small>+'+(events.length-3)+'건</small>':"")+'</div>');
+function monthGrid(list,options={}){
+ const [y,m]=shownMonth().split("-").map(Number);
+ const start=new Date(Date.UTC(y,m-1,1)).getUTCDay();
+ const days=new Date(Date.UTC(y,m,0)).getUTCDate();
+ const calendarItems=list.filter(b=>b.startDate&&b.endDate&&b.status!=="취소");
+ const maxVisible=options.compact?3:4;
+ const cells=Array.from({length:start},()=>'<div class="cal-cell cal-blank"></div>');
+ for(let d=1;d<=days;d++){
+  const date=shownMonth()+"-"+String(d).padStart(2,"0");
+  const events=calendarItems.filter(b=>b.startDate<=date&&b.endDate>=date)
+     .sort((a,b)=>(a.startDate||"").localeCompare(b.startDate||""));
+  const chips=events.slice(0,maxVisible).map(b=>{
+   const label=(b.sellerName||"미확인")+" · "+(b.product||b.productName||"상품 미확인");
+   return '<button type="button" class="cal-event '+(b.startDate===date?"cal-event-start":"")+'" data-act="edit-buy" data-id="'+h(b.id)+'" title="'+h(label)+'">'+h(label)+'</button>';
+  }).join("");
+  cells.push('<div class="cal-cell '+(date===todayLocal()?"cal-today":"")+'"><div class="cal-date-head"><b>'+d+'</b>'+(events.length?'<small>'+events.length+'건</small>':"")+'</div>'+chips+(events.length>maxVisible?'<button type="button" class="cal-more" data-nav="schedule">+'+(events.length-maxVisible)+'건 더보기</button>':"")+'</div>');
  }
  return '<div class="cal-scroll"><div class="cal-grid">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+cells.join("")+'</div></div>';
 }
@@ -376,7 +388,7 @@ function dashboard(){
  const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",state.sellers.length.toLocaleString("ko-KR"),"등록된 셀러")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("선택한 달 공구",monthlyBuys().length,"월별 등록된 일정")+'</div>';
  const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록 ↗</button></td></tr>');
  const monthly=monthlyBuys();
- const monthlyPanel=wrap("월별 공구 현황",monthPicker()+'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><div class="monthly-actions"><button type="button" class="primary" data-quick="buy">+ 공구 등록</button><button class="panel-link" data-nav="schedule">전체 보기</button></div></div>'+table(["셀러","상품","시작일","종료일","상태","수정"],monthlyRows(monthly.slice(0,10))));
+ const monthlyPanel=wrap("월별 공구 현황",'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><div class="monthly-actions"><button type="button" class="primary" data-quick="buy">+ 공구 등록</button><button class="panel-link" data-nav="schedule">전체 보기</button></div></div>'+table(["셀러","상품","시작일","종료일","상태","수정"],monthlyRows(monthly.slice(0,10))));
  const actionPanel=wrap("오늘 할 일",'<p class="panel-description">최근 공구와 직접 등록한 후속 연락 일정만 표시합니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
  const scheduleRows=[...running,...upcoming].slice(0,6).map(b=>'<tr><td><strong>'+h(b.sellerName)+'</strong></td><td>'+h(b.product)+'</td><td>'+h(b.startDate.slice(5))+' ~ '+h(b.endDate.slice(5))+'</td><td><span class="status '+(b.startDate<=today?"good":"")+'">'+(b.startDate<=today?"진행 중":"예정")+'</span></td></tr>');
  const schedule=wrap("예정 공구",table(["셀러","상품","일정","상태"],scheduleRows),'<button data-nav="schedule" class="panel-link">전체 보기</button>');
@@ -390,8 +402,9 @@ function dashboard(){
  const products=wrap("상품별 공구 진행 이력",'<p class="panel-description">공구 진행 횟수 기준</p>'+(topProducts.map(([name,count])=>'<div class="product-bar-row"><div><span>'+h(name)+'</span><strong>'+count+'건</strong></div><div class="product-track"><span style="width:'+(count/max*100)+'%"></span></div></div>').join("")||'<div class="empty">상품 이력이 없습니다.</div>'),'<button data-nav="products" class="panel-link">상품 보기</button>');
  const distribution=[["최근 활성",active],["재접촉 후보",dormant],["공구 예정 및 최근 연락",opp.filter(x=>["공구 예정","최근 연락"].includes(x.level)).length],["과거 공구 없음",Math.max(0,state.sellers.length-opp.length)]];
  const distributionUI=wrap("셀러 현황",'<div class="distribution-chart"><div class="donut" style="--p:'+(state.sellers.length?(active/state.sellers.length*100):0)+'%"><div><strong>'+state.sellers.length+'</strong><small>전체 셀러</small></div></div><div class="distribution-legend">'+distribution.map((x,i)=>'<div><span class="legend-dot legend-'+i+'"></span><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join("")+'</div></div><p class="panel-note">※ 등록된 데이터 기준의 참고 집계입니다.</p>');
+ const mainCalendar=wrap("공구 캘린더",monthPicker()+'<div class="home-calendar-sub"><span>등록된 일정 '+monthly.length+'건</span><span>오늘은 '+h(today)+'</span><button type="button" class="panel-link" data-nav="schedule">월별 대장 보기</button><button type="button" class="primary home-calendar-add" data-quick="buy">+ 공구 등록</button></div>'+monthGrid(monthly,{compact:true}));
  const quick='<div class="dashboard-actions"><div><strong>빠른 등록</strong></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
- return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+quick+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+opportunities+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
+ return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+mainCalendar+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+opportunities+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
 }
 function productsPage(){
  const counts={};state.buys.filter(b=>b.status!=="취소").forEach(b=>{if(!counts[b.product])counts[b.product]={sellers:new Set(),count:0,last:""};counts[b.product].count++;counts[b.product].sellers.add(b.sellerId);if((b.endDate||"")>counts[b.product].last)counts[b.product].last=b.endDate;});
