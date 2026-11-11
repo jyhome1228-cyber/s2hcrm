@@ -441,7 +441,7 @@ function dashboard(){
  const month=state.buys.filter(b=>b.status!=="취소"&&b.startDate?.slice(0,7)===today.slice(0,7));
  const alertCount=rem.length, dormant=opp.filter(x=>["관심 필요","재접촉 우선","장기 공백"].includes(x.level)).length;
 
- const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",state.sellers.length.toLocaleString("ko-KR"),"등록된 셀러")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("선택한 달 공구",monthlyBuys().length,"월별 등록된 일정")+'</div>';
+ const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",sellerGroups().length.toLocaleString("ko-KR"),"중복 계정 통합")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("선택한 달 공구",monthlyBuys().length,"월별 등록된 일정")+'</div>';
  const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록 ↗</button></td></tr>');
  const monthly=monthlyBuys();
  const monthlyPanel=wrap("월별 공구 현황",'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><div class="monthly-actions"><button type="button" class="primary" data-quick="buy">+ 공구 등록</button><button class="panel-link" data-nav="schedule">전체 보기</button></div></div>'+table(["셀러","상품","시작일","종료일","상태","수정"],monthlyRows(monthly.slice(0,10))));
@@ -630,16 +630,37 @@ function opportunitiesPage(){
 function proposalsPage(){
  return wrap("제안 파이프라인 · 준비 중",'<div class="pipeline-preview">'+["제안 준비","제안 완료","답변 대기","협의 중","일정 확정"].map((v,i)=>'<div><span class="pipeline-step">'+(i+1)+'</span><strong>'+v+'</strong><small>데이터 연동 예정</small></div>').join("")+'</div><p class="panel-note">현재 제안 DB는 아직 연결되지 않았습니다. 건수와 성과를 임의로 표시하지 않습니다.</p>');
 }
+function sellerGroups(){
+ const groups=new Map();
+ for(const seller of state.sellers){
+  const key=sellerIdentity(seller);
+  if(!groups.has(key))groups.set(key,{id:key,members:[]});
+  groups.get(key).members.push(seller);
+ }
+ return [...groups.values()].map(group=>{
+  const members=group.members.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const selected=members[0],ids=new Set(members.map(s=>s.id));
+  const histories=state.buys.filter(b=>ids.has(b.sellerId));
+  const recent=[...histories].sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""))[0]||null;
+  const names=[...new Set(members.map(m=>m.name).filter(Boolean))];
+  const channel=selected.instagramUrl||selected.instagramId||selected.channel||"";
+  return {...group,selected,ids,names,histories,recent,channel};
+ });
+}
+function matchingSellerGroup(sellerId){
+ return sellerGroups().find(g=>g.ids.has(sellerId))||null;
+}
 function sellerDetailPage(){
- const seller=state.sellers.find(x=>x.id===state.selectedSellerId);
- if(!seller)return wrap("셀러 상세","<p>셀러를 선택해주세요.</p>");
- const buys=state.buys.filter(b=>b.sellerId===seller.id).sort((a,b)=>(b.startDate||"").localeCompare(a.startDate||""));
- const activities=state.activities.filter(a=>a.sellerId===seller.id);
+ const group=matchingSellerGroup(state.selectedSellerId);
+ if(!group)return wrap("셀러 상세","<p>셀러를 선택해주세요.</p>");
+ const seller=group.selected;
+ const buys=group.histories.sort((a,b)=>(b.startDate||"").localeCompare(a.startDate||""));
+ const activities=state.activities.filter(a=>group.ids.has(a.sellerId));
  const history=buys.map(b=>'<tr><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.round||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.note||b.memo||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>');
  const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName)+'</td></tr>');
  const ig=seller.instagramUrl;
  const link=ig?.startsWith("https://")?'<a target="_blank" rel="noopener noreferrer" href="'+h(ig)+'">인스타그램 열기</a>':h(seller.channel||seller.instagramId||"-");
- const summary='<div class="seller-summary"><div><span>셀러명</span><strong>'+h(seller.name)+'</strong></div><div><span>인스타그램</span>'+link+'</div><div><span>공구 진행 기록</span><strong>'+buys.length+'건</strong></div><div><span>마지막 공구 종료일</span><strong>'+h(buys[0]?.endDate||"-")+'</strong></div></div>';
+ const summary='<div class="seller-summary"><div><span>셀러명</span><strong>'+h(seller.name)+'</strong>'+(group.names.length>1?'<small>동일 계정의 기록 이름: '+h(group.names.join(", "))+'</small>':'')+'</div><div><span>인스타그램</span>'+link+'</div><div><span>공구 진행 기록</span><strong>'+buys.length+'건</strong></div><div><span>마지막 공구 종료일</span><strong>'+h(buys[0]?.endDate||"-")+'</strong></div></div>';
  return '<div class="detail-nav"><button data-nav="sellers" class="mini-button">← 전체 셀러</button><button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div>'
  +wrap("셀러 정보",summary)
  +wrap("전체 공구 이력",'<p class="panel-description">2024년과 2025년 자료를 포함한 거래 이력입니다. 과거 기록은 자동 연락 알림을 생성하지 않습니다.</p>'+table(["상품","시작일","종료일","회차","결제창","정산","비고","수정"],history))
@@ -647,11 +668,19 @@ function sellerDetailPage(){
 }
 function sellersPage(){
  const term=state.search.toLowerCase();
- const rows=state.sellers.filter(s=>(s.name+" "+s.channel+" "+s.contact).toLowerCase().includes(term)).map(s=>{
- const b=latestBuy(s.id);const a=latestActivity(s.id);
- return '<tr><td><strong>'+h(s.name)+'</strong></td><td>'+h(s.channel||"-")+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td><td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
+ const groups=sellerGroups();
+ const rows=groups.filter(g=>{
+  const s=g.selected;
+  return [g.names.join(" "),g.channel,s.contact||""].join(" ").toLowerCase().includes(term);
+ }).sort((a,b)=>a.selected.name.localeCompare(b.selected.name,"ko-KR")).map(g=>{
+  const s=g.selected,b=g.recent;
+  const activities=state.activities.filter(a=>g.ids.has(a.sellerId));
+  const a=[...activities].sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
+  return '<tr><td><strong>'+h(s.name)+'</strong>'+(g.names.length>1?'<small class="seller-alias">다른 기록명: '+h(g.names.filter(n=>n!==s.name).join(", "))+'</small>':"")+'</td>'+
+  '<td>'+h(g.channel||"-")+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
+  '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
- return wrap("전체 셀러 · "+state.sellers.length, '<div class="toolbar"><input id="seller-search" placeholder="셀러명, 채널, 연락처로 검색" value="'+h(state.search)+'"/></div>'+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows));
+ return wrap("전체 셀러 · "+groups.length,'<p class="panel-description">같은 인스타그램 계정으로 확인되는 셀러는 하나로 조회합니다. 원본 기록은 보존하며, 서로 다른 계정은 자동 병합하지 않습니다.</p><div class="toolbar"><input id="seller-search" placeholder="셀러명, 채널, 연락처로 검색" value="'+h(state.search)+'"/></div>'+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows));
 }
 
 function schedulePage(){
