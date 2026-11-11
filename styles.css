@@ -249,3 +249,17 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .cal-expand{z-index:2;justify-self:start;align-self:center;margin-left:10px;padding:4px 7px;border:0;background:transparent;color:#0089b3;text-align:left;font-size:11px;font-weight:700;cursor:pointer}
 .cal-expand:hover{text-decoration:underline}
 @media(max-width:850px){.cal-weekdays,.cal-weeks{min-width:840px}}
+
+/* Week switching and full backup downloads */
+.cal-display-controls{display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;gap:14px;flex-wrap:wrap}
+.cal-mode-switch{display:inline-flex;background:#edf3f6;padding:4px;border-radius:8px;gap:3px}
+.cal-mode-switch button{border:0;background:transparent;border-radius:6px;padding:9px 17px;font-size:12px;color:#697e8b;cursor:pointer}
+.cal-mode-switch button.selected{color:#067fa6;background:#fff;box-shadow:0 1px 5px #3d65701c;font-weight:700}
+.cal-week-navigator{display:flex;align-items:center;gap:12px;font-size:12px;color:#466577}
+.cal-week-navigator button{background:white;border:1px solid #dbe8ed;border-radius:6px;padding:5px 12px;font-size:19px;color:#0089b3;cursor:pointer}
+.backup-export-panel{background:#f4fafc;border:1px solid #dcecf2;border-radius:12px;padding:23px;margin:8px 0 26px}
+.backup-export-panel h3,.backup-import-separator h3{font-size:15px;margin:0 0 9px;color:#2c4b5b}
+.backup-export-panel p,.backup-import-separator p{font-size:12px;color:#69828f;line-height:1.7}
+#backup-export-status{margin-top:12px;font-size:11px}
+.backup-import-separator{border-top:1px solid #e5ebef;padding:22px 0 8px}
+@media(max-width:720px){.cal-display-controls{align-items:flex-start}.backup-export-panel .import-buttons{flex-wrap:wrap}}
