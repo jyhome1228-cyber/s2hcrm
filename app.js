@@ -1,11 +1,12 @@
 import { firebaseConfig, firebaseConfigured } from "./firebase-config.js";
 import { mountSeedImporter } from "./import-seed-ui.js";
+import { mountBackupExport } from "./backup-export.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{} };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -80,7 +81,7 @@ $("#preview-button").onclick=()=>enterPreview();
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))closeModal();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{state.page=btn.dataset.page;state.search="";render();}));
-$("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
+$("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
 $("#add-button").onclick=()=>state.page==="schedule"?buyModal():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
  e.preventDefault();const btn=e.target.querySelector("[type=submit]");btn.disabled=true;
@@ -300,6 +301,14 @@ function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'
 
 function shownMonth(){return state.selectedMonth||todayLocal().slice(0,7);}
 function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);const next=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);if(next<todayLocal().slice(0,4)+"-01")return;state.selectedMonth=next;render();}
+function weekStartFor(date){return datePlus(date,-new Date(date+"T00:00:00Z").getUTCDay());}
+function activeWeekStart(){const month=shownMonth(),today=todayLocal();return state.weekStart||weekStartFor(month===today.slice(0,7)?today:month+"-01");}
+function weekNavigation(delta){state.weekStart=datePlus(activeWeekStart(),7*delta);state.selectedMonth=datePlus(state.weekStart,3).slice(0,7);render();}
+function calendarModeControls(){
+ const weekly=state.calendarMode==="week",start=activeWeekStart();
+ return '<div class="cal-display-controls"><div class="cal-mode-switch"><button type="button" data-calendar-mode="month" class="'+(!weekly?"selected":"")+'">월간</button><button type="button" data-calendar-mode="week" class="'+(weekly?"selected":"")+'">주간</button></div>'
+ +(weekly?'<div class="cal-week-navigator"><button data-week-move="-1" type="button">‹</button><strong>'+h(start.slice(5))+' ~ '+h(datePlus(start,6).slice(5))+'</strong><button data-week-move="1" type="button">›</button></div>':"")+'</div>';
+}
 function monthlyBuys(){const m=shownMonth();return state.buys.filter(b=>b.startDate&&b.endDate&&b.startDate.slice(0,7)<=m&&b.endDate.slice(0,7)>=m).sort((a,b)=>a.startDate.localeCompare(b.startDate));}
 function monthPicker(){
  return '<div class="month-controls"><div class="month-title"><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="'+todayLocal().slice(0,4)+'-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
@@ -324,10 +333,10 @@ function monthGrid(list,options={}){
  const [y,m]=shownMonth().split("-").map(Number);
  const monthStart=shownMonth()+"-01";
  const monthEnd=datePlus(new Date(Date.UTC(y,m,0)).toISOString().slice(0,10),0);
- const firstWeekStart=datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
- const lastWeekEnd=datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
- const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=monthEnd&&b.endDate>=monthStart&&b.status!=="취소");
- const maxVisible=options.compact?3:4;
+ const firstWeekStart=options.weekOnly?activeWeekStart():datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
+ const lastWeekEnd=options.weekOnly?datePlus(firstWeekStart,6):datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
+ const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&b.status!=="취소");
+ const maxVisible=options.weekOnly?6:(options.compact?3:4);
  const weekCount=Math.round(daysBetween(firstWeekStart,lastWeekEnd)+1)/7;
  const weeks=[];
  const fmt=date=>date.slice(5).replace("-",".");
@@ -345,7 +354,7 @@ function monthGrid(list,options={}){
    if(lane<0)lane=laneEnds.length;
    laneEnds[lane]=e.to;e.lane=lane;
   }
-  const weekId=shownMonth()+"-week-"+w;
+  const weekId=weekStart;
   const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
   const height=38+Math.max(visible,1)*28+27;
   const dayCells=Array.from({length:7},(_,day)=>{
@@ -429,7 +438,7 @@ function dashboard(){
  const products=wrap("상품별 공구 진행 이력",'<p class="panel-description">공구 진행 횟수 기준</p>'+(topProducts.map(([name,count])=>'<div class="product-bar-row"><div><span>'+h(name)+'</span><strong>'+count+'건</strong></div><div class="product-track"><span style="width:'+(count/max*100)+'%"></span></div></div>').join("")||'<div class="empty">상품 이력이 없습니다.</div>'),'<button data-nav="products" class="panel-link">상품 보기</button>');
  const distribution=[["최근 활성",active],["재접촉 후보",dormant],["공구 예정 및 최근 연락",opp.filter(x=>["공구 예정","최근 연락"].includes(x.level)).length],["과거 공구 없음",Math.max(0,state.sellers.length-opp.length)]];
  const distributionUI=wrap("셀러 현황",'<div class="distribution-chart"><div class="donut" style="--p:'+(state.sellers.length?(active/state.sellers.length*100):0)+'%"><div><strong>'+state.sellers.length+'</strong><small>전체 셀러</small></div></div><div class="distribution-legend">'+distribution.map((x,i)=>'<div><span class="legend-dot legend-'+i+'"></span><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join("")+'</div></div><p class="panel-note">※ 등록된 데이터 기준의 참고 집계입니다.</p>');
- const mainCalendar=wrap("공구 캘린더",monthPicker()+'<div class="home-calendar-sub"><span>등록된 일정 '+monthly.length+'건</span><span>오늘은 '+h(today)+'</span><button type="button" class="panel-link" data-nav="schedule">월별 대장 보기</button><button type="button" class="primary home-calendar-add" data-quick="buy">+ 공구 등록</button></div>'+monthGrid(monthly,{compact:true}));
+ const mainCalendar=wrap("공구 캘린더",monthPicker()+calendarModeControls()+'<div class="home-calendar-sub"><span>등록된 일정 '+monthly.length+'건</span><span>오늘은 '+h(today)+'</span><button type="button" class="panel-link" data-nav="schedule">월별 대장 보기</button><button type="button" class="primary home-calendar-add" data-quick="buy">+ 공구 등록</button></div>'+monthGrid(state.calendarMode==='week'?state.buys:monthly,{compact:true,weekOnly:state.calendarMode==='week'}));
  const quick='<div class="dashboard-actions"><div><strong>빠른 등록</strong></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
  return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+mainCalendar+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+opportunities+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
 }
@@ -473,8 +482,9 @@ function schedulePage(){
  const list=monthlyBuys().filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
  const chooser='<div class="schedule-switch"><button data-view="list" class="'+(state.scheduleView==="list"?"selected":"")+'">목록</button><button data-view="calendar" class="'+(state.scheduleView==="calendar"?"selected":"")+'">달력</button></div>';
  const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>총 '+list.length+'건</span>'+chooser+'<button type="button" class="primary" data-quick="buy">+ 공구 등록</button></div>';
- const content=state.scheduleView==="calendar"?monthGrid(list):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
- return wrap("월별 공구 대장",monthPicker()+toolbar+content);
+ const weekList=state.buys.filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
+ const content=state.scheduleView==="calendar"?monthGrid(state.calendarMode==="week"?weekList:list,{weekOnly:state.calendarMode==="week"}):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
+ return wrap("월별 공구 대장",monthPicker()+toolbar+(state.scheduleView==="calendar"?calendarModeControls():"")+content);
 }
 function reminderTemplates(seller,buy){
  const name=(seller?.name||"셀러").trim();
@@ -547,7 +557,7 @@ function activityPage(){
 }
 function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 초기 데이터 이전을 실행할 수 있습니다.</p>");
- return wrap("초기 데이터 백업 및 복원",'<p class="panel-description">로컬 ZIP 파일은 브라우저에서만 읽으며 GitHub에 업로드하지 않습니다. Firebase로 직접 저장됩니다. <strong>최초 데이터 이전용</strong>으로만 사용하세요.</p><div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 셀러·상품·공구 관계 검사</div><div>3. Firebase 업로드 후 건수 검수</div></div><label class="import-label">S2H CRM 초기 데이터 ZIP<input type="file" id="seed-zip" accept=".zip,application/zip"/></label><div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button><button class="primary" id="seed-run" type="button" disabled>Firebase로 이전</button></div><progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status">비공개 ZIP 파일을 선택해주세요.</p><p class="panel-note">관리자 전용 화면입니다. 같은 ID 재업로드 시 문서가 갱신될 수 있으므로, 운영 중인 데이터를 수정한 후에는 초기 ZIP을 재업로드하지 마세요.</p>');
+ return wrap("전체 데이터 백업",'<div class="backup-export-panel"><h3>전체 데이터 다운로드</h3><p>현재 Firebase에 저장된 셀러, 상품, 공구 이력, 활동 기록을 내려받습니다. 파일은 공개 GitHub에 저장되지 않습니다.</p><div class="import-buttons"><button type="button" class="primary" id="backup-xlsx">엑셀 전체 다운로드</button><button type="button" class="secondary" id="backup-csv">CSV · JSON ZIP 다운로드</button></div><p id="backup-export-status" role="status">관리자 전용입니다. 다운로드한 파일은 비공개로 보관하세요.</p></div><div class="backup-import-separator"><h3>초기 데이터 복원</h3><p>이 기능은 처음 이전할 때만 사용하세요. 운영 중 재업로드하면 데이터를 덮어쓸 수 있습니다.</p></div><p class="panel-description">로컬 ZIP 파일은 브라우저에서만 읽으며 GitHub에 업로드하지 않습니다. Firebase로 직접 저장됩니다. <strong>최초 데이터 이전용</strong>으로만 사용하세요.</p><div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 셀러·상품·공구 관계 검사</div><div>3. Firebase 업로드 후 건수 검수</div></div><label class="import-label">S2H CRM 초기 데이터 ZIP<input type="file" id="seed-zip" accept=".zip,application/zip"/></label><div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button><button class="primary" id="seed-run" type="button" disabled>Firebase로 이전</button></div><progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status">비공개 ZIP 파일을 선택해주세요.</p><p class="panel-note">관리자 전용 화면입니다. 같은 ID 재업로드 시 문서가 갱신될 수 있으므로, 운영 중인 데이터를 수정한 후에는 초기 ZIP을 재업로드하지 마세요.</p>');
 }
 function render(){
  if(!state.user)return;
@@ -559,13 +569,20 @@ function render(){
  $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="import"||state.page==="sellerDetail"||state.page==="products"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
- if(state.page==="import"&&!state.demo&&state.staff?.role==="admin")mountSeedImporter(db);
+ if(state.page==="import"&&!state.demo&&state.staff?.role==="admin"){mountSeedImporter(db);mountBackupExport(db);}
  $("#page-body").querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",()=>{state.page=el.dataset.nav;render();}));
 
- $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);render();}else changeMonth(Number(el.dataset.move));}));
- const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;render();});
+ $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;render();}else{state.weekStart=null;changeMonth(Number(el.dataset.move));}}));
+ const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("change",e=>{state.monthSearch=e.target.value;render();});
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
+ $("#page-body").querySelectorAll("[data-calendar-mode]").forEach(el=>el.addEventListener("click",()=>{
+  const next=el.dataset.calendarMode;
+  if(next==="week"&&state.calendarMode!=="week")state.weekStart=weekStartFor(shownMonth()===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
+  state.calendarMode=next;render();
+ }));
+ $("#page-body").querySelectorAll("[data-week-move]").forEach(el=>el.addEventListener("click",()=>weekNavigation(Number(el.dataset.weekMove))));
+
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")buyModal();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
