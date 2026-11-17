@@ -549,3 +549,10 @@ body.s2h-modal-open{overflow:hidden}
 #page-body .panel:has(.product-audit-link) .table-wrap{overflow-x:auto}
 #page-body .panel:has(.product-audit-link) table{min-width:660px;white-space:normal}
 #page-body .panel:has(.product-audit-link) td:nth-child(2){max-width:600px;line-height:1.9}
+
+/* Brand-first master list: details available without losing editable product records */
+.product-brand-name{border:0;background:transparent;color:#263f4c;font-weight:750;font-size:13px;padding:5px 0;cursor:pointer;text-align:left}
+.product-brand-name:hover{color:#0089b3;text-decoration:underline;text-underline-offset:3px}
+.product-brand-name:focus-visible{outline:2px solid #0089b3;outline-offset:3px;border-radius:3px}
+.product-family-detail .mini-button{margin:2px 2px 2px 0}
+#modal .product-family-detail .table-wrap{max-height:360px}
