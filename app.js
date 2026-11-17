@@ -26,7 +26,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -562,6 +562,9 @@ function productIndex(){
    return canonicalCache.get(raw);
  };
  const groups=new Map(),stats=new Map(),sellerById=new Map(state.sellers.map(x=>[x.id,x]));
+ const monthly=new Map(),uniqueSellerIds=new Set();
+ let totalBuys=0,lastYearBuys=0;
+ const lastYearDate=datePlus(todayLocal(),-365);
  const getStats=name=>{
    if(!stats.has(name))stats.set(name,{count:0,sellers:new Set(),last:"-",aliases:new Set()});
    return stats.get(name);
@@ -583,17 +586,22 @@ function productIndex(){
   if(!name)continue;
   if(groups.has(name)&&raw!==name)groups.get(name).aliases.add(raw);
   if(b.status==="취소")continue;
+  totalBuys++;
+  const sellerKey=sellerIdentity(sellerById.get(b.sellerId),b);
+  uniqueSellerIds.add(sellerKey);
+  if(b.startDate){const month=b.startDate.slice(0,7);monthly.set(month,(monthly.get(month)||0)+1);if(b.startDate>=lastYearDate&&b.startDate<=todayLocal())lastYearBuys++;}
   const stat=getStats(name);
   stat.count++;
-  if(b.sellerId)stat.sellers.add(sellerIdentity(sellerById.get(b.sellerId),b));
+  stat.sellers.add(sellerKey);
   if(b.endDate&&b.endDate>stat.last)stat.last=b.endDate;
  }
  const computed=[...groups.values()].map(g=>{
   const primary=g.members.find(p=>masterProductName(p)===g.name)||g.members[0];
   const active=g.members.some(p=>p.active!==false);
-  return {...g,primary,active,aliases:[...g.aliases].sort((a,b)=>a.localeCompare(b,"ko-KR"))};
+  return {...g,primary,active,aliases:[...g.aliases].sort((a,b)=>a.localeCompare(b,"ko-KR")),
+   searchText:[g.name,...g.aliases,...g.members.flatMap(p=>[p.brand,p.category,p.supplier])].filter(Boolean).join(" ").toLocaleLowerCase()};
  });
- productIndexCache={products:state.products,buys:state.buys,sellers:state.sellers,groups:computed,stats};
+ productIndexCache={products:state.products,buys:state.buys,sellers:state.sellers,groups:computed,stats,monthly,totalBuys,lastYearBuys,uniqueSellerCount:uniqueSellerIds.size};
  return productIndexCache;
 }
 function productStats(product){
@@ -671,15 +679,17 @@ function productsPage(){
  const filtered=groups.filter(g=>{
   if(state.productStatus==="active"&&!g.active)return false;
   if(state.productStatus==="archived"&&g.active)return false;
-  const terms=[g.name,...g.aliases,...g.members.flatMap(p=>[p.brand,p.category,p.supplier])].filter(Boolean).join(" ").toLocaleLowerCase();
-  return !q||terms.includes(q);
+  return !q||g.searchText.includes(q);
  }).sort((a,b)=>a.name.localeCompare(b.name,"ko-KR",{numeric:true}));
  const countActive=groups.filter(g=>g.active).length;
  const countArchived=groups.length-countActive;
  const controls='<div class="product-toolbar"><input id="product-search" type="search" placeholder="상품명, 기존 표기, 브랜드 검색" value="'+h(state.productSearch)+'"/>'+
  '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","휴지통 ("+countArchived+")"],["all","전체 ("+groups.length+")"]]
  .map(([key,label])=>'<button type="button" data-product-status="'+key+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
- const rows=filtered.map(g=>{
+ const pageSize=60,pageCount=Math.max(1,Math.ceil(filtered.length/pageSize));
+ state.productPage=Math.min(pageCount,Math.max(1,state.productPage));
+ const from=(state.productPage-1)*pageSize;
+ const rows=filtered.slice(from,from+pageSize).map(g=>{
   const p=g.primary,stats=productStats(p),inactive=!g.active;
   return '<tr><td><strong>'+h(g.name)+'</strong>'+(inactive?'<span class="product-archive-label">휴지통</span>':'')+
    (g.aliases.length?'<small class="product-alias">기존 표기 '+h(g.aliases.join(" · "))+'</small>':'')+'</td>'+
@@ -690,7 +700,8 @@ function productsPage(){
  });
  return wrap("상품 목록 · "+filtered.length+"건",
   '<p class="panel-description">상품 삭제 시 휴지통으로 이동하며 복원할 수 있습니다. 기존 공구 이력과 상품 원본은 유지됩니다.</p>'+
-  controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows));
+  controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
+  (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
 function productInsightSellers(productName){
  const sellersById=new Map(state.sellers.map(s=>[s.id,s]));
@@ -766,33 +777,25 @@ function showProductInsightSellers(productName){
  draw();
 }
 function productInsightsPage(){
- const productsByName=new Map();
- for(const b of state.buys.filter(x=>x.status!=="취소")){
-  const label=productCanonicalName(b.product||b.productName,state.products);
-  if(!label)continue;
-  if(!productsByName.has(label))productsByName.set(label,{name:label,count:0,sellers:new Set(),last:"",months:new Set()});
-  const row=productsByName.get(label);
-  row.count++;
-  const seller=state.sellers.find(x=>x.id===b.sellerId);
-  row.sellers.add(sellerIdentity(seller,b));
-  if((b.endDate||"")>row.last)row.last=b.endDate;
-  if(b.startDate)row.months.add(b.startDate.slice(0,7));
- }
- const all=[...productsByName.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"ko-KR"));
+ // Use the product snapshot index instead of rescanning all buys and sellers per click.
+ const index=productIndex();
+ const all=[...index.stats.entries()].map(([name,p])=>({name,...p}))
+  .sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"ko-KR"));
  const top=all.slice(0,10);
- const monthly=new Map();
- for(const b of state.buys.filter(x=>x.status!=="취소"&&x.startDate)){
-  const month=b.startDate.slice(0,7);monthly.set(month,(monthly.get(month)||0)+1);
- }
- const monthlyRows=[...monthly.entries()].sort((a,b)=>b[0].localeCompare(a[0])).slice(0,12);
- const ranking=table(["상품명","공구 횟수","진행 셀러","최근 종료"],top.map(p=>
-  '<tr><td><button type="button" class="insight-product-link" data-insight-product="'+h(p.name)+'">'+h(p.name)+'</button>'+(productDisplayAliases(p.name,state.products,state.buys).length?'<small class="insight-alias-count">기존 표기 '+productDisplayAliases(p.name,state.products,state.buys).length+'종 통합</small>':'')+'</td><td>'+p.count+'건</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(p.name)+'">'+p.sellers.size+'명 보기</button></td><td>'+h(p.last||"-")+'</td></tr>'));
+ const monthlyRows=[...index.monthly.entries()].sort((a,b)=>b[0].localeCompare(a[0])).slice(0,12);
+ const aliasCounts=new Map(index.groups.map(g=>[g.name,g.aliases.length]));
+ const ranking=table(["상품명","공구 횟수","진행 셀러","최근 종료"],top.map(p=>{
+  const count=aliasCounts.get(p.name)||0;
+  return '<tr><td><button type="button" class="insight-product-link" data-insight-product="'+h(p.name)+'">'+h(p.name)+'</button>'+
+   (count?'<small class="insight-alias-count">기존 표기 '+count+'종 통합</small>':'')+
+   '</td><td>'+p.count+'건</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(p.name)+'">'+p.sellers.size+'명 보기</button></td><td>'+h(p.last||"-")+'</td></tr>';
+ }));
  const trend=table(["월","공구 건수"],monthlyRows.map(([month,count])=>
   '<tr><td>'+h(month)+'</td><td>'+count+'건</td></tr>'));
  return '<div class="metrics">'+metric("진행 상품",all.length,"공구 이력이 있는 상품")+
-  metric("전체 공구 이력",all.reduce((n,p)=>n+p.count,0),"취소 제외 기록")+
-  metric("진행 셀러",new Set(state.buys.filter(b=>b.status!=="취소").map(b=>sellerIdentity(state.sellers.find(x=>x.id===b.sellerId),b))).size,"중복 제외")+
-  metric("최근 12개월",state.buys.filter(b=>b.status!=="취소"&&b.startDate>=datePlus(todayLocal(),-365)&&b.startDate<=todayLocal()).length,"시작일 기준")+'</div>'+
+  metric("전체 공구 이력",index.totalBuys,"취소 제외 기록")+
+  metric("진행 셀러",index.uniqueSellerCount,"중복 제외")+
+  metric("최근 12개월",index.lastYearBuys,"시작일 기준")+'</div>'+
   '<div class="layout-two">'+wrap("상품별 공구 현황",ranking)+wrap("월별 공구 추이",trend)+'</div>'+
   '<p class="panel-note">공구 이력 기준 집계이며 매출 실적이 아닙니다. 확인된 상품 별칭만 통합합니다. 확인되지 않은 표기는 별도 집계됩니다.</p>';
 }
@@ -1011,6 +1014,7 @@ function bindSearchInput(selector,stateKey){
   if(!input.isConnected)return;
   state[stateKey]=input.value;
   if(stateKey==="search")state.sellerPage=1;
+  if(stateKey==="productSearch")state.productPage=1;
  };
  const schedule=()=>{
   clearTimeout(searchRenderTimer);
@@ -1053,8 +1057,9 @@ function render(){
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
+ $("#page-body").querySelectorAll("[data-product-page]").forEach(btn=>btn.addEventListener("click",()=>{state.productPage+=Number(btn.dataset.productPage);render();}));
  $("#page-body").querySelectorAll("[data-product-view]").forEach(el=>el.addEventListener("click",()=>{state.productView=el.dataset.productView;render();}));
- $("#page-body").querySelectorAll("[data-product-status]").forEach(el=>el.addEventListener("click",()=>{state.productStatus=el.dataset.productStatus;render();}));
+ $("#page-body").querySelectorAll("[data-product-status]").forEach(el=>el.addEventListener("click",()=>{state.productStatus=el.dataset.productStatus;state.productPage=1;render();}));
  $("#page-body").querySelectorAll("[data-insight-product]").forEach(el=>el.addEventListener("click",()=>showProductInsightSellers(el.dataset.insightProduct)));
 
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
