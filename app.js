@@ -490,7 +490,7 @@ function dashboard(){
  const alertCount=rem.length, dormant=opp.filter(x=>["관심 필요","재접촉 우선","장기 공백"].includes(x.level)).length;
 
  const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",sellerGroups().length.toLocaleString("ko-KR"),"중복 계정 통합")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("선택한 달 공구",monthlyBuys().length,"월별 등록된 일정")+'</div>';
- const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록 ↗</button></td></tr>');
+ const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
  const monthly=monthlyBuys();
  const monthlyPanel=wrap("월별 공구 현황",'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><div class="monthly-actions"><button type="button" class="primary" data-quick="buy">+ 공구 등록</button><button class="panel-link" data-nav="schedule">전체 보기</button></div></div>'+table(["셀러","상품","시작일","종료일","상태","수정"],monthlyRows(monthly.slice(0,10))));
  const actionPanel=wrap("오늘 할 일",'<p class="panel-description">최근 공구와 직접 등록한 후속 연락 일정만 표시합니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
@@ -954,7 +954,7 @@ function render(){
 
  $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;render();}else{state.weekStart=null;changeMonth(Number(el.dataset.move));}}));
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
- const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("change",e=>{state.monthSearch=e.target.value;render();});
+ const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("input",e=>{const pos=e.target.selectionStart;state.monthSearch=e.target.value;render();const input=$("#month-search");if(input){input.focus();input.setSelectionRange(pos,pos);}});
  const productSearch=$("#product-search");if(productSearch)productSearch.addEventListener("input",e=>{
   const pos=e.target.selectionStart;
   state.productSearch=e.target.value;render();
