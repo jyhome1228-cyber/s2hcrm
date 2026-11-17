@@ -30,6 +30,25 @@ const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul"
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
 const h = (value) => String(value ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function instagramLink(rawValue){
+ const raw=String(rawValue||"").trim();
+ if(!raw||raw==="-")return "-";
+ let handle="";
+ try{
+  if(/^https?:\/\//i.test(raw)){
+   const url=new URL(raw);
+   if(!["instagram.com","www.instagram.com","m.instagram.com"].includes(url.hostname.toLowerCase()))return h(raw);
+   handle=decodeURIComponent(url.pathname.split("/").filter(Boolean)[0]||"");
+  }else{
+   handle=raw.replace(/^@/,"").replace(/^\/?/,"").split(/[/?#]/)[0];
+  }
+ }catch{return h(raw);}
+ if(!/^[A-Za-z0-9._]{1,30}$/.test(handle))return h(raw);
+ return '<a class="instagram-profile-link" href="https://www.instagram.com/'+encodeURIComponent(handle)+'/" target="_blank" rel="noopener noreferrer" title="인스타그램 프로필 새 탭에서 열기">@'+h(handle)+' <span aria-hidden="true">↗</span></a>';
+}
+function openBuyModalSafely(item=null){
+ try{buyModal(item);}catch(error){console.error("공구 등록창 오류:",error);notify("공구 등록창을 열지 못했습니다: "+(error?.message||"알 수 없는 오류"));}
+}
 const dt = (ts) => ts?.toDate?.()?.toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}) || "-";
 const notify = (msg) => { $("#toast").textContent=msg;$("#toast").classList.remove("hidden");setTimeout(()=>$("#toast").classList.add("hidden"),2800); };
 const f = (name,label,type="text",val="",required=false,full=false) => '<label class="'+(full?'full':'')+'">'+h(label)+'<input name="'+h(name)+'" type="'+type+'" value="'+h(val)+'" '+(required?'required':'')+' /></label>';
@@ -117,7 +136,7 @@ $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))closeModal();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>navigateTo(btn.dataset.page)));
 $("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
-$("#add-button").onclick=()=>state.page==="schedule"?buyModal():sellerModal();
+$("#add-button").onclick=()=>state.page==="schedule"?openBuyModalSafely():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
  e.preventDefault();const btn=e.target.querySelector("[type=submit]");btn.disabled=true;
  const data=Object.fromEntries(new FormData(e.target).entries());
@@ -148,13 +167,13 @@ function buyModal(item=null){
  for(const p of [...state.products].sort((a,b)=>Number(productLabel(b)===productCanonicalName(productLabel(b),state.products))-Number(productLabel(a)===productCanonicalName(productLabel(a),state.products)))){
   const raw=productLabel(p),label=productCanonicalName(raw,state.products);
   if(label&&(p.active!==false||p.id===item?.productId)&&!products.has(label))
-    products.set(label,{id:p.id,name:label,search:productDisplayAliases(label,state.products,state.buys).join(" ")});
+    products.set(label,{id:p.id,name:label,search:[label,raw,...(Array.isArray(p.aliases)?p.aliases:[])].join(" ")});
  }
  for(const b of state.buys){
   const raw=String(b.product||b.productName||"").trim();
   const label=productCanonicalName(raw,state.products);
   if(label&&!products.has(label)&&(!archivedNames.has(raw)||raw===(item?.product||item?.productName)))
-    products.set(label,{id:"legacy:"+label,name:label,search:productDisplayAliases(label,state.products,state.buys).join(" ")});
+    products.set(label,{id:"legacy:"+label,name:label,search:[label,raw].join(" ")});
  }
  const sellerChoices=[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name));
  const productChoices=[...products.values()].sort((a,b)=>cmp(a.name,b.name));
@@ -826,7 +845,7 @@ function sellersPage(){
   const activities=g.members.map(x=>lastActivities.get(x.id)).filter(Boolean);
   const a=activities.sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
   return '<tr><td><strong>'+h(s.name)+'</strong>'+(g.names.length>1?'<small class="seller-alias">다른 기록명: '+h(g.names.filter(n=>n!==s.name).join(", "))+'</small>':"")+'</td>'+
-  '<td>'+h(g.channel||"-")+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
+  '<td>'+instagramLink(g.channel||s.instagramUrl||s.instagramId||s.channel)+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
   '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
  const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div><span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>CSV 내보내기</button></div>';
@@ -838,7 +857,7 @@ function sellersPage(){
 function schedulePage(){
  const list=monthlyBuys().filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
  const chooser='<div class="schedule-switch"><button data-view="list" class="'+(state.scheduleView==="list"?"selected":"")+'">목록</button><button data-view="calendar" class="'+(state.scheduleView==="calendar"?"selected":"")+'">달력</button></div>';
- const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>총 '+list.length+'건</span>'+chooser+'<button type="button" class="primary" data-quick="buy">+ 공구 등록</button></div>';
+ const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>총 '+list.length+'건</span>'+chooser+'</div>';
  const weekList=state.buys.filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
  const content=state.scheduleView==="calendar"?monthGrid(state.calendarMode==="week"?weekList:list,{weekOnly:state.calendarMode==="week"}):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
  return wrap("월별 공구 대장",monthPicker()+toolbar+(state.scheduleView==="calendar"?calendarModeControls():"")+content);
@@ -923,7 +942,7 @@ function render(){
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
  $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
- $("#add-button").onclick=state.page==="schedule"?()=>buyModal():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
+ $("#add-button").onclick=state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
  if(state.page==="import"&&!state.demo&&state.staff?.role==="admin"){mountSeedImporter(db);mountBackupExport(db);}
@@ -949,7 +968,7 @@ function render(){
  $("#page-body").querySelectorAll("[data-week-move]").forEach(el=>el.addEventListener("click",()=>weekNavigation(Number(el.dataset.weekMove))));
 
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
- $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")buyModal();if(el.dataset.quick==="activity")activityModal();}));
+ $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
  if(search)search.addEventListener("input",e=>{
   const pos=e.target.selectionStart;state.search=e.target.value;
@@ -965,7 +984,7 @@ function render(){
  if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
  if(action==="toggle-product"){const product=state.products.find(x=>x.id===id);if(product)setProductActive(id,product.active===false);}
  if(action==="toggle-product-group"){const group=productMasterGroups().find(g=>g.name===el.dataset.canonical);if(group)productGroupToggle(group.name,!group.active);}
- if(action==="edit-buy")buyModal(state.buys.find(x=>x.id===id));
+ if(action==="edit-buy")openBuyModalSafely(state.buys.find(x=>x.id===id));
  if(action==="contact")activityModal(id);
  if(action==="templates"){state.expandedReminderId=state.expandedReminderId===id?null:id;render();}
  if(action==="complete-reminder")reminderCompleteModal(id);
