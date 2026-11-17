@@ -390,3 +390,17 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .modal-save-feedback{color:#b73738;font-size:12px;line-height:1.6;min-height:0;margin-top:8px}
 .modal-save-feedback:empty{display:none}
 @media(max-width:580px){.seller-pagination{align-items:flex-start;flex-direction:column}.seller-pagination>div{width:100%;justify-content:flex-end}}
+
+/* Product list, insights and recoverable trash */
+.product-view-tabs{display:flex;align-items:center;gap:4px;margin:0 0 18px;border-bottom:1px solid #e6edf1;padding-bottom:10px}
+.product-view-tabs button{border:0;background:transparent;color:#748a98;font-size:13px;font-weight:600;padding:11px 17px;border-radius:7px;cursor:pointer}
+.product-view-tabs button.selected{background:#e8f5fa;color:#007fa6}
+.product-view-tabs button:hover:not(.selected){background:#f2f6f8;color:#315363}
+.product-view-tabs button:focus-visible,.product-filters button:focus-visible{outline:2px solid #0089b3;outline-offset:2px}
+/* Explicit input geometry avoids Korean glyphs being cropped in search fields */
+#month-search,#product-search{height:44px;min-height:44px;line-height:normal;vertical-align:middle;padding:0 14px;display:block;appearance:auto;-webkit-appearance:auto;font-family:Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:400;letter-spacing:normal;overflow:visible}
+#month-search{flex:0 1 340px;width:min(340px,100%)}
+.ledger-toolbar{min-height:44px;flex-wrap:wrap;align-items:center}
+.ledger-toolbar .schedule-switch{flex-shrink:0}
+.product-archive-label{background:#f1f4f6;color:#647b87}
+@media(max-width:680px){.ledger-toolbar #month-search{flex:1 1 100%;width:100%;max-width:none}.ledger-toolbar .schedule-switch{margin-left:0}.product-view-tabs button{flex:1}}
