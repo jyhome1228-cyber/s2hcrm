@@ -22,23 +22,73 @@ function confirmedFamily(name){
  if(compact==="900도피자")return "900도 피자";
  return spaced;
 }
-// Resolve 300+ product names in O(1) per historical buy instead of repeatedly scanning products.
+// Deterministic display grouping. No Firestore document or original buy name changes.
+// Merge typography differences and trailing quantity/set variants only.
 const productLookupCache=new WeakMap();
+function compactName(value){
+ return normalizeName(value).toLocaleLowerCase().replace(/[\s._·-]/g,"");
+}
+function variationBase(value){
+ const compact=compactName(value);
+ const match=compact.match(/^(.*?)(?:\(?\d{1,3}(?:종|개|팩|세트|박스|입|봉|병|묶음)\)?)$/u);
+ return match?.[1]||"";
+}
 function productLookup(products){
  let map=productLookupCache.get(products);
  if(map)return map;
  map=new Map();
- for(const product of products){
-  const original=normalizeName(product.standardName||product.name||product.productName);
+ const originals=products.map(p=>normalizeName(p.standardName||p.name||p.productName));
+ const candidates=new Map();
+ // A user-confirmed parent always takes priority over heuristic grouping.
+ for(let i=0;i<products.length;i++){
+  const name=originals[i],product=products[i];
+  if(!name||product.groupOverride===true||product.groupName)continue;
+  const key=compactName(name),array=candidates.get(key)||[];
+  array.push(name);candidates.set(key,array);
+ }
+ const preferred=new Map();
+ const displayScore=name=>{
+  const n=normalizeName(name);
+  return (/\s/.test(n)?2:0)+(/^\d/.test(n)?1:0);
+ };
+ for(const [key,names] of candidates){
+  preferred.set(key,[...names].sort((a,b)=>displayScore(b)-displayScore(a)||a.length-b.length||a.localeCompare(b,"ko-KR"))[0]);
+ }
+ const bases=new Map();
+ for(let i=0;i<products.length;i++){
+  const product=products[i],name=originals[i];
+  if(!name||product.groupOverride===true||product.groupName)continue;
+  const base=variationBase(name);
+  if(!base||base.length<2)continue;
+  const array=bases.get(base)||new Set();
+  array.add(compactName(name));bases.set(base,array);
+ }
+ for(let i=0;i<products.length;i++){
+  const product=products[i],original=originals[i];
   if(!original)continue;
-  const overridden=product.groupOverride===true;
-  const target=overridden?(normalizeName(product.groupName)||original):
-   (confirmedFamily(original)!==original?confirmedFamily(original):(normalizeName(product.groupName)||original));
+  const explicit=product.groupOverride===true;
+  const confirmed=confirmedFamily(original);
+  let target=explicit?(normalizeName(product.groupName)||original):
+   (normalizeName(product.groupName)||confirmed);
+  if(!explicit&&!product.groupName&&confirmed===original){
+   const key=compactName(original),base=variationBase(original);
+   if(base&&(preferred.has(base)||(bases.get(base)?.size||0)>=2)){
+    target=preferred.get(base)||[...bases.get(base)].length&&
+      originals.find(n=>compactName(n).startsWith(base)&&variationBase(n)===base)||original;
+    if(!preferred.has(base))target=normalizeName(target).replace(/\s*\(?\d{1,3}(?:종|개|팩|세트|박스|입|봉|병|묶음)\)?\s*$/u,"");
+   }else if(preferred.has(key))target=preferred.get(key);
+  }
   map.set(original,target);
   for(const alias of product.aliases||[]){
-   const name=normalizeName(alias);
-   if(name&&!map.has(name))map.set(name,target);
+   const aliasName=normalizeName(alias);
+   if(aliasName&&!map.has(aliasName))map.set(aliasName,target);
   }
+ }
+ // Historical-only variations can follow a registered parent, but never create
+ // novel merged products from unrelated fuzzy or brand-only similarities.
+ for(const [raw,target] of [...map]){
+  const key=compactName(raw);
+  if(!map.has(key))map.set(key,target);
  }
  productLookupCache.set(products,map);
  return map;
@@ -46,7 +96,15 @@ function productLookup(products){
 export function productCanonicalName(value,products=[]){
  const name=normalizeName(value);
  if(!name)return "";
- return productLookup(products).get(name)||confirmedFamily(name);
+ const lookup=productLookup(products);
+ if(lookup.has(name))return lookup.get(name);
+ const compact=compactName(name);
+ if(lookup.has(compact))return lookup.get(compact);
+ const confirmed=confirmedFamily(name);
+ if(confirmed!==name)return confirmed;
+ const base=variationBase(name);
+ if(base&&lookup.has(base))return lookup.get(base);
+ return name;
 }
 export function productDisplayAliases(canonical,products=[],buys=[]){
  const found=new Set();
