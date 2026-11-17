@@ -73,9 +73,7 @@ function productLookup(products){
   if(!explicit&&!product.groupName&&confirmed===original){
    const key=compactName(original),base=variationBase(original);
    if(base&&(preferred.has(base)||(bases.get(base)?.size||0)>=2)){
-    target=preferred.get(base)||[...bases.get(base)].length&&
-      originals.find(n=>compactName(n).startsWith(base)&&variationBase(n)===base)||original;
-    if(!preferred.has(base))target=normalizeName(target).replace(/\s*\(?\d{1,3}(?:종|개|팩|세트|박스|입|봉|병|묶음)\)?\s*$/u,"");
+    target=preferred.get(base)||normalizeName(original).replace(/\s*\(?\d{1,3}(?:종|개|팩|세트|박스|입|봉|병|묶음)\)?\s*$/u,"");
    }else if(preferred.has(key))target=preferred.get(key);
   }
   map.set(original,target);
