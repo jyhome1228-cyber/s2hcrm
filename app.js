@@ -409,7 +409,7 @@ function calendarModeControls(){
 }
 function monthlyBuys(){const m=shownMonth();return state.buys.filter(b=>b.startDate&&b.endDate&&b.startDate.slice(0,7)<=m&&b.endDate.slice(0,7)>=m).sort((a,b)=>a.startDate.localeCompare(b.startDate));}
 function monthPicker(){
- return '<div class="month-controls"><div class="month-title"><strong>월별 공구 운영 대장</strong></div><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="'+todayLocal().slice(0,4)+'-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
+ return '<div class="month-controls"><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="'+todayLocal().slice(0,4)+'-01" max="2030-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
 }
 function scheduleStatus(b){
  if(b.status==="취소")return "취소";
@@ -994,6 +994,41 @@ function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 초기 데이터 이전을 실행할 수 있습니다.</p>");
  return wrap("전체 데이터 백업",'<div class="backup-export-panel"><h3>전체 데이터 다운로드</h3><p>현재 Firebase에 저장된 셀러, 상품, 공구 이력, 활동 기록을 내려받습니다. 파일은 공개 GitHub에 저장되지 않습니다.</p><div class="import-buttons"><button type="button" class="primary" id="backup-xlsx">엑셀 전체 다운로드</button><button type="button" class="secondary" id="backup-csv">CSV · JSON ZIP 다운로드</button></div><p id="backup-export-status" role="status">관리자 전용입니다. 다운로드한 파일은 비공개로 보관하세요.</p></div><div class="backup-import-separator"><h3>초기 데이터 복원</h3><p>이 기능은 처음 이전할 때만 사용하세요. 운영 중 재업로드하면 데이터를 덮어쓸 수 있습니다.</p></div><p class="panel-description">로컬 ZIP 파일은 브라우저에서만 읽으며 GitHub에 업로드하지 않습니다. Firebase로 직접 저장됩니다. <strong>최초 데이터 이전용</strong>으로만 사용하세요.</p><div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 셀러·상품·공구 관계 검사</div><div>3. Firebase 업로드 후 건수 검수</div></div><label class="import-label">S2H CRM 초기 데이터 ZIP<input type="file" id="seed-zip" accept=".zip,application/zip"/></label><div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button><button class="primary" id="seed-run" type="button" disabled>Firebase로 이전</button></div><progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status">비공개 ZIP 파일을 선택해주세요.</p><p class="panel-note">관리자 전용 화면입니다. 같은 ID 재업로드 시 문서가 갱신될 수 있으므로, 운영 중인 데이터를 수정한 후에는 초기 ZIP을 재업로드하지 마세요.</p>');
 }
+// Preserve Korean IME composition. Replacing a focused input on every keystroke
+// interrupts syllable assembly and causes decomposed Hangul (ㅅ ㅔ ㄹ ...).
+let searchRenderTimer=null;
+function bindSearchInput(selector,stateKey){
+ const input=$(selector);
+ if(!input)return;
+ let composing=false;
+ const sync=()=>{
+  if(!input.isConnected)return;
+  state[stateKey]=input.value;
+  if(stateKey==="search")state.sellerPage=1;
+ };
+ const schedule=()=>{
+  clearTimeout(searchRenderTimer);
+  searchRenderTimer=setTimeout(()=>{
+   if(composing||!input.isConnected)return;
+   sync();
+   const selectionStart=input.selectionStart,selectionEnd=input.selectionEnd;
+   const focused=document.activeElement===input;
+   render();
+   if(focused){
+    const next=$(selector);
+    if(next){next.focus({preventScroll:true});try{next.setSelectionRange(selectionStart,selectionEnd);}catch{}}
+   }
+  },450);
+ };
+ input.addEventListener("compositionstart",()=>{composing=true;clearTimeout(searchRenderTimer);});
+ input.addEventListener("compositionend",()=>{composing=false;sync();schedule();});
+ input.addEventListener("input",event=>{sync();if(!composing&&!event.isComposing)schedule();});
+ input.addEventListener("change",()=>{sync();schedule();});
+ input.addEventListener("keydown",event=>{
+  if(event.key==="Enter"&&!composing){event.preventDefault();clearTimeout(searchRenderTimer);sync();render();}
+ });
+ input.addEventListener("blur",()=>{if(!composing&&input.isConnected){clearTimeout(searchRenderTimer);sync();schedule();}});
+}
 function render(){
  if(!state.user)return;
  if(state.page==="productInsights"){state.page="products";state.productView="insights";}
@@ -1010,12 +1045,8 @@ function render(){
 
  $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;render();}else{state.weekStart=null;changeMonth(Number(el.dataset.move));}}));
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
- const monthSearch=$("#month-search");if(monthSearch)monthSearch.addEventListener("input",e=>{const pos=e.target.selectionStart;state.monthSearch=e.target.value;render();const input=$("#month-search");if(input){input.focus();input.setSelectionRange(pos,pos);}});
- const productSearch=$("#product-search");if(productSearch)productSearch.addEventListener("input",e=>{
-  const pos=e.target.selectionStart;
-  state.productSearch=e.target.value;render();
-  const field=$("#product-search");if(field){field.focus();field.setSelectionRange(pos,pos);}
- });
+ bindSearchInput("#month-search","monthSearch");
+ bindSearchInput("#product-search","productSearch");
  $("#page-body").querySelectorAll("[data-product-view]").forEach(el=>el.addEventListener("click",()=>{state.productView=el.dataset.productView;render();}));
  $("#page-body").querySelectorAll("[data-product-status]").forEach(el=>el.addEventListener("click",()=>{state.productStatus=el.dataset.productStatus;render();}));
  $("#page-body").querySelectorAll("[data-insight-product]").forEach(el=>el.addEventListener("click",()=>showProductInsightSellers(el.dataset.insightProduct)));
@@ -1030,12 +1061,7 @@ function render(){
 
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
- const search=$("#seller-search");
- if(search)search.addEventListener("input",e=>{
-  const pos=e.target.selectionStart;state.search=e.target.value;state.sellerPage=1;
-  render();
-  const input=$("#seller-search");if(input){input.focus();input.setSelectionRange(pos,pos);}
- });
+ bindSearchInput("#seller-search","search");
  $("#page-body").querySelectorAll("[data-seller-page]").forEach(btn=>btn.addEventListener("click",()=>{state.sellerPage+=Number(btn.dataset.sellerPage);render();}));
  const exportSellers=$("#page-body [data-export-sellers]");
  if(exportSellers)exportSellers.addEventListener("click",sellerCSV);
