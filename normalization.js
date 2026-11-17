@@ -10,13 +10,14 @@ const CONFIRMED_PRODUCT_ALIASES=new Map([
   ["김미떡 4종 + 송편","김미떡"],
   ["김미떡 4종+송편","김미떡"]
 ]);
-export const normalizeName=value=>String(value??"").trim().replace(/\\s+/g," ");
-// Explicitly approved family: preserve the individual sets/flavours in the source rows.
+export const normalizeName=value=>String(value??"").trim().replace(/\s+/g," ");
+// Explicitly approved representative groups; spelling and set sizes remain in historical records.
 function confirmedFamily(name){
  const spaced=normalizeName(name);
  if(CONFIRMED_PRODUCT_ALIASES.has(spaced))return CONFIRMED_PRODUCT_ALIASES.get(spaced);
- const compact=spaced.replace(/\\s+/g,"");
- if(/^강금옥쭈꾸미(?:$|[+&/,(\\s0-9]|마라|대창)/u.test(compact)||/^강금옥(?:2종|4종)$/u.test(compact))
+ const compact=spaced.replace(/\s+/g,"");
+ // Confirmed by the operator: every Ganggeumok octopus set/flavour belongs to one parent.
+ if(/^강금옥쭈꾸미(?:.*)$/u.test(compact)||/^강금옥(?:2종|3종|4종)$/u.test(compact))
   return "강금옥 쭈꾸미";
  if(compact==="900도피자")return "900도 피자";
  return spaced;
@@ -32,7 +33,7 @@ function productLookup(products){
   if(!original)continue;
   const overridden=product.groupOverride===true;
   const target=overridden?(normalizeName(product.groupName)||original):
-   (normalizeName(product.groupName)||confirmedFamily(original));
+   (confirmedFamily(original)!==original?confirmedFamily(original):(normalizeName(product.groupName)||original));
   map.set(original,target);
   for(const alias of product.aliases||[]){
    const name=normalizeName(alias);
