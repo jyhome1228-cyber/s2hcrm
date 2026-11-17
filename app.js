@@ -808,6 +808,7 @@ function productBrandName(group){
  const compact=group.name.replace(/\s+/g,"");
  if(/^김미떡/u.test(compact))return "김미떡";
  if(/^강금옥/u.test(compact))return "강금옥";
+ if(/^가쉬/u.test(compact))return "가쉬";
  return group.name;
 }
 function brandProductGroups(){
@@ -841,7 +842,7 @@ function brandProductModal(name){
   return '<tr><td><strong>'+h(group.name)+'</strong>'+(group.aliases.length?'<small class="product-alias">판매 구성 '+group.aliases.length+'개</small>':"")+'</td>'+
   '<td>'+(st?.sellers.size||0)+'명</td><td>'+count+'건</td><td>'+
   '<button type="button" class="mini-button" data-brand-family="'+h(group.name)+'">구성 보기</button></td></tr>';
- }).join("");
+ });
  const fields='<div class="full insight-summary"><span>브랜드 / 대표 상품군</span><strong>'+h(brand.name)+'</strong>'+
   '<p>상품 '+brand.products.length+'종 · 진행 셀러 '+brand.sellers.size+'명 · 공구 이력 '+brand.count+'건</p></div>'+
   '<div class="full product-family-detail"><strong>상품별 구성 및 이력</strong>'+
@@ -869,10 +870,10 @@ function productsPage(){
  state.productPage=Math.min(pageCount,Math.max(1,state.productPage));
  const from=(state.productPage-1)*pageSize;
  const rows=filtered.slice(from,from+pageSize).map(g=>{
-  const p=g.members[0],stats={sellers:g.sellers.size,count:g.count,last:g.last},inactive=!g.active;
+  const stats={sellers:g.sellers.size,count:g.count,last:g.last},inactive=!g.active;
   return '<tr><td><button type="button" class="product-brand-name" data-brand-detail="'+h(g.name)+'">'+h(g.name)+'</button>'+(inactive?'<span class="product-archive-label">휴지통</span>':'')+
    '<small class="product-alias">'+g.products.length+'개 상품 · '+g.aliases.length+'개 구성·기존 표기</small>'+'</td>'+
-   '<td>'+h(g.name)+'</td><td>'+h(g.products.length+'종')+'</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
+   '<td>'+h(g.name)+'</td><td>'+h(g.products.length+'종')+'</td><td><button type="button" class="insight-seller-count" data-brand-sellers="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
    '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
    '<button type="button" class="mini-button" data-brand-detail="'+h(g.name)+'">상세 보기</button></td></tr>';
  });
@@ -881,9 +882,11 @@ function productsPage(){
   controls+table(["브랜드 / 대표 상품군","브랜드","상품 수","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
   (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
-function productInsightSellers(productName){
+function productInsightSellers(productName,asBrand=false){
  const sellersById=new Map(state.sellers.map(s=>[s.id,s]));
- const records=state.buys.filter(b=>b.status!=="취소"&&productCanonicalName(b.product||b.productName,state.products)===productName);
+ const brand=asBrand?brandProductGroups().find(g=>g.name===productName):null;
+ const names=brand?new Set(brand.products.map(g=>g.name)):null;
+ const records=state.buys.filter(b=>b.status!=="취소"&&(names?names.has(productCanonicalName(b.product||b.productName,state.products)):productCanonicalName(b.product||b.productName,state.products)===productName));
  const grouped=new Map();
  for(const b of records){
   const seller=sellersById.get(b.sellerId);
@@ -901,10 +904,11 @@ function productInsightSellers(productName){
  const list=[...grouped.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"ko-KR"));
  return {list,records:records.length};
 }
-function showProductInsightSellers(productName){
+function showProductInsightSellers(productName,asBrand=false){
  // Query the in-memory Firestore snapshot once. Search and export reuse the result.
- const data=productInsightSellers(productName);
- const aliases=productDisplayAliases(productName,state.products,state.buys);
+ const data=productInsightSellers(productName,asBrand);
+ const brand=asBrand?brandProductGroups().find(g=>g.name===productName):null;
+ const aliases=brand?brand.aliases.filter(n=>n!==productName):productDisplayAliases(productName,state.products,state.buys);
  const fields='<div class="full insight-summary"><span>상품명</span><strong>'+h(productName)+'</strong>'+
    '<p>진행 셀러 '+data.list.length+'명 · 공구 이력 '+data.records+'건</p>'+
    (aliases.length?'<p>통합 표기: '+h(aliases.join(" · "))+'</p>':"")+'</div>'+
@@ -1235,6 +1239,7 @@ function render(){
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
+ $("#page-body").querySelectorAll("[data-brand-sellers]").forEach(btn=>btn.addEventListener("click",()=>showProductInsightSellers(btn.dataset.brandSellers,true)));
  $("#page-body").querySelectorAll("[data-brand-detail]").forEach(btn=>btn.addEventListener("click",()=>brandProductModal(btn.dataset.brandDetail)));
  $("#page-body").querySelectorAll("[data-audit-family]").forEach(btn=>btn.addEventListener("click",()=>productFamilyModal(btn.dataset.auditFamily)));
  $("#page-body").querySelectorAll("[data-product-page]").forEach(btn=>btn.addEventListener("click",()=>{state.productPage+=Number(btn.dataset.productPage);render();}));
