@@ -841,7 +841,9 @@ function brandProductModal(name){
   const st=productIndex().stats.get(group.name),count=st?.count||0;
   return '<tr><td><strong>'+h(group.name)+'</strong>'+(group.aliases.length?'<small class="product-alias">판매 구성 '+group.aliases.length+'개</small>':"")+'</td>'+
   '<td>'+(st?.sellers.size||0)+'명</td><td>'+count+'건</td><td>'+
-  '<button type="button" class="mini-button" data-brand-family="'+h(group.name)+'">구성 보기</button></td></tr>';
+  '<button type="button" class="mini-button" data-brand-family="'+h(group.name)+'">구성 보기</button> '+
+  '<button type="button" class="mini-button" data-brand-edit="'+h(group.primary.id)+'">수정</button> '+
+  '<button type="button" class="mini-button" data-brand-toggle="'+h(group.name)+'">'+(group.active?'삭제':'복원')+'</button></td></tr>';
  });
  const fields='<div class="full insight-summary"><span>브랜드 / 대표 상품군</span><strong>'+h(brand.name)+'</strong>'+
   '<p>상품 '+brand.products.length+'종 · 진행 셀러 '+brand.sellers.size+'명 · 공구 이력 '+brand.count+'건</p></div>'+
@@ -852,6 +854,14 @@ function brandProductModal(name){
  openModal("브랜드 상세",fields,async()=>{});
  const save=$("#modal-form button[type=submit]");if(save)save.classList.add("hidden");
  $("#modal-fields").querySelectorAll("[data-brand-family]").forEach(btn=>btn.addEventListener("click",()=>productFamilyModal(btn.dataset.brandFamily)));
+ $("#modal-fields").querySelectorAll("[data-brand-edit]").forEach(btn=>btn.addEventListener("click",()=>{
+  const product=state.products.find(p=>p.id===btn.dataset.brandEdit);
+  if(product)productModal(product);
+ }));
+ $("#modal-fields").querySelectorAll("[data-brand-toggle]").forEach(btn=>btn.addEventListener("click",()=>{
+  const group=productMasterGroups().find(g=>g.name===btn.dataset.brandToggle);
+  if(group){closeModal();productGroupToggle(group.name,!group.active);}
+ }));
 }
 function productsPage(){
  const groups=brandProductGroups();
@@ -873,13 +883,13 @@ function productsPage(){
   const stats={sellers:g.sellers.size,count:g.count,last:g.last},inactive=!g.active;
   return '<tr><td><button type="button" class="product-brand-name" data-brand-detail="'+h(g.name)+'">'+h(g.name)+'</button>'+(inactive?'<span class="product-archive-label">휴지통</span>':'')+
    '<small class="product-alias">'+g.products.length+'개 상품 · '+g.aliases.length+'개 구성·기존 표기</small>'+'</td>'+
-   '<td>'+h(g.name)+'</td><td>'+h(g.products.length+'종')+'</td><td><button type="button" class="insight-seller-count" data-brand-sellers="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
+   '<td>'+h(g.products.length+'종')+'</td><td><button type="button" class="insight-seller-count" data-brand-sellers="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
    '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
    '<button type="button" class="mini-button" data-brand-detail="'+h(g.name)+'">상세 보기</button></td></tr>';
  });
  return wrap("브랜드 목록 · "+filtered.length+"건",
   '<p class="panel-description">브랜드별로 상품을 하나의 줄에 모았습니다. 브랜드명을 클릭하면 개별 상품·판매 구성·공구 이력을 확인할 수 있습니다.</p>'+
-  controls+table(["브랜드 / 대표 상품군","브랜드","상품 수","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
+  controls+table(["브랜드 / 대표 상품군","상품 수","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
   (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
 function productInsightSellers(productName,asBrand=false){
