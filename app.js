@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseConfigured } from "./firebase-config.js";
-import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js";
+import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js?v=20261117-product-family-1";
 import { mountSeedImporter } from "./import-seed-ui.js";
 import { mountBackupExport } from "./backup-export.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
