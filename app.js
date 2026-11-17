@@ -435,7 +435,7 @@ function monthGrid(list,options={}){
  const firstWeekStart=options.weekOnly?activeWeekStart():datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
  const lastWeekEnd=options.weekOnly?datePlus(firstWeekStart,6):datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
  const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&b.status!=="취소");
- const maxVisible=options.weekOnly?6:(options.compact?3:4);
+ const maxVisible=options.weekOnly?7:(options.compact?4:5);
  const weekCount=Math.round(daysBetween(firstWeekStart,lastWeekEnd)+1)/7;
  const weeks=[];
  const fmt=date=>date.slice(5).replace("-",".");
@@ -455,7 +455,7 @@ function monthGrid(list,options={}){
   }
   const weekId=weekStart;
   const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
-  const height=38+Math.max(visible,1)*28+27;
+  const height=44+Math.max(visible,1)*42+34;
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
@@ -466,10 +466,12 @@ function monthGrid(list,options={}){
    const startOfEvent=e.from===e.startDate,endOfEvent=e.to===e.endDate;
    const tip=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인")+" ("+e.startDate+" ~ "+e.endDate+")";
    const textLabel=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인");
-   return '<button type="button" class="cal-range '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'">'+h(textLabel)+'</button>';
+   const progress=scheduleStatus(e);
+   const progressClass=progress==="진행 중"?"cal-range-active":progress==="예정"?"cal-range-upcoming":"cal-range-completed";
+   return '<button type="button" class="cal-range '+progressClass+' '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'">'+h(textLabel)+'</button>';
   }).join("");
   const hiddenCount=events.filter(e=>e.lane>=maxVisible).length;
-  const more=laneEnds.length>maxVisible?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기 −':'+'+hiddenCount+'건 더보기')+'</button>':'';
+  const more=laneEnds.length>maxVisible?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기':'+'+hiddenCount+'건 더보기')+'</button>':'';
   weeks.push('<section class="cal-week-row" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
  }
  return '<div class="cal-scroll"><div class="cal-weekdays">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+'</div><div class="cal-weeks">'+weeks.join("")+'</div></div>';
