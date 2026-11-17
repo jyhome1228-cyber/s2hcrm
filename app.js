@@ -731,13 +731,76 @@ function productFamilyModal(canonical){
   }catch(err){notify("분리 실패: "+(err?.message||"다시 시도해주세요."));button.disabled=false;}
  }));
 }
+// Non-destructive audit of the names currently loaded from Firestore.
+// Review suggestions only: no automatic merge of unlike SKUs.
+let productAuditCache=null;
+function productAuditCandidates(){
+ const index=productIndex();
+ if(productAuditCache?.index===index)return productAuditCache.groups;
+ const groups=index.groups.filter(g=>g.active);
+ const compact=name=>String(name||"").toLocaleLowerCase().replace(/[\\s._·\-]/g,"");
+ const stripped=name=>compact(name)
+  .replace(/\\([^)]*\\)/g,"")
+  .replace(/[+&/].*$/,"")
+  .replace(/(?:\\d+종|\\d+개|\\d+팩|\\d+세트|세트|구성|묶음|추가)$/,"");
+ const matches=[];
+ for(let i=0;i<groups.length;i++){
+  const a=groups[i],ca=compact(a.name),sa=stripped(a.name);
+  for(let j=i+1;j<groups.length;j++){
+   const b=groups[j],cb=compact(b.name),sb=stripped(b.name);
+   if(!ca||!cb||ca===cb&&a.name===b.name)continue;
+   let reason="",level=0;
+   if(ca===cb){reason="표기·띄어쓰기 차이";level=3;}
+   else if(sa===sb&&sa.length>=3){reason="세트·구성 차이";level=2;}
+   else{
+    const [short,long]=ca.length<=cb.length?[ca,cb]:[cb,ca];
+    const remainder=long.slice(short.length);
+    if(short.length>=3&&long.startsWith(short)&&
+      /^(?:\\d+종|\\d+개|\\d+팩|\\d+세트|세트|구성|\\+|&|\\/|\\(|맛|추가)/.test(remainder)){
+      reason="동일 계열 가능성";level=1;
+    }
+   }
+   if(level)matches.push({a:i,b:j,reason,level});
+  }
+ }
+ const parent=groups.map((_,i)=>i);
+ const find=i=>parent[i]===i?i:(parent[i]=find(parent[i]));
+ for(const m of matches){const a=find(m.a),b=find(m.b);if(a!==b)parent[b]=a;}
+ const clusters=new Map();
+ for(const m of matches){
+  const root=find(m.a);
+  if(!clusters.has(root))clusters.set(root,{ids:new Set(),level:0,reasons:new Set()});
+  const c=clusters.get(root);
+  c.ids.add(m.a);c.ids.add(m.b);
+  c.level=Math.max(c.level,m.level);c.reasons.add(m.reason);
+ }
+ const result=[...clusters.values()].map(c=>{
+  const members=[...c.ids].map(i=>groups[i]).sort((a,b)=>a.name.localeCompare(b.name,"ko-KR",{numeric:true}));
+  return {members,level:c.level,reasons:[...c.reasons],primary:members[0].name};
+ }).sort((a,b)=>b.members.length-a.members.length||b.level-a.level||a.primary.localeCompare(b.primary,"ko-KR"));
+ productAuditCache={index,groups:result};
+ return result;
+}
+function productAuditPage(){
+ const candidates=productAuditCandidates();
+ const rows=candidates.map(c=>{
+  const names=c.members.map(g=>g.name);
+  const detail=c.members.map(g=>'<button type="button" class="product-audit-link" data-audit-family="'+h(g.name)+'">'+h(g.name)+'</button>').join(" · ");
+  return '<tr><td><strong>'+h(c.primary)+'</strong><small class="product-alias">'+c.members.length+'개 상품명</small></td>'+
+    '<td>'+detail+'</td><td>'+h(c.reasons.join(" / "))+'</td></tr>';
+ });
+ return wrap("유사 상품 검토 · "+candidates.length+"개 그룹",
+  '<p class="panel-description">현재 등록된 상품명 전체를 비교한 검토 후보입니다. 띄어쓰기와 판매 구성 차이를 표시하며, 다른 상품일 가능성이 있어 자동 통합하지 않습니다. 각 상품명을 누르면 구성 관리에서 대표 상품으로 통합할 수 있습니다.</p>'+
+  (candidates.length?table(["대표 검토명","중복 의심 상품명","판단 근거"],rows):
+  '<div class="empty">현재 기준으로 발견된 유사 상품 후보가 없습니다.</div>'));
+}
 function productWorkspaceTabs(){
  return '<div class="product-view-tabs" role="group" aria-label="상품 관리 보기">'+
-  [["list","상품 목록"],["insights","상품 인사이트"]].map(([key,label])=>
+  [["list","상품 목록"],["audit","유사 상품 검토"],["insights","상품 인사이트"]].map(([key,label])=>
    '<button type="button" data-product-view="'+key+'" class="'+(state.productView===key?"selected":"")+'">'+label+'</button>').join("")+'</div>';
 }
 function productWorkspacePage(){
- return productWorkspaceTabs()+(state.productView==="insights"?productInsightsPage():productsPage());
+ return productWorkspaceTabs()+(state.productView==="insights"?productInsightsPage():state.productView==="audit"?productAuditPage():productsPage());
 }
 function productsPage(){
  const groups=productMasterGroups();
@@ -1124,6 +1187,7 @@ function render(){
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
+ $("#page-body").querySelectorAll("[data-audit-family]").forEach(btn=>btn.addEventListener("click",()=>productFamilyModal(btn.dataset.auditFamily)));
  $("#page-body").querySelectorAll("[data-product-page]").forEach(btn=>btn.addEventListener("click",()=>{state.productPage+=Number(btn.dataset.productPage);render();}));
  $("#page-body").querySelectorAll("[data-product-view]").forEach(el=>el.addEventListener("click",()=>{state.productView=el.dataset.productView;render();}));
  $("#page-body").querySelectorAll("[data-product-status]").forEach(el=>el.addEventListener("click",()=>{state.productStatus=el.dataset.productStatus;state.productPage=1;render();}));
