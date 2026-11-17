@@ -741,7 +741,7 @@ function productAuditCandidates(){
  const compact=name=>String(name||"").toLocaleLowerCase().replace(/[\s._·-]/g,"");
  const stripped=name=>compact(name)
   .replace(/\([^)]*\)/g,"")
-  .replace(/[+&/].*$/,"")
+  .replace(/[+&\/].*$/,"")
   .replace(/(?:\d+종|\d+개|\d+팩|\d+세트|세트|구성|묶음|추가)$/,"");
  const matches=[];
  for(let i=0;i<groups.length;i++){
@@ -756,7 +756,7 @@ function productAuditCandidates(){
     const [short,long]=ca.length<=cb.length?[ca,cb]:[cb,ca];
     const remainder=long.slice(short.length);
     if(short.length>=3&&long.startsWith(short)&&
-      /^(?:\d+종|\d+개|\d+팩|\d+세트|세트|구성|[+&/(]|맛|추가)/.test(remainder)){
+      /^(?:\d+종|\d+개|\d+팩|\d+세트|세트|구성|[+&\/(]|맛|추가)/.test(remainder)){
       reason="동일 계열 가능성";level=1;
     }
    }
