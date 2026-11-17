@@ -440,3 +440,82 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .cal-week-row{border-bottom-color:#dce6eb}
 .cal-weekdays .cal-week{font-size:11px;font-weight:650}
 @media(max-width:850px){.cal-weekdays,.cal-weeks{min-width:900px}}
+
+/* Stable edit/register modal: fixed header/actions, one scrollable form body */
+body.s2h-modal-open{overflow:hidden}
+#modal.modal{
+ display:flex;align-items:center;justify-content:center;
+ padding:clamp(12px,3vh,30px) 16px;
+ overflow:hidden;
+ background:rgba(16,28,37,.66);
+}
+#modal .modal-panel{
+ display:flex;flex-direction:column;
+ width:min(720px,100%);height:auto;
+ max-height:min(850px,calc(100dvh - 36px));
+ min-height:0;overflow:hidden;
+ padding:0;border:1px solid #e0e8ed;
+ border-radius:16px;background:#fff;
+ box-shadow:0 22px 70px rgba(19,42,56,.24);
+}
+#modal .modal-head{
+ flex:0 0 auto;min-height:76px;
+ padding:22px 28px 16px;
+ border-bottom:1px solid #eaf0f3;
+ background:#fff;
+}
+#modal .modal-head h2{margin:0;font-size:21px;letter-spacing:-.5px;color:#263944}
+#modal #close-modal{width:35px;height:35px;display:grid;place-items:center;color:#718794;border-radius:7px}
+#modal #close-modal:hover{background:#f1f5f7;color:#253d4b}
+#modal #modal-form{
+ display:flex;flex-direction:column;min-height:0;
+ flex:1 1 auto;overflow:hidden;margin:0;
+}
+#modal #modal-fields{
+ overflow-y:auto;overscroll-behavior:contain;
+ min-height:0;flex:1 1 auto;
+ padding:20px 28px 24px;
+ scrollbar-width:thin;scrollbar-color:#bfced7 transparent;
+}
+#modal .modal-fields{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ align-items:start;column-gap:16px;row-gap:15px;
+}
+#modal .modal-fields>label,
+#modal .modal-fields>.combo-wrap{min-width:0;margin:0}
+#modal .modal-fields>label{
+ color:#526c7c;font-size:12px;font-weight:650;line-height:1.5;
+}
+#modal .modal-fields label.full,
+#modal .modal-fields>.full{grid-column:1 / -1}
+#modal .modal-fields>label input,
+#modal .modal-fields>label select,
+#modal .modal-fields>label textarea{
+ width:100%;margin-top:7px;
+ border:1px solid #d9e5eb;border-radius:8px;
+ background:#fbfcfd;color:#263f4e;
+ font-size:13px;line-height:1.45;
+}
+#modal .modal-fields>label input,
+#modal .modal-fields>label select{min-height:44px;padding:10px 12px}
+#modal .modal-fields>label textarea{min-height:86px;padding:11px 12px}
+#modal .modal-fields :is(input,select,textarea):focus{outline:none;border-color:#0089b3;box-shadow:0 0 0 3px rgba(0,137,179,.12)}
+#modal .modal-fields>.combo-wrap>label{margin:0 0 7px;font-size:12px;font-weight:650}
+#modal .modal-fields>.combo-wrap>input{height:45px}
+#modal .modal-fields>.seller-linked-data{margin:0}
+#modal .modal-actions{
+ position:relative;z-index:2;flex:0 0 auto;
+ margin:0;padding:16px 28px;
+ border-top:1px solid #e7edf1;background:#fff;
+ box-shadow:0 -5px 15px rgba(26,60,75,.035);
+}
+#modal .modal-actions button{min-width:90px;min-height:41px}
+#modal .modal-save-feedback:not(:empty){padding:10px 12px;margin-top:12px;border-radius:7px;background:#fff6f4;color:#b83b2c}
+@media(max-width:600px){
+ #modal.modal{padding:8px}
+ #modal .modal-panel{width:100%;max-height:calc(100dvh - 16px);border-radius:12px}
+ #modal .modal-head{min-height:64px;padding:16px 18px}
+ #modal #modal-fields{padding:16px 18px 20px}
+ #modal .modal-fields{grid-template-columns:minmax(0,1fr);row-gap:14px}
+ #modal .modal-actions{padding:13px 18px}
+}
