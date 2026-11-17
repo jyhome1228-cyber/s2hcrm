@@ -148,7 +148,7 @@ $("#modal-form").addEventListener("submit",async e=>{
  catch(err){notify("저장 실패: "+err.message);}
  finally{btn.disabled=false;}
 });
-function openModal(title,fields,save){$("#modal-title").textContent=title;$("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div>';state.modalSave=save;$("#modal").classList.remove("hidden");}
+function openModal(title,fields,save){$("#modal-title").textContent=title;$("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div>';const submit=$("#modal-form button[type=submit]");if(submit){submit.classList.remove("hidden");submit.disabled=false;submit.textContent="저장";}state.modalSave=save;$("#modal").classList.remove("hidden");}
 function closeModal(){$("#modal").classList.add("hidden");state.modalSave=null;$("#modal-form").reset();}
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
@@ -941,7 +941,7 @@ function importerPage(){
 }
 function render(){
  if(!state.user)return;
- const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·보관",productsPage],productInsights:["상품 인사이트","","상품별 공구 현황",productInsightsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
+ const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·보관",productsPage],productInsights:["상품 인사이트","","상품별 공구 현황",productInsightsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
