@@ -541,3 +541,11 @@ body.s2h-modal-open{overflow:hidden}
 .product-family-detail+.full{margin-top:8px!important}
 #modal .modal-fields>.product-family-detail{grid-column:1/-1}
 @media(max-width:600px){.product-family-detail table{min-width:390px}}
+
+/* Product-name audit screen */
+.product-audit-link{display:inline;border:0;background:none;padding:3px 2px;color:#087fa5;font-size:12px;font-weight:600;text-align:left;cursor:pointer}
+.product-audit-link:hover{text-decoration:underline}
+.product-view-tabs{flex-wrap:wrap}
+#page-body .panel:has(.product-audit-link) .table-wrap{overflow-x:auto}
+#page-body .panel:has(.product-audit-link) table{min-width:660px;white-space:normal}
+#page-body .panel:has(.product-audit-link) td:nth-child(2){max-width:600px;line-height:1.9}
