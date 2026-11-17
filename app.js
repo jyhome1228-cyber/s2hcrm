@@ -47,7 +47,11 @@ function instagramLink(rawValue){
  return '<a class="instagram-profile-link" href="https://www.instagram.com/'+encodeURIComponent(handle)+'/" target="_blank" rel="noopener noreferrer" title="인스타그램 프로필 새 탭에서 열기">@'+h(handle)+' <span aria-hidden="true">↗</span></a>';
 }
 function openBuyModalSafely(item=null){
- try{buyModal(item);}catch(error){console.error("공구 등록창 오류:",error);notify("공구 등록창을 열지 못했습니다: "+(error?.message||"알 수 없는 오류"));}
+ showLoading(item?"공구 수정창을 준비하고 있습니다":"공구 등록창을 준비하고 있습니다");
+ setTimeout(()=>{
+  try{buyModal(item);}catch(error){console.error("공구 등록창 오류:",error);notify("공구 등록창을 열지 못했습니다: "+(error?.message||"알 수 없는 오류"));}
+  finally{hideLoading();}
+ },25);
 }
 const dt = (ts) => ts?.toDate?.()?.toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}) || "-";
 const notify = (msg) => { $("#toast").textContent=msg;$("#toast").classList.remove("hidden");setTimeout(()=>$("#toast").classList.add("hidden"),2800); };
