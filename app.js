@@ -138,7 +138,8 @@ togglePassword.addEventListener("click",()=>{
 });
 
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
-$("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))closeModal();});
+// Backdrop clicks must not dismiss a form while the operator is registering or editing data.
+$("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))e.preventDefault();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>navigateTo(btn.dataset.page)));
 $("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
 $("#add-button").onclick=()=>state.page==="schedule"?openBuyModalSafely():sellerModal();
