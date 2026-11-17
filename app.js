@@ -8,6 +8,7 @@ import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, q
 
 const $ = (selector) => document.querySelector(selector);
 let screenBusyCount=0;
+let modalSaving=false;
 function showLoading(label="데이터를 불러오는 중입니다"){
  const layer=document.getElementById("app-loading");
  if(!layer)return;
@@ -142,14 +143,36 @@ document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("clic
 $("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
 $("#add-button").onclick=()=>state.page==="schedule"?openBuyModalSafely():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
- e.preventDefault();const btn=e.target.querySelector("[type=submit]");btn.disabled=true;
- const data=Object.fromEntries(new FormData(e.target).entries());
- try {await state.modalSave?.(data);closeModal();notify("저장되었습니다.");}
- catch(err){notify("저장 실패: "+err.message);}
- finally{btn.disabled=false;}
+ e.preventDefault();
+ if(modalSaving||typeof state.modalSave!=="function")return;
+ const btn=e.target.querySelector("[type=submit]"),form=e.target;
+ const data=Object.fromEntries(new FormData(form).entries());
+ modalSaving=true;btn.disabled=true;
+ const originalText=btn.textContent;
+ btn.textContent="저장 중...";
+ const feedback=$("#modal-save-feedback");
+ if(feedback)feedback.textContent="";
+ try{
+  await state.modalSave(data);
+  modalSaving=false;closeModal();notify("저장되었습니다.");
+ }catch(err){
+  const message="저장 실패: "+(err?.message||"다시 시도해주세요.");
+  if(feedback)feedback.textContent=message;
+  notify(message);
+ }finally{modalSaving=false;btn.disabled=false;btn.textContent=originalText;}
 });
-function openModal(title,fields,save){$("#modal-title").textContent=title;$("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div>';const submit=$("#modal-form button[type=submit]");if(submit){submit.classList.remove("hidden");submit.disabled=false;submit.textContent="저장";}state.modalSave=save;$("#modal").classList.remove("hidden");}
-function closeModal(){$("#modal").classList.add("hidden");state.modalSave=null;$("#modal-form").reset();}
+function openModal(title,fields,save){
+ if(modalSaving)return;
+ $("#modal-title").textContent=title;
+ $("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div><div id="modal-save-feedback" class="modal-save-feedback" role="alert"></div>';
+ const submit=$("#modal-form button[type=submit]");
+ if(submit){submit.classList.remove("hidden");submit.disabled=false;submit.textContent="저장";}
+ state.modalSave=save;$("#modal").classList.remove("hidden");
+}
+function closeModal(){
+ if(modalSaving)return;
+ $("#modal").classList.add("hidden");state.modalSave=null;$("#modal-form").reset();
+}
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
   openModal(item?"셀러 정보 수정":"새 셀러 등록",
@@ -181,6 +204,9 @@ function buyModal(item=null){
  }
  const sellerChoices=[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name));
  const productChoices=[...products.values()].sort((a,b)=>cmp(a.name,b.name));
+ const sellerSearchChoices=sellerChoices.map(x=>({id:x.id,name:x.name,search:[x.instagramId,x.channel,x.instagramUrl].filter(Boolean).join(" ")}));
+ const productSearchChoices=[...productChoices];
+ const productById=new Map(productChoices.map(p=>[p.id,p]));
  const originalSeller=sellerMap.get(item?.sellerId);
  const initialProduct=productCanonicalName(item?.product||item?.productName||"",state.products);
  const initialProductChoice=productChoices.find(p=>p.id===item?.productId||p.name===initialProduct);
@@ -208,9 +234,11 @@ function buyModal(item=null){
  openModal(item?"공구 수정":"새 공구 등록",fields,async data=>{
   const seller=sellerMap.get(data.sellerId);
   if(!seller)throw new Error("셀러를 검색한 뒤 아래 목록에서 선택하거나 신규 등록해주세요.");
-  const prod=[...products.values()].find(p=>p.id===data.productId);
+  const prod=productById.get(data.productId);
   if(!prod)throw new Error("상품을 검색한 뒤 아래 목록에서 선택하거나 신규 등록해주세요.");
+  if(!data.startDate||!data.endDate)throw new Error("공구 시작일과 종료일을 입력해주세요.");
   if(data.endDate<data.startDate)throw new Error("종료일이 시작일보다 빠릅니다.");
+  if(data.followers&&(!Number.isFinite(Number(data.followers))||Number(data.followers)<0))throw new Error("팔로워 수는 0 이상의 숫자로 입력해주세요.");
   const oldProductLabel=String(item?.product||item?.productName||"").trim();
   const originalProductUnchanged=Boolean(item&&productCanonicalName(oldProductLabel,state.products)===prod.name);
   const savedProductLabel=originalProductUnchanged?oldProductLabel:prod.name;
@@ -256,7 +284,7 @@ function buyModal(item=null){
   sellerProfile(id,true);
  };
  const chooseProduct=id=>{
-  const product=[...products.values()].find(p=>p.id===id);if(!product)return;
+  const product=productById.get(id);if(!product)return;
   selectedProduct=product;$m("product-id").value=id;productInput.value=product.name;
   $m("product-suggestions").classList.add("hidden");productInput.setAttribute("aria-expanded","false");
  };
@@ -281,12 +309,12 @@ function buyModal(item=null){
   input.addEventListener("blur",()=>setTimeout(()=>{dropdown.classList.add("hidden");input.setAttribute("aria-expanded","false");},160));
  };
  setupCombo(sellerInput,$m("seller-suggestions"),
-  ()=>[...sellerMap.values()].sort((a,b)=>cmp(a.name,b.name)).map(x=>({id:x.id,name:x.name,search:[x.instagramId,x.channel].filter(Boolean).join(" ")})),
+  ()=>sellerSearchChoices,
   chooseSeller,name=>{$m("create-seller").classList.remove("hidden");$m("new-seller-name").value=name;$m("new-seller-name").focus();},
   ()=>{selectedSellerId="";$m("seller-id").value="";$m("linked-seller-info").classList.add("hidden");}
  );
  setupCombo(productInput,$m("product-suggestions"),
-  ()=>[...products.values()].sort((a,b)=>cmp(a.name,b.name)),
+  ()=>productSearchChoices,
   chooseProduct,name=>{$m("create-product").classList.remove("hidden");$m("new-product-name").value=name;$m("new-product-name").focus();},
   ()=>{selectedProduct=null;$m("product-id").value="";}
  );
@@ -305,6 +333,8 @@ function buyModal(item=null){
      contact:$m("new-seller-contact").value.trim(),cycleDays:30,note:"",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
    const ref=await addDoc(collection(db,"sellers"),record);
    sellerMap.set(ref.id,{id:ref.id,...record});
+   sellerSearchChoices.push({id:ref.id,name,search:[record.instagramId,record.channel,record.instagramUrl].filter(Boolean).join(" ")});
+   sellerSearchChoices.sort((a,b)=>cmp(a.name,b.name));
    chooseSeller(ref.id);$m("create-seller").classList.add("hidden");
    notify("셀러가 등록되었습니다. 공구 입력을 이어서 진행하세요.");
   }catch(error){notify("셀러 등록 실패: "+error.message);}finally{button.disabled=false;}
@@ -319,7 +349,7 @@ function buyModal(item=null){
   button.disabled=true;
   try{
    const result=await addDoc(collection(db,"products"),{standardName:name,aliases:[],source:"manual",createdByUid:state.user.uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
-   const choice={id:result.id,name,search:""};products.set(name,choice);chooseProduct(choice.id);
+   const choice={id:result.id,name,search:""};products.set(name,choice);productById.set(choice.id,choice);productSearchChoices.push(choice);productSearchChoices.sort((a,b)=>cmp(a.name,b.name));chooseProduct(choice.id);
    $m("create-product").classList.add("hidden");
    notify("상품이 등록되었습니다. 공구 입력을 이어서 진행하세요.");
   }catch(error){notify("상품 등록 실패: "+error.message);}finally{button.disabled=false;}
@@ -1005,7 +1035,7 @@ function render(){
  if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
  if(action==="toggle-product"){const product=state.products.find(x=>x.id===id);if(product)setProductActive(id,product.active===false);}
  if(action==="toggle-product-group"){const group=productMasterGroups().find(g=>g.name===el.dataset.canonical);if(group)productGroupToggle(group.name,!group.active);}
- if(action==="edit-buy")openBuyModalSafely(state.buys.find(x=>x.id===id));
+ if(action==="edit-buy"){const buy=state.buys.find(x=>x.id===id);if(buy)openBuyModalSafely(buy);else notify("수정할 공구 기록을 찾지 못했습니다. 목록을 새로 확인해주세요.");}
  if(action==="contact")activityModal(id);
  if(action==="templates"){state.expandedReminderId=state.expandedReminderId===id?null:id;render();}
  if(action==="complete-reminder")reminderCompleteModal(id);
