@@ -404,3 +404,39 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .ledger-toolbar .schedule-switch{flex-shrink:0}
 .product-archive-label{background:#f1f4f6;color:#647b87}
 @media(max-width:680px){.ledger-toolbar #month-search{flex:1 1 100%;width:100%;max-width:none}.ledger-toolbar .schedule-switch{margin-left:0}.product-view-tabs button{flex:1}}
+
+/* 2026-11 calendar readability: larger actionable event lanes */
+.cal-week-row{
+ grid-template-rows:44px repeat(var(--cal-visible-rows),42px) 34px;
+}
+.cal-date-head{height:44px;padding:0 7px}
+.cal-date-head b{font-size:13px;font-weight:750}
+.cal-date-head small{font-size:11px;font-weight:550;color:#8b9eaa}
+.cal-today .cal-date-head b{width:27px;height:27px}
+.cal-range{
+ display:flex;align-items:center;
+ height:34px;min-height:34px;line-height:1.3;
+ padding:0 12px;font-size:12px;font-weight:650;letter-spacing:-.15px;
+ margin:0 4px;border-radius:7px;
+ background:#dceff7;color:#195b75;
+ box-shadow:inset 0 0 0 1px rgba(44,130,165,.08);
+ transition:background .15s,box-shadow .15s;
+}
+.cal-range:hover{background:#c8e8f4;box-shadow:inset 0 0 0 1px rgba(0,137,179,.23);z-index:3}
+.cal-range:focus-visible{outline:2px solid #0089b3;outline-offset:1px;z-index:4}
+.cal-range-active{background:#c6e9f5;color:#075f81;border-left-color:#0089b3}
+.cal-range-upcoming{background:#e2edf7;color:#365c79;border-left-color:#799cbb}
+.cal-range-completed{background:#e6f1f5;color:#4a6b7c;border-left-color:#91b6c8}
+.cal-range-continue{border-left-width:0;border-radius:5px}
+.cal-range-start{border-top-left-radius:7px;border-bottom-left-radius:7px}
+.cal-range-end{border-top-right-radius:7px;border-bottom-right-radius:7px}
+.cal-expand{
+ min-height:28px;padding:5px 10px;margin-left:6px;
+ background:#f0f7fa;border-radius:6px;
+ color:#087fa5;font-size:12px;
+}
+.cal-expand:hover{text-decoration:none;background:#e4f2f8}
+.cal-bg-day{border-right-color:#e5edf1}
+.cal-week-row{border-bottom-color:#dce6eb}
+.cal-weekdays .cal-week{font-size:11px;font-weight:650}
+@media(max-width:850px){.cal-weekdays,.cal-weeks{min-width:900px}}
