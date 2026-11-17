@@ -380,3 +380,13 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
  .sidebar .sidebar-bottom{display:none}
 }
 @media(prefers-reduced-motion:reduce){.sidebar .nav-link{transition:none}}
+
+/* Phase 1: lightweight seller pagination and reliable save feedback */
+.seller-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0 0;border-top:1px solid #e7eef2;margin-top:4px;color:#708592;font-size:12px}
+.seller-pagination>div{display:flex;align-items:center;gap:12px}
+.seller-pagination button{padding:8px 14px;min-height:34px;font-size:12px}
+.seller-pagination button:disabled{opacity:.38;cursor:not-allowed}
+.seller-page-current{min-width:45px;text-align:center;font-variant-numeric:tabular-nums;color:#3c5360;font-weight:600}
+.modal-save-feedback{color:#b73738;font-size:12px;line-height:1.6;min-height:0;margin-top:8px}
+.modal-save-feedback:empty{display:none}
+@media(max-width:580px){.seller-pagination{align-items:flex-start;flex-direction:column}.seller-pagination>div{width:100%;justify-content:flex-end}}
