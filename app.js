@@ -169,10 +169,13 @@ function openModal(title,fields,save){
  const submit=$("#modal-form button[type=submit]");
  if(submit){submit.classList.remove("hidden");submit.disabled=false;submit.textContent="저장";}
  state.modalSave=save;$("#modal").classList.remove("hidden");
+ document.body.classList.add("s2h-modal-open");
+ $("#modal-fields").scrollTop=0;
 }
 function closeModal(){
  if(modalSaving)return;
- $("#modal").classList.add("hidden");state.modalSave=null;$("#modal-form").reset();
+ $("#modal").classList.add("hidden");document.body.classList.remove("s2h-modal-open");
+ state.modalSave=null;$("#modal-form").reset();
 }
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
