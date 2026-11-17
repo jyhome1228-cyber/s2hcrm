@@ -802,37 +802,75 @@ function productWorkspacePage(){
  return productWorkspaceTabs()+(state.productView==="insights"?productInsightsPage():state.productView==="audit"?productAuditPage():productsPage());
 }
 // Brand-level list groups multiple distinct products without changing historical records.
-function productBrandName(group){
+// Apply the same brand-first view to EVERY registered product. Explicit brand data
+// takes precedence; where it is blank, use only repeated, distinctive name roots.
+// One-off names remain their own product family instead of being assigned a false brand.
+let brandGroupCache=null;
+const PRESET_BRAND_ROOTS=["김미떡","강금옥","가쉬"];
+const GENERIC_NAME_ROOTS=new Set(["수제","프리미엄","국내산","고급","특가","한정","정품","세트","선물","공구","신상","대용량","소용량","리뉴얼","NEW","더","THE","오늘","우리","맛있는","건강한","유기농","오리지널"]);
+function brandRootCandidates(groups){
+ const rootMap=new Map();
+ const add=(root,original,priority=1)=>{
+  const key=String(root||"").trim();
+  if(key.length<2||GENERIC_NAME_ROOTS.has(key.toUpperCase())||GENERIC_NAME_ROOTS.has(key))return;
+  const set=rootMap.get(key)||new Set();set.add(original);rootMap.set(key,set);
+ };
+ for(const group of groups){
+  const name=String(group.name||"").trim();
+  if(!name)continue;
+  // Ignore optional product descriptors and use a recurring leading token as a family hint.
+  const token=name.split(/[\s(+/&·,_]/u)[0].trim();
+  if(token.length>=2&&token!==name)add(token,name);
+  for(const product of group.members){
+   const brand=String(product.brand||"").trim();
+   if(brand)add(brand,name,3);
+  }
+ }
+ const validated=[...rootMap].filter(([root,names])=>names.size>=2)
+  .map(([root])=>root).sort((a,b)=>b.length-a.length||a.localeCompare(b,"ko-KR"));
+ return [...new Set([...PRESET_BRAND_ROOTS,...validated])];
+}
+function productBrandName(group,roots){
  const configured=group.members.map(p=>String(p.brand||"").trim()).find(Boolean);
  if(configured)return configured;
- const compact=group.name.replace(/\s+/g,"");
- if(/^김미떡/u.test(compact))return "김미떡";
- if(/^강금옥/u.test(compact))return "강금옥";
- if(/^가쉬/u.test(compact))return "가쉬";
- return group.name;
+ const name=String(group.name||"").trim(),compact=name.replace(/\s+/g,"");
+ for(const root of roots){
+  if(name===root||compact===root)return root;
+  if(name.startsWith(root+" ")||name.startsWith(root+"(")||name.startsWith(root+"+")||name.startsWith(root+"/")||name.startsWith(root+"&"))return root;
+  if(compact.startsWith(root)&&PRESET_BRAND_ROOTS.includes(root))return root;
+ }
+ // An unclassified product is still presented in the same clickable master/detail flow.
+ return name;
 }
 function brandProductGroups(){
- const originals=productMasterGroups();
+ const index=productIndex();
+ if(brandGroupCache?.index===index)return brandGroupCache.groups;
+ const originals=index.groups;
+ const roots=brandRootCandidates(originals);
  const byName=new Map();
  for(const group of originals){
-  const name=productBrandName(group);
-  if(!byName.has(name))byName.set(name,{name,products:[],members:[],aliases:new Set(),sellers:new Set(),count:0,last:"-",active:false});
+  const name=productBrandName(group,roots);
+  if(!byName.has(name))byName.set(name,{name,products:[],members:[],aliases:new Set(),sellers:new Set(),count:0,last:"-",active:false,inferred:false});
   const item=byName.get(name);
   item.products.push(group);
   item.members.push(...group.members);
   item.active=item.active||group.active;
   item.aliases.add(group.name);
+  if(name!==group.name)item.inferred=true;
   for(const alias of group.aliases)item.aliases.add(alias);
-  const stats=productIndex().stats.get(group.name);
+  const stats=index.stats.get(group.name);
   if(stats){
    item.count+=stats.count;
    for(const seller of stats.sellers)item.sellers.add(seller);
    if(stats.last>item.last)item.last=stats.last;
   }
  }
- return [...byName.values()].map(item=>({
-  ...item,aliases:[...item.aliases],searchText:[item.name,...item.aliases,...item.members.flatMap(p=>[p.brand,p.category,p.supplier])].filter(Boolean).join(" ").toLocaleLowerCase()
+ const computed=[...byName.values()].map(item=>({
+  ...item,aliases:[...item.aliases],
+  searchText:[item.name,...item.aliases,...item.members.flatMap(p=>[p.brand,p.category,p.supplier])].filter(Boolean).join(" ").toLocaleLowerCase()
  }));
+ brandGroupCache={index,groups:computed};
+ return computed;
 }
 function brandProductModal(name){
  const brand=brandProductGroups().find(b=>b.name===name);
@@ -888,7 +926,7 @@ function productsPage(){
    '<button type="button" class="mini-button" data-brand-detail="'+h(g.name)+'">상세 보기</button></td></tr>';
  });
  return wrap("브랜드 목록 · "+filtered.length+"건",
-  '<p class="panel-description">브랜드별로 상품을 하나의 줄에 모았습니다. 브랜드명을 클릭하면 개별 상품·판매 구성·공구 이력을 확인할 수 있습니다.</p>'+
+  '<p class="panel-description">전 상품을 브랜드·대표 상품군 기준으로 표시합니다. 명확한 브랜드 정보가 없는 상품도 상세 보기에서 개별 구성과 이력을 확인할 수 있습니다. 브랜드명 추정은 원본 데이터를 변경하지 않습니다.</p>'+
   controls+table(["브랜드 / 대표 상품군","상품 수","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
   (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
