@@ -26,7 +26,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -642,13 +642,22 @@ function productGroupToggle(canonical,active){
  if(state.demo)return notify("미리보기에서는 변경할 수 없습니다.");
  const group=productMasterGroups().find(g=>g.name===canonical);
  if(!group)return notify("상품을 찾을 수 없습니다.");
- const message=active?("‘"+canonical+"’ 상품을 복원할까요?"):("‘"+canonical+"’ 상품을 보관할까요? 기존 공구 이력은 보존됩니다.");
+ const message=active?("휴지통의 ‘"+canonical+"’ 상품을 복원할까요?"):("‘"+canonical+"’ 상품을 휴지통으로 이동할까요? 상품 정보와 기존 공구 이력은 삭제되지 않으며 언제든 복원할 수 있습니다.");
  if(!confirm(message))return;
  Promise.all(group.members.map(p=>updateDoc(doc(db,"products",p.id),{
-  active,updatedAt:serverTimestamp(),updatedByUid:state.user.uid,
+  active,deletedAt:active?null:serverTimestamp(),deletedByUid:active?null:state.user.uid,
+  updatedAt:serverTimestamp(),updatedByUid:state.user.uid,
   updatedByName:state.staff?.name||state.user.email
- }))).then(()=>notify(active?"상품이 복원되었습니다.":"상품이 보관되었습니다."))
+ }))).then(()=>notify(active?"상품이 복원되었습니다.":"상품을 휴지통으로 이동했습니다."))
   .catch(e=>notify("상품 상태 변경 중 오류: "+e.message));
+}
+function productWorkspaceTabs(){
+ return '<div class="product-view-tabs" role="group" aria-label="상품 관리 보기">'+
+  [["list","상품 목록"],["insights","상품 인사이트"]].map(([key,label])=>
+   '<button type="button" data-product-view="'+key+'" class="'+(state.productView===key?"selected":"")+'">'+label+'</button>').join("")+'</div>';
+}
+function productWorkspacePage(){
+ return productWorkspaceTabs()+(state.productView==="insights"?productInsightsPage():productsPage());
 }
 function productsPage(){
  const groups=productMasterGroups();
@@ -662,19 +671,19 @@ function productsPage(){
  const countActive=groups.filter(g=>g.active).length;
  const countArchived=groups.length-countActive;
  const controls='<div class="product-toolbar"><input id="product-search" type="search" placeholder="상품명, 기존 표기, 브랜드 검색" value="'+h(state.productSearch)+'"/>'+
- '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","보관 상품 ("+countArchived+")"],["all","전체 ("+groups.length+")"]]
+ '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","휴지통 ("+countArchived+")"],["all","전체 ("+groups.length+")"]]
  .map(([key,label])=>'<button type="button" data-product-status="'+key+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
  const rows=filtered.map(g=>{
   const p=g.primary,stats=productStats(p),inactive=!g.active;
-  return '<tr><td><strong>'+h(g.name)+'</strong>'+(inactive?'<span class="product-archive-label">보관</span>':'')+
+  return '<tr><td><strong>'+h(g.name)+'</strong>'+(inactive?'<span class="product-archive-label">휴지통</span>':'')+
    (g.aliases.length?'<small class="product-alias">기존 표기 '+h(g.aliases.join(" · "))+'</small>':'')+'</td>'+
    '<td>'+h(p.brand||"-")+'</td><td>'+h(p.category||"-")+'</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
    '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
    '<button class="mini-button" data-act="edit-product" data-id="'+h(p.id)+'">수정</button> '+
-   '<button class="mini-button" data-act="toggle-product-group" data-canonical="'+h(g.name)+'">'+(inactive?"복원":"보관")+'</button></td></tr>';
+   '<button class="mini-button" data-act="toggle-product-group" data-canonical="'+h(g.name)+'">'+(inactive?"복원":"삭제")+'</button></td></tr>';
  });
  return wrap("상품 목록 · "+filtered.length+"건",
-  '<p class="panel-description">같은 상품의 확인된 표기는 하나로 표시합니다. 원래 상품명과 과거 공구 기록은 변경하지 않습니다.</p>'+
+  '<p class="panel-description">상품 삭제 시 휴지통으로 이동하며 복원할 수 있습니다. 기존 공구 이력과 상품 원본은 유지됩니다.</p>'+
   controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows));
 }
 function productInsightSellers(productName){
@@ -987,7 +996,8 @@ function importerPage(){
 }
 function render(){
  if(!state.user)return;
- const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·보관",productsPage],productInsights:["상품 인사이트","","상품별 공구 현황",productInsightsPage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
+ if(state.page==="productInsights"){state.page="products";state.productView="insights";}
+ const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],productInsights:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
@@ -1006,6 +1016,7 @@ function render(){
   state.productSearch=e.target.value;render();
   const field=$("#product-search");if(field){field.focus();field.setSelectionRange(pos,pos);}
  });
+ $("#page-body").querySelectorAll("[data-product-view]").forEach(el=>el.addEventListener("click",()=>{state.productView=el.dataset.productView;render();}));
  $("#page-body").querySelectorAll("[data-product-status]").forEach(el=>el.addEventListener("click",()=>{state.productStatus=el.dataset.productStatus;render();}));
  $("#page-body").querySelectorAll("[data-insight-product]").forEach(el=>el.addEventListener("click",()=>showProductInsightSellers(el.dataset.insightProduct)));
 
