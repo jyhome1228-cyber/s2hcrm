@@ -738,17 +738,17 @@ function productAuditCandidates(){
  const index=productIndex();
  if(productAuditCache?.index===index)return productAuditCache.groups;
  const groups=index.groups.filter(g=>g.active);
- const compact=name=>String(name||"").toLocaleLowerCase().replace(/[\\s._·\-]/g,"");
+ const compact=name=>String(name||"").toLocaleLowerCase().replace(/[\s._·-]/g,"");
  const stripped=name=>compact(name)
-  .replace(/\\([^)]*\\)/g,"")
+  .replace(/\([^)]*\)/g,"")
   .replace(/[+&/].*$/,"")
-  .replace(/(?:\\d+종|\\d+개|\\d+팩|\\d+세트|세트|구성|묶음|추가)$/,"");
+  .replace(/(?:\d+종|\d+개|\d+팩|\d+세트|세트|구성|묶음|추가)$/,"");
  const matches=[];
  for(let i=0;i<groups.length;i++){
   const a=groups[i],ca=compact(a.name),sa=stripped(a.name);
   for(let j=i+1;j<groups.length;j++){
    const b=groups[j],cb=compact(b.name),sb=stripped(b.name);
-   if(!ca||!cb||ca===cb&&a.name===b.name)continue;
+   if(!ca||!cb)continue;
    let reason="",level=0;
    if(ca===cb){reason="표기·띄어쓰기 차이";level=3;}
    else if(sa===sb&&sa.length>=3){reason="세트·구성 차이";level=2;}
@@ -756,7 +756,7 @@ function productAuditCandidates(){
     const [short,long]=ca.length<=cb.length?[ca,cb]:[cb,ca];
     const remainder=long.slice(short.length);
     if(short.length>=3&&long.startsWith(short)&&
-      /^(?:\\d+종|\\d+개|\\d+팩|\\d+세트|세트|구성|\\+|&|\\/|\\(|맛|추가)/.test(remainder)){
+      /^(?:\d+종|\d+개|\d+팩|\d+세트|세트|구성|[+&/(]|맛|추가)/.test(remainder)){
       reason="동일 계열 가능성";level=1;
     }
    }
@@ -784,7 +784,6 @@ function productAuditCandidates(){
 function productAuditPage(){
  const candidates=productAuditCandidates();
  const rows=candidates.map(c=>{
-  const names=c.members.map(g=>g.name);
   const detail=c.members.map(g=>'<button type="button" class="product-audit-link" data-audit-family="'+h(g.name)+'">'+h(g.name)+'</button>').join(" · ");
   return '<tr><td><strong>'+h(c.primary)+'</strong><small class="product-alias">'+c.members.length+'개 상품명</small></td>'+
     '<td>'+detail+'</td><td>'+h(c.reasons.join(" / "))+'</td></tr>';
