@@ -1,5 +1,5 @@
 import { firebaseConfig, firebaseConfigured } from "./firebase-config.js";
-import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js?v=20261117-product-family-2";
+import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js?v=20261117-auto-family-3";
 import { mountSeedImporter } from "./import-seed-ui.js";
 import { mountBackupExport } from "./backup-export.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -828,7 +828,7 @@ function productsPage(){
    '<button class="mini-button" data-act="toggle-product-group" data-canonical="'+h(g.name)+'">'+(inactive?"복원":"삭제")+'</button></td></tr>';
  });
  return wrap("상품 목록 · "+filtered.length+"건",
-  '<p class="panel-description">같은 상품의 판매 구성은 대표 상품 아래에 표시합니다. 구성 관리에서 통합·분리할 수 있으며 기존 공구 기록은 보존됩니다.</p>'+
+  '<p class="panel-description">동일 상품의 표기·수량 구성은 자동으로 대표 상품에 묶입니다. 구성 관리에서 직접 통합·분리할 수 있으며 기존 공구 기록은 보존됩니다.</p>'+
   controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
   (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
