@@ -25,7 +25,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -759,6 +759,16 @@ function proposalsPage(){
  return wrap("제안 파이프라인 · 준비 중",'<div class="pipeline-preview">'+["제안 준비","제안 완료","답변 대기","협의 중","일정 확정"].map((v,i)=>'<div><span class="pipeline-step">'+(i+1)+'</span><strong>'+v+'</strong><small>데이터 연동 예정</small></div>').join("")+'</div><p class="panel-note">현재 제안 DB는 아직 연결되지 않았습니다. 건수와 성과를 임의로 표시하지 않습니다.</p>');
 }
 let sellerGroupCache=null;
+let filteredSellerCache=null;
+function sellerLastActivityIndex(){
+ const map=new Map();
+ for(const activity of state.activities){
+  if(!activity.sellerId)continue;
+  const current=map.get(activity.sellerId);
+  if(!current||(activity.createdAt?.seconds||0)>(current.createdAt?.seconds||0))map.set(activity.sellerId,activity);
+ }
+ return map;
+}
 function sellerGroups(){
  if(sellerGroupCache&&sellerGroupCache.sellers===state.sellers&&sellerGroupCache.buys===state.buys)
    return sellerGroupCache.groups;
@@ -804,18 +814,23 @@ function sellerDetailPage(){
  +wrap("연락 기록",table(["일시","연락 방식","내용","담당자","기록자"],logs));
 }
 function filteredSellerGroups(){
- const search=state.search.trim().toLocaleLowerCase();
- return sellerGroups().filter(g=>{
+ const groups=sellerGroups(),search=state.search.trim().toLocaleLowerCase();
+ if(filteredSellerCache?.groups===groups&&filteredSellerCache.search===search)return filteredSellerCache.result;
+ const result=groups.filter(g=>{
+  if(!search)return true;
   const s=g.selected;
-  return !search||[g.names.join(" "),g.channel,s.contact||"",...g.members.map(x=>x.instagramId||"")].join(" ").toLocaleLowerCase().includes(search);
- }).sort((a,b)=>a.selected.name.localeCompare(b.selected.name,"ko-KR"));
+  return [g.names.join(" "),g.channel,s.contact||"",...g.members.map(x=>x.instagramId||"")].join(" ").toLocaleLowerCase().includes(search);
+ }).sort((a,b)=>a.selected.name.localeCompare(b.selected.name,"ko-KR",{numeric:true}));
+ filteredSellerCache={groups,search,result};
+ return result;
 }
 function sellerCSV(){
  if(state.demo)return notify("미리보기 데이터는 내보낼 수 없습니다.");
+ const lastActivities=sellerLastActivityIndex();
  const rows=filteredSellerGroups().map(g=>{
   const s=g.selected,b=g.recent;
   const count=g.histories.length;
-  const lastActivity=state.activities.filter(a=>g.ids.has(a.sellerId)).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
+  const lastActivity=[...g.ids].map(id=>lastActivities.get(id)).filter(Boolean).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
   return [s.name,g.names.join(" / "),g.channel,
     s.followerCountLatestRecorded??"",s.contact||"",
     count,b?.product||b?.productName||"",b?.endDate||"",
@@ -838,13 +853,13 @@ function sellerCSV(){
  notify(rows.length+"명의 셀러 목록을 CSV로 내려받았습니다.");
 }
 function sellersPage(){
- const groups=filteredSellerGroups();
- const lastActivities=new Map();
- for(const activity of state.activities){
-  if(!activity.sellerId||lastActivities.has(activity.sellerId))continue;
-  lastActivities.set(activity.sellerId,activity);
- }
- const rows=groups.map(g=>{
+ const groups=filteredSellerGroups(),pageSize=state.sellerPageSize;
+ const pageCount=Math.max(1,Math.ceil(groups.length/pageSize));
+ state.sellerPage=Math.max(1,Math.min(pageCount,state.sellerPage));
+ const from=(state.sellerPage-1)*pageSize;
+ const visibleGroups=groups.slice(from,from+pageSize);
+ const lastActivities=sellerLastActivityIndex();
+ const rows=visibleGroups.map(g=>{
   const s=g.selected,b=g.recent;
   const activities=g.members.map(x=>lastActivities.get(x.id)).filter(Boolean);
   const a=activities.sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
@@ -853,9 +868,10 @@ function sellersPage(){
   '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
  const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div><span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>CSV 내보내기</button></div>';
+ const pagination='<div class="seller-pagination"><span>'+(!groups.length?'검색 결과 없음':(from+1)+'–'+Math.min(from+pageSize,groups.length)+' / '+groups.length+'명')+'</span><div><button type="button" class="secondary" data-seller-page="-1" '+(state.sellerPage===1?'disabled':'')+'>이전</button><span class="seller-page-current">'+state.sellerPage+' / '+pageCount+'</span><button type="button" class="secondary" data-seller-page="1" '+(state.sellerPage>=pageCount?'disabled':'')+'>다음</button></div></div>';
  return wrap("셀러 목록 · "+sellerGroups().length,
   '<p class="panel-description">동일 인스타그램 계정은 하나로 표시하고 과거 이름과 이력은 보존합니다.</p>'+
-  tools+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows));
+  tools+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows)+pagination);
 }
 
 function schedulePage(){
@@ -975,10 +991,11 @@ function render(){
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
  const search=$("#seller-search");
  if(search)search.addEventListener("input",e=>{
-  const pos=e.target.selectionStart;state.search=e.target.value;
+  const pos=e.target.selectionStart;state.search=e.target.value;state.sellerPage=1;
   render();
   const input=$("#seller-search");if(input){input.focus();input.setSelectionRange(pos,pos);}
  });
+ $("#page-body").querySelectorAll("[data-seller-page]").forEach(btn=>btn.addEventListener("click",()=>{state.sellerPage+=Number(btn.dataset.sellerPage);render();}));
  const exportSellers=$("#page-body [data-export-sellers]");
  if(exportSellers)exportSellers.addEventListener("click",sellerCSV);
  $("#page-body").querySelectorAll("[data-act]").forEach(el=>el.addEventListener("click",()=>{
