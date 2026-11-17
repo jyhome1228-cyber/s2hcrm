@@ -541,7 +541,7 @@ function dashboard(){
  return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+mainCalendar+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
 }
 function masterProductName(product){
- return String(product.standardName||product.productName||product.name||"").trim();
+ return String(product?.standardName||product?.productName||product?.name||"").trim();
 }
 // Build the product summary once for each Firestore snapshot, not once per row or search keystroke.
 let productIndexCache=null;
@@ -668,7 +668,7 @@ function productsPage(){
   const p=g.primary,stats=productStats(p),inactive=!g.active;
   return '<tr><td><strong>'+h(g.name)+'</strong>'+(inactive?'<span class="product-archive-label">보관</span>':'')+
    (g.aliases.length?'<small class="product-alias">기존 표기 '+h(g.aliases.join(" · "))+'</small>':'')+'</td>'+
-   '<td>'+h(p.brand||"-")+'</td><td>'+h(p.category||"-")+'</td><td>'+stats.sellers+'명</td>'+
+   '<td>'+h(p.brand||"-")+'</td><td>'+h(p.category||"-")+'</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
    '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
    '<button class="mini-button" data-act="edit-product" data-id="'+h(p.id)+'">수정</button> '+
    '<button class="mini-button" data-act="toggle-product-group" data-canonical="'+h(g.name)+'">'+(inactive?"복원":"보관")+'</button></td></tr>';
