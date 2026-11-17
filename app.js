@@ -703,10 +703,15 @@ function productFamilyModal(canonical){
   if(!target||target===canonical)throw Error("통합할 다른 대표 상품을 선택해주세요.");
   if(!productMasterGroups().some(g=>g.name===target&&g.active))throw Error("통합 대상 상품을 다시 확인해주세요.");
   if(!confirm("‘"+canonical+"’ 묶음을 ‘"+target+"’ 대표 상품 아래로 통합할까요? 기존 공구 기록은 유지됩니다."))throw Error("통합이 취소되었습니다.");
-  await Promise.all(group.members.map(p=>updateDoc(doc(db,"products",p.id),{
-   groupName:target,groupOverride:true,updatedAt:serverTimestamp(),
-   updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email
-  })));
+  // Keep historical-only labels connected even if an old groupbuy has no product record.
+  const primaryId=group.primary.id;
+  await Promise.all(group.members.map(p=>{
+   const record={groupName:target,groupOverride:true,updatedAt:serverTimestamp(),
+    updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email};
+   if(p.id===primaryId)record.aliases=[...new Set([...(p.aliases||[]),...group.aliases]
+    .map(x=>String(x||"").trim()).filter(x=>x&&x!==masterProductName(p)))];
+   return updateDoc(doc(db,"products",p.id),record);
+  }));
  });
  const submit=$("#modal-form button[type=submit]");
  if(submit)submit.textContent="선택한 대표 상품에 통합";
