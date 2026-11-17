@@ -665,6 +665,67 @@ function productGroupToggle(canonical,active){
  }))).then(()=>notify(active?"상품이 복원되었습니다.":"상품을 휴지통으로 이동했습니다."))
   .catch(e=>notify("상품 상태 변경 중 오류: "+e.message));
 }
+// The display family is separate from original products and groupbuy history.
+// A reviewer can merge a family into another representative, or split a single source product.
+function productFamilyModal(canonical){
+ const group=productMasterGroups().find(g=>g.name===canonical);
+ if(!group)return notify("상품 정보를 찾지 못했습니다.");
+ const sourceMap=new Map(group.members.map(p=>[masterProductName(p),p]));
+ const counts=new Map();
+ for(const buy of state.buys){
+  if(buy.status==="취소")continue;
+  const raw=String(buy.product||buy.productName||"").trim();
+  if(productCanonicalName(raw,state.products)!==canonical)continue;
+  counts.set(raw,(counts.get(raw)||0)+1);
+ }
+ const variations=[...new Set([canonical,...group.aliases,...sourceMap.keys(),...counts.keys()])]
+  .filter(Boolean).sort((a,b)=>a.localeCompare(b,"ko-KR",{numeric:true}));
+ const rows=variations.map(name=>{
+  const source=sourceMap.get(name);
+  const available=Boolean(source)&&group.members.length>1&&name!==canonical;
+  return '<tr><td><strong>'+h(name)+'</strong></td><td>'+(counts.get(name)||0)+'건</td><td>'+
+   (available?'<button type="button" class="mini-button" data-split-product="'+h(source.id)+'">분리</button>':
+   '<span class="muted">'+(source?"대표":"기존 표기")+'</span>')+'</td></tr>';
+ });
+ const choices=productMasterGroups().filter(g=>g.name!==canonical&&g.active)
+  .sort((a,b)=>a.name.localeCompare(b.name,"ko-KR",{numeric:true}))
+  .map(g=>'<option value="'+h(g.name)+'">'+h(g.name)+'</option>').join("");
+ const fields='<div class="full insight-summary"><span>대표 상품</span><strong>'+h(canonical)+'</strong>'+
+  '<p>등록 상품 '+group.members.length+'개 · 기존 판매 구성 '+variations.length+'개 · 공구 이력 '+[...counts.values()].reduce((a,b)=>a+b,0)+'건</p></div>'+
+  '<div class="full product-family-detail"><strong>판매 구성 및 기존 표기</strong>'+
+  table(["상품명 · 판매 구성","공구 이력","관리"],rows)+
+  '<p class="panel-note">판매 구성이 달라도 대표 상품 아래에서 함께 조회합니다. 원래 상품명과 공구 기록은 수정되지 않습니다. 분리는 등록 상품에만 적용됩니다.</p></div>'+
+  '<label class="full">다른 대표 상품으로 통합<select name="targetFamily"><option value="">대표 상품 선택</option>'+choices+'</select></label>'+
+  '<p class="full panel-note">대표 상품을 선택하고 통합하면 이 묶음의 등록 상품이 대상 대표 상품 아래로 이동합니다. 원본 데이터는 유지됩니다.</p>';
+ openModal("대표 상품 및 판매 구성",fields,async data=>{
+  if(state.demo)throw Error("미리보기에서는 변경할 수 없습니다.");
+  const target=String(data.targetFamily||"");
+  if(!target||target===canonical)throw Error("통합할 다른 대표 상품을 선택해주세요.");
+  if(!productMasterGroups().some(g=>g.name===target&&g.active))throw Error("통합 대상 상품을 다시 확인해주세요.");
+  if(!confirm("‘"+canonical+"’ 묶음을 ‘"+target+"’ 대표 상품 아래로 통합할까요? 기존 공구 기록은 유지됩니다."))throw Error("통합이 취소되었습니다.");
+  await Promise.all(group.members.map(p=>updateDoc(doc(db,"products",p.id),{
+   groupName:target,groupOverride:true,updatedAt:serverTimestamp(),
+   updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email
+  })));
+ });
+ const submit=$("#modal-form button[type=submit]");
+ if(submit)submit.textContent="선택한 대표 상품에 통합";
+ $("#modal-fields").querySelectorAll("[data-split-product]").forEach(button=>button.addEventListener("click",async()=>{
+  if(state.demo)return notify("미리보기에서는 변경할 수 없습니다.");
+  const product=group.members.find(p=>p.id===button.dataset.splitProduct);
+  if(!product)return notify("원본 상품을 찾지 못했습니다.");
+  const original=masterProductName(product);
+  if(!confirm("‘"+original+"’ 상품을 ‘"+canonical+"’ 묶음에서 분리할까요? 과거 공구 기록은 그대로 유지됩니다."))return;
+  button.disabled=true;
+  try{
+   await updateDoc(doc(db,"products",product.id),{
+    groupName:original,groupOverride:true,updatedAt:serverTimestamp(),
+    updatedByUid:state.user.uid,updatedByName:state.staff?.name||state.user.email
+   });
+   closeModal();notify("상품 구성을 분리했습니다.");
+  }catch(err){notify("분리 실패: "+(err?.message||"다시 시도해주세요."));button.disabled=false;}
+ }));
+}
 function productWorkspaceTabs(){
  return '<div class="product-view-tabs" role="group" aria-label="상품 관리 보기">'+
   [["list","상품 목록"],["insights","상품 인사이트"]].map(([key,label])=>
@@ -692,14 +753,15 @@ function productsPage(){
  const rows=filtered.slice(from,from+pageSize).map(g=>{
   const p=g.primary,stats=productStats(p),inactive=!g.active;
   return '<tr><td><strong>'+h(g.name)+'</strong>'+(inactive?'<span class="product-archive-label">휴지통</span>':'')+
-   (g.aliases.length?'<small class="product-alias">기존 표기 '+h(g.aliases.join(" · "))+'</small>':'')+'</td>'+
+   (g.aliases.length?'<small class="product-alias">판매 구성·기존 표기 '+g.aliases.length+'개 통합</small>':'')+'</td>'+
    '<td>'+h(p.brand||"-")+'</td><td>'+h(p.category||"-")+'</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(g.name)+'" aria-label="'+h(g.name)+' 진행 셀러 '+stats.sellers+'명 보기">'+stats.sellers+'명</button></td>'+
    '<td>'+stats.count+'건</td><td>'+h(stats.last)+'</td><td>'+
+   '<button class="mini-button" data-act="view-product-family" data-canonical="'+h(g.name)+'">구성 관리</button> '+
    '<button class="mini-button" data-act="edit-product" data-id="'+h(p.id)+'">수정</button> '+
    '<button class="mini-button" data-act="toggle-product-group" data-canonical="'+h(g.name)+'">'+(inactive?"복원":"삭제")+'</button></td></tr>';
  });
  return wrap("상품 목록 · "+filtered.length+"건",
-  '<p class="panel-description">상품 삭제 시 휴지통으로 이동하며 복원할 수 있습니다. 기존 공구 이력과 상품 원본은 유지됩니다.</p>'+
+  '<p class="panel-description">같은 상품의 판매 구성은 대표 상품 아래에 표시합니다. 구성 관리에서 통합·분리할 수 있으며 기존 공구 기록은 보존됩니다.</p>'+
   controls+table(["상품명","브랜드","카테고리","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
   (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
@@ -1081,6 +1143,7 @@ function render(){
  if(action==="view-seller"){state.selectedSellerId=id;state.page="sellerDetail";render();}
  if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
  if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
+ if(action==="view-product-family")productFamilyModal(el.dataset.canonical);
  if(action==="toggle-product"){const product=state.products.find(x=>x.id===id);if(product)setProductActive(id,product.active===false);}
  if(action==="toggle-product-group"){const group=productMasterGroups().find(g=>g.name===el.dataset.canonical);if(group)productGroupToggle(group.name,!group.active);}
  if(action==="edit-buy"){const buy=state.buys.find(x=>x.id===id);if(buy)openBuyModalSafely(buy);else notify("수정할 공구 기록을 찾지 못했습니다. 목록을 새로 확인해주세요.");}
