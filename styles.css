@@ -519,3 +519,11 @@ body.s2h-modal-open{overflow:hidden}
  #modal .modal-fields{grid-template-columns:minmax(0,1fr);row-gap:14px}
  #modal .modal-actions{padding:13px 18px}
 }
+
+/* Faster product list: bounded rows and clear paging */
+.product-pagination{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:19px 2px 2px;color:#718795;font-size:12px}
+.product-pagination>div{display:flex;align-items:center;gap:15px}
+.product-pagination strong{color:#385465;font-weight:650;white-space:nowrap}
+.product-pagination button{background:#fff;border:1px solid #dbe6ec;color:#087fa5;padding:9px 14px;border-radius:7px;font-size:12px;cursor:pointer}
+.product-pagination button:hover:not(:disabled){background:#eaf6fa}
+.product-pagination button:disabled{opacity:.38;cursor:default}
