@@ -44,7 +44,7 @@ function instagramLink(rawValue){
   }
  }catch{return h(raw);}
  if(!/^[A-Za-z0-9._]{1,30}$/.test(handle))return h(raw);
- return '<a class="instagram-profile-link" href="https://www.instagram.com/'+encodeURIComponent(handle)+'/" target="_blank" rel="noopener noreferrer" title="인스타그램 프로필 새 탭에서 열기">@'+h(handle)+' <span aria-hidden="true">↗</span></a>';
+ return '<a class="instagram-profile-link" href="https://www.instagram.com/'+encodeURIComponent(handle)+'/" target="_blank" rel="noopener noreferrer" title="인스타그램 프로필 새 탭에서 열기">@'+h(handle)+'</a>';
 }
 function openBuyModalSafely(item=null){
  showLoading(item?"공구 수정창을 준비하고 있습니다":"공구 등록창을 준비하고 있습니다");
