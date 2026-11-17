@@ -350,3 +350,33 @@ td{border-bottom:1px solid #edf1f3;color:#34444e}
 .instagram-profile-link:hover{text-decoration:underline;color:#006c90}
 .instagram-profile-link:focus-visible{outline:2px solid #0089b3;outline-offset:3px;border-radius:3px}
 .instagram-profile-link span{font-size:11px;opacity:.75}
+
+/* S2H CRM — refined navigation system */
+.sidebar{width:236px;min-width:236px;padding:30px 16px 20px;background:#17232d;border-right:1px solid #22313b}
+.sidebar .brand-home{margin:0 0 26px;padding:7px 13px 23px;width:100%;border-bottom:1px solid #ffffff12;text-align:left}
+.sidebar .brand-logo img{display:block;width:130px;height:48px;object-fit:contain;object-position:left center}
+.sidebar .brand-logo .brand-sub{font-size:9px;font-weight:600;letter-spacing:1.5px;line-height:1.4;margin-top:8px;color:#8fa6b2}
+.sidebar .nav{display:flex;flex-direction:column;gap:19px;overflow-y:auto;min-height:0}
+.sidebar .nav-group{display:flex;flex-direction:column;gap:3px}
+.sidebar .nav-section{display:block;font-size:9px;line-height:1.3;font-weight:700;letter-spacing:1.45px;margin:0 13px 9px;color:#698290;user-select:none}
+.sidebar .nav-link{height:42px;min-height:42px;display:flex;align-items:center;gap:13px;width:100%;padding:0 12px;border:1px solid transparent;border-radius:7px;background:transparent;color:#a9bbc6;transition:background .15s ease,color .15s ease,border-color .15s ease;font-weight:500;line-height:1}
+.sidebar .nav-link span{font-size:12.5px;font-weight:inherit;letter-spacing:-.2px}
+.sidebar .nav-link .nav-icon{display:block;flex:none;width:17px;height:17px;color:#8da4b1;stroke:currentColor}
+.sidebar .nav-link:hover{background:#263946;color:#fff;border-color:#ffffff09}
+.sidebar .nav-link.active{background:#263e4c;border:1px solid #3a5666;color:#fff;font-weight:650;box-shadow:none}
+.sidebar .nav-link.active .nav-icon{color:#60c5e1}
+.sidebar .nav-link:focus-visible{outline:2px solid #62c9e5;outline-offset:2px}
+.sidebar .sidebar-bottom{padding:17px 13px 0;margin-top:auto;border-top:1px solid #ffffff12;color:#78909c;font-size:9px;letter-spacing:1.55px}
+@media(max-width:720px){
+ .sidebar{width:100%;min-width:0;height:auto;padding:13px 15px 11px}
+ .sidebar .brand-home{margin:0 0 8px;padding:2px 2px 10px;border-bottom:1px solid #ffffff12}
+ .sidebar .brand-logo img{width:100px;height:37px}
+ .sidebar .brand-logo .brand-sub{font-size:8px;margin-top:2px}
+ .sidebar .nav{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;gap:12px;padding:1px 0 5px;scrollbar-width:thin}
+ .sidebar .nav-group{flex-direction:row;gap:5px;flex:0 0 auto}
+ .sidebar .nav-section{display:none}
+ .sidebar .nav-link{width:auto;height:38px;min-height:38px;padding:0 11px;white-space:nowrap;gap:8px}
+ .sidebar .nav-link span{font-size:12px}
+ .sidebar .sidebar-bottom{display:none}
+}
+@media(prefers-reduced-motion:reduce){.sidebar .nav-link{transition:none}}
