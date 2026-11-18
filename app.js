@@ -47,10 +47,10 @@ function instagramLink(rawValue){
  if(!/^[A-Za-z0-9._]{1,30}$/.test(handle))return h(raw);
  return '<a class="instagram-profile-link" href="https://www.instagram.com/'+encodeURIComponent(handle)+'/" target="_blank" rel="noopener noreferrer" title="인스타그램 프로필 새 탭에서 열기">@'+h(handle)+'</a>';
 }
-function openBuyModalSafely(item=null){
+function openBuyModalSafely(item=null,presetSellerId=null){
  showLoading(item?"공구 수정창을 준비하고 있습니다":"공구 등록창을 준비하고 있습니다");
  setTimeout(()=>{
-  try{buyModal(item);}catch(error){console.error("공구 등록창 오류:",error);notify("공구 등록창을 열지 못했습니다: "+(error?.message||"알 수 없는 오류"));}
+  try{buyModal(item,presetSellerId);}catch(error){console.error("공구 등록창 오류:",error);notify("공구 등록창을 열지 못했습니다: "+(error?.message||"알 수 없는 오류"));}
   finally{hideLoading();}
  },25);
 }
@@ -209,7 +209,7 @@ function sellerModal(item=null){
     else await addDoc(collection(db,"sellers"),{...record,createdAt:serverTimestamp()});
    });
 }
-function buyModal(item=null){
+function buyModal(item=null,presetSellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다.");return;}
  const cmp=(a,b)=>String(a||"").localeCompare(String(b||""),"ko-KR",{sensitivity:"base",numeric:true});
  const productLabel=p=>String(p.standardName||p.productName||p.name||"").trim();
@@ -232,7 +232,7 @@ function buyModal(item=null){
  const sellerSearchChoices=sellerChoices.map(x=>({id:x.id,name:x.name,search:[x.instagramId,x.channel,x.instagramUrl].filter(Boolean).join(" ")}));
  const productSearchChoices=[...productChoices];
  const productById=new Map(productChoices.map(p=>[p.id,p]));
- const originalSeller=sellerMap.get(item?.sellerId);
+ const originalSeller=sellerMap.get(item?.sellerId||presetSellerId);
  const initialProduct=productCanonicalName(item?.product||item?.productName||"",state.products);
  const initialProductChoice=productChoices.find(p=>p.id===item?.productId||p.name===initialProduct);
  let selectedSellerId=originalSeller?.id||"";
@@ -1445,7 +1445,7 @@ function render(){
  bindSearchInput("#product-search","productSearch");
  $("#page-body").querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerProfileLink(btn.dataset.sellerShare)));
  $("#page-body").querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
- $("#page-body").querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>openBuyModalSafely()));
+ $("#page-body").querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>openBuyModalSafely(null,btn.dataset.sellerNewBuy)));
  $("#page-body").querySelectorAll("[data-brand-sellers]").forEach(btn=>btn.addEventListener("click",()=>showProductInsightSellers(btn.dataset.brandSellers,true)));
  $("#page-body").querySelectorAll("[data-brand-detail]").forEach(btn=>btn.addEventListener("click",()=>brandProductModal(btn.dataset.brandDetail)));
  $("#page-body").querySelectorAll("[data-audit-family]").forEach(btn=>btn.addEventListener("click",()=>productFamilyModal(btn.dataset.auditFamily)));
