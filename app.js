@@ -998,7 +998,7 @@ function showProductInsightSellers(productName,asBrand=false){
   out.querySelectorAll('[data-act="view-seller"]').forEach(button=>button.addEventListener("click",()=>{
    const id=button.dataset.id;
    if(!state.sellers.some(x=>x.id===id)){notify("셀러 정보를 찾을 수 없습니다.");return;}
-   closeModal();state.selectedSellerId=id;state.page="sellerDetail";render();
+   closeModal();openSellerPopup(id);
   }));
  };
  const draw=()=>{
