@@ -1212,7 +1212,10 @@ function sellerDetailPage(){
  const cycle=group.members.map(x=>Number(x.cycleDays)).find(n=>Number.isFinite(n)&&n>0);
  const nextContact=seller.nextContactDate||(latestActivity?.createdAt?.toDate&&cycle?
   datePlus(latestActivity.createdAt.toDate().toISOString().slice(0,10),cycle):"");
- const history=buys.map(b=>'<tr><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.round||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.note||b.memo||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>');
+ const history=buys.map(b=>'<tr><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.round||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.note||b.memo||"-")+'</td><td>'+h(b.event||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>');
+ const events=buys.filter(b=>String(b.event||"").trim()).map(b=>
+  '<div class="seller-event-item"><div><strong>'+h(b.product||b.productName||"상품 미확인")+'</strong><span>'+h(b.startDate||"-")+' ~ '+h(b.endDate||"-")+'</span></div>'+
+  '<p>'+h(b.event)+'</p><small>기존 공구 대장 이벤트 원문 · 계획 조건이며 실제 지급 결과는 별도 확인 필요</small></div>').join("");
  const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type||"-")+'</td><td>'+h(a.memo||"-")+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName||"-")+'</td></tr>');
  const info=(label,value)=>'<div class="seller-profile-item"><span>'+label+'</span><strong>'+value+'</strong></div>';
  const summary='<div class="seller-profile-header"><div><span class="seller-profile-eyebrow">SELLER PROFILE</span><h2>'+h(seller.name)+'</h2>'+
@@ -1244,7 +1247,9 @@ function sellerDetailPage(){
   '<button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div></div>'+
   wrap("셀러 기본정보",summary+details)+
   wrap("전체 공구 이력 · "+buys.length+"건",'<p class="panel-description">기존 공구 기록을 날짜순으로 조회합니다. 원본 거래 내용은 유지됩니다.</p>'+
-   table(["상품","시작일","종료일","회차","결제창","정산","비고","수정"],history))+
+   table(["상품","시작일","종료일","회차","결제창","정산","비고","이벤트","수정"],history))+
+  wrap("이벤트 이력 · "+buys.filter(b=>String(b.event||"").trim()).length+"건",
+   events||'<p class="panel-description">기록된 공구 이벤트가 없습니다.</p>')+
   wrap("연락 및 활동 이력 · "+activities.length+"건",table(["일시","연락 방식","내용","담당자","기록자"],logs));
 }
 function filteredSellerGroups(){
