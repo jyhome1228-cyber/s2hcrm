@@ -614,3 +614,13 @@ body.seller-popup-open{overflow:hidden}
  .seller-detail-dialog-head{padding:15px 17px}
  .seller-detail-dialog-body{padding:14px}
 }
+
+/* KakaoTalk proposal composer in seller CRM */
+#modal .proposal-intro{background:#f1f8fb;border:1px solid #deedf3;border-radius:9px;padding:16px 17px}
+#modal .proposal-intro strong{font-size:13px;color:#244758}
+#modal .proposal-intro p{font-size:11px;color:#688394;line-height:1.65;margin:7px 0 0}
+#modal #proposal-message{min-height:240px;font-size:13px;line-height:1.85;background:#fff;white-space:pre-wrap;resize:vertical}
+#modal .proposal-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:1px}
+#modal .proposal-actions button{background:#e8f5fa;border:1px solid #c8e7f1;color:#007fa6;font-weight:750;padding:11px 16px;border-radius:7px}
+#modal .proposal-actions button:hover{background:#d8eef6}
+#modal .proposal-status{font-size:11px;color:#768e9b;line-height:1.6}
