@@ -179,14 +179,35 @@ function closeModal(){
 }
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
-  openModal(item?"셀러 정보 수정":"새 셀러 등록",
-    f("name","셀러명","text",item?.name,true)+f("channel","인스타그램 계정","text",item?.channel||item?.instagramId)+f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||"",false,true)+f("followerCountLatestRecorded","최근 기록된 팔로워 수","number",item?.followerCountLatestRecorded??"")+f("contact","연락처","text",item?.contact)+f("cycleDays","리마인드 주기 (일)","number",item?.cycleDays??30,true)+textarea("note","셀러 메모",item?.note||item?.notes),
-    async data=>{
-      const record={name:data.name.trim(),channel:data.channel.trim(),instagramUrl:data.instagramUrl.trim(),followerCountLatestRecorded:data.followerCountLatestRecorded?Number(data.followerCountLatestRecorded):null,contact:data.contact.trim(),note:data.note.trim(),cycleDays:Math.max(1,Number(data.cycleDays)||30),updatedAt:serverTimestamp()};
-      if(!record.name)throw new Error("셀러명을 입력해주세요.");
-      if(item)await updateDoc(doc(db,"sellers",item.id),record);
-      else await addDoc(collection(db,"sellers"),{...record,createdAt:serverTimestamp()});
-    });
+ const statusOptions=[["","미설정"],["활성","활성"],["협의 중","협의 중"],["재접촉 필요","재접촉 필요"],["보류","보류"],["거래 종료","거래 종료"]];
+ const proposalOptions=[["","미설정"],["제안 준비","제안 준비"],["답변 대기","답변 대기"],["수락","수락"],["거절","거절"],["협의 중","협의 중"]];
+ openModal(item?"셀러 정보 수정":"새 셀러 등록",
+   f("name","셀러명","text",item?.name,true)+f("channel","인스타그램 계정","text",item?.channel||item?.instagramId)+
+   f("instagramUrl","인스타그램 URL","url",item?.instagramUrl||"",false,true)+
+   f("followerCountLatestRecorded","최근 기록된 팔로워 수","number",item?.followerCountLatestRecorded??"")+
+   f("contact","연락처","text",item?.contact)+
+   select("collaborationStatus","협업 상태",statusOptions,item?.collaborationStatus||"")+
+   f("primaryCategory","주력 카테고리","text",item?.primaryCategory||"")+
+   f("contactChannel","선호 연락 채널","text",item?.contactChannel||"")+
+   select("proposalResult","최근 제안 결과",proposalOptions,item?.proposalResult||"")+
+   f("nextContactDate","다음 연락 예정일","date",item?.nextContactDate||"")+
+   f("cycleDays","리마인드 주기 (일)","number",item?.cycleDays??30,true)+
+   textarea("preferredConditions","선호 상품·협업 조건",item?.preferredConditions||"")+
+   textarea("note","셀러 메모",item?.note||item?.notes),
+   async data=>{
+    const record={
+     name:data.name.trim(),channel:data.channel.trim(),instagramUrl:data.instagramUrl.trim(),
+     followerCountLatestRecorded:data.followerCountLatestRecorded?Number(data.followerCountLatestRecorded):null,
+     contact:data.contact.trim(),collaborationStatus:data.collaborationStatus,
+     primaryCategory:data.primaryCategory.trim(),contactChannel:data.contactChannel.trim(),
+     proposalResult:data.proposalResult,nextContactDate:data.nextContactDate,
+     preferredConditions:data.preferredConditions.trim(),note:data.note.trim(),
+     cycleDays:Math.max(1,Number(data.cycleDays)||30),updatedAt:serverTimestamp()
+    };
+    if(!record.name)throw new Error("셀러명을 입력해주세요.");
+    if(item)await updateDoc(doc(db,"sellers",item.id),record);
+    else await addDoc(collection(db,"sellers"),{...record,createdAt:serverTimestamp()});
+   });
 }
 function buyModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다.");return;}
@@ -1097,8 +1118,8 @@ function sellerDetailPage(){
  const note=group.members.map(x=>x.note||x.notes).filter(Boolean).join("\n");
  const latestActivity=activities[0];
  const cycle=group.members.map(x=>Number(x.cycleDays)).find(n=>Number.isFinite(n)&&n>0);
- const nextContact=latestActivity?.createdAt?.toDate&&cycle?
-  datePlus(latestActivity.createdAt.toDate().toISOString().slice(0,10),cycle):"";
+ const nextContact=seller.nextContactDate||(latestActivity?.createdAt?.toDate&&cycle?
+  datePlus(latestActivity.createdAt.toDate().toISOString().slice(0,10),cycle):"");
  const history=buys.map(b=>'<tr><td>'+h(b.product||b.productName||"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.round||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.note||b.memo||"-")+'</td><td><button class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></td></tr>');
  const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type||"-")+'</td><td>'+h(a.memo||"-")+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName||"-")+'</td></tr>');
  const info=(label,value)=>'<div class="seller-profile-item"><span>'+label+'</span><strong>'+value+'</strong></div>';
@@ -1116,9 +1137,19 @@ function sellerDetailPage(){
   info("마지막 연락·활동",h(latestActivity?dt(latestActivity.createdAt):"기록 없음"))+
   info("리마인드 주기",cycle?cycle+"일":"미설정")+
   info("다음 연락 참고일",h(nextContact||"미설정"))+
-  info("총 연락 기록",activities.length+'건')+'</div>'+
+  info("총 연락 기록",activities.length+'건')+
+  info("협업 상태",h(seller.collaborationStatus||"미설정"))+
+  info("주력 카테고리",h(seller.primaryCategory||"미등록"))+
+  info("선호 연락 채널",h(seller.contactChannel||"미등록"))+
+  info("최근 제안 결과",h(seller.proposalResult||"미설정"))+'</div>'+
+  '<div class="seller-profile-note"><span>선호 상품·협업 조건</span><p>'+h(seller.preferredConditions||"등록된 조건이 없습니다.")+'</p></div>'+
   '<div class="seller-profile-note"><span>셀러 메모 및 특이사항</span><p>'+h(note||"등록된 메모가 없습니다.")+'</p></div>';
- return '<div class="detail-nav"><button data-nav="sellers" class="mini-button">셀러 목록</button><button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div>'+
+ return '<div class="detail-nav"><button data-nav="sellers" class="mini-button">셀러 목록</button>'+
+  '<div class="seller-detail-actions">'+
+  '<button type="button" class="secondary" data-seller-share="'+h(seller.id)+'">공유 링크 복사</button>'+
+  '<button type="button" class="secondary" data-seller-excel="'+h(seller.id)+'">거래 이력 엑셀</button>'+
+  '<button type="button" class="secondary" data-seller-new-buy="'+h(seller.id)+'">공구 등록</button>'+
+  '<button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div></div>'+
   wrap("셀러 기본정보",summary+details)+
   wrap("전체 공구 이력 · "+buys.length+"건",'<p class="panel-description">기존 공구 기록을 날짜순으로 조회합니다. 원본 거래 내용은 유지됩니다.</p>'+
    table(["상품","시작일","종료일","회차","결제창","정산","비고","수정"],history))+
