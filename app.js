@@ -138,6 +138,9 @@ togglePassword.addEventListener("click",()=>{
 });
 
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
+$("#seller-detail-modal-close").addEventListener("click",()=>closeSellerPopup());
+$("#seller-detail-modal").addEventListener("click",event=>{if(event.target===$("#seller-detail-modal"))closeSellerPopup();});
+
 // Backdrop clicks must not dismiss a form while the operator is registering or editing data.
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))e.preventDefault();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{clearSellerLink();navigateTo(btn.dataset.page);}));
@@ -1114,6 +1117,46 @@ async function copySellerProfileLink(id){
   window.prompt("내부 팀원에게 전달할 링크입니다. 복사해주세요.",link);
  }
 }
+let currentSellerPopupId=null;
+function closeSellerPopup(clearHash=true){
+ const modal=$("#seller-detail-modal");
+ if(modal)modal.classList.add("hidden");
+ currentSellerPopupId=null;
+ document.body.classList.remove("seller-popup-open");
+ if(clearHash)clearSellerLink();
+}
+function openSellerPopup(id){
+ const group=matchingSellerGroup(id);
+ if(!group)return notify("셀러 정보를 찾을 수 없습니다.");
+ state.selectedSellerId=group.selected.id;
+ currentSellerPopupId=group.selected.id;
+ const modal=$("#seller-detail-modal"),body=$("#seller-detail-modal-body");
+ $("#seller-detail-modal-title").textContent=group.selected.name+" · 셀러 정보";
+ body.innerHTML=sellerDetailPage();
+ modal.classList.remove("hidden");
+ document.body.classList.add("seller-popup-open");
+ body.scrollTop=0;
+ // All actions work in place without navigating away from the seller list.
+ body.querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerProfileLink(btn.dataset.sellerShare)));
+ body.querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
+ body.querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>{
+  const sellerId=btn.dataset.sellerNewBuy;
+  closeSellerPopup(false);openBuyModalSafely(null,sellerId);
+ }));
+ body.querySelectorAll("[data-act]").forEach(btn=>btn.addEventListener("click",()=>{
+  const id=btn.dataset.id;
+  if(btn.dataset.act==="edit-seller"){
+   const seller=state.sellers.find(x=>x.id===id);
+   closeSellerPopup(false);if(seller)sellerModal(seller);
+  }else if(btn.dataset.act==="contact"){
+   closeSellerPopup(false);activityModal(id);
+  }else if(btn.dataset.act==="edit-buy"){
+   const buy=state.buys.find(x=>x.id===id);
+   closeSellerPopup(false);if(buy)openBuyModalSafely(buy);
+  }
+ }));
+ body.querySelectorAll("[data-nav]").forEach(btn=>btn.addEventListener("click",()=>closeSellerPopup()));
+}
 function restoreSellerLink(){
  if(!state.user)return false;
  const hash=window.location.hash;
@@ -1121,8 +1164,8 @@ function restoreSellerLink(){
  let id="";
  try{id=decodeURIComponent(hash.slice(8));}catch{return false;}
  if(!id||!matchingSellerGroup(id))return false;
- state.selectedSellerId=id;
- state.page="sellerDetail";
+ // Do not replace the underlying view with sellerDetail.
+ if(currentSellerPopupId!==matchingSellerGroup(id).selected.id)openSellerPopup(id);
  return true;
 }
 function clearSellerLink(){
@@ -1441,6 +1484,11 @@ function render(){
  $("#add-button").onclick=state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
+ if(currentSellerPopupId&&!$("#seller-detail-modal").classList.contains("hidden")){
+  const group=matchingSellerGroup(currentSellerPopupId);
+  if(!group)closeSellerPopup();
+ }
+
  if(state.page==="import"&&!state.demo&&state.staff?.role==="admin"){mountSeedImporter(db);mountBackupExport(db);}
  $("#page-body").querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",()=>{clearSellerLink();state.page=el.dataset.nav;render();}));
 
@@ -1475,7 +1523,7 @@ function render(){
  if(exportSellers)exportSellers.addEventListener("click",sellerCSV);
  $("#page-body").querySelectorAll("[data-act]").forEach(el=>el.addEventListener("click",()=>{
  const action=el.dataset.act,id=el.dataset.id;
- if(action==="view-seller"){state.selectedSellerId=id;state.page="sellerDetail";render();}
+ if(action==="view-seller")openSellerPopup(id);
  if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
  if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
  if(action==="view-product-family")productFamilyModal(el.dataset.canonical);
