@@ -1106,15 +1106,74 @@ function sellerProfileUrl(id){
  url.hash="seller="+encodeURIComponent(id);
  return url.href;
 }
-async function copySellerProfileLink(id){
- if(!matchingSellerGroup(id))return notify("셀러 정보를 찾지 못했습니다.");
- const link=sellerProfileUrl(id);
+function sellerKakaoSummary(id){
+ const group=matchingSellerGroup(id);
+ if(!group)return "";
+ const seller=group.selected;
+ const today=todayLocal();
+ const all=[...group.histories].filter(b=>b.status!=="취소").sort((a,b)=>(b.endDate||b.startDate||"").localeCompare(a.endDate||a.startDate||""));
+ const completed=all.filter(b=>b.endDate&&b.endDate<today);
+ const running=all.filter(b=>b.startDate<=today&&b.endDate>=today);
+ const planned=all.filter(b=>b.startDate>today);
+ const activities=state.activities.filter(a=>group.ids.has(a.sellerId))
+  .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+ const mostRecent=all[0];
+ const handle=group.channel||seller.instagramUrl||seller.instagramId||seller.channel||"";
+ const instagram=handle?String(handle).startsWith("http")?handle:
+  "https://www.instagram.com/"+String(handle).replace(/^@/,"").replace(/^.*instagram\.com\//,"").replace(/\/.*$/,"")+"/":"미등록";
+ const contacts=group.members.map(x=>String(x.contact||"").trim()).filter(Boolean);
+ const followers=[
+  ...group.members.map(x=>({value:x.followerCountLatestRecorded,at:x.updatedAt?.seconds||0})),
+  ...all.map(b=>({value:b.followers,at:Date.parse((b.endDate||b.startDate||"1970-01-01")+"T00:00:00Z")/1000||0}))
+ ].filter(x=>x.value!==null&&x.value!==undefined&&x.value!==""&&Number.isFinite(Number(x.value)))
+ .sort((a,b)=>b.at-a.at);
+ const mostRecentEvent=all.find(b=>String(b.event||"").trim());
+ const contactDate=activities[0]?dt(activities[0].createdAt):"기록 없음";
+ const count=group.histories.length;
+ const lines=[
+  "［S2H 셀러 정보］",
+  "셀러명: "+seller.name,
+  "인스타그램: "+instagram,
+  "팔로워(최근 기록): "+(followers.length?Number(followers[0].value).toLocaleString("ko-KR")+"명":"미등록"),
+  "연락처: "+(contacts[0]||"미등록"),
+  "협업 상태: "+(seller.collaborationStatus||"미설정"),
+  "주력 카테고리: "+(seller.primaryCategory||"미등록"),
+  "",
+  "［공구 현황］",
+  "전체 "+count+"건 / 완료 "+completed.length+"건 / 진행 중 "+running.length+"건 / 예정 "+planned.length+"건",
+  "최근 공구: "+(mostRecent?(mostRecent.product||mostRecent.productName||"상품 미확인")+" ("+(mostRecent.startDate||"-")+" ~ "+(mostRecent.endDate||"-")+")":"기록 없음"),
+  "최근 공구 이력:"
+ ];
+ const recent=all.slice(0,5);
+ if(recent.length)recent.forEach((b,i)=>lines.push(
+  (i+1)+". "+(b.product||b.productName||"상품 미확인")+" / "+(b.startDate||"-")+" ~ "+(b.endDate||"-")
+  +(b.round?" / "+b.round+"회차":"")
+ ));
+ else lines.push("- 기록 없음");
+ if(all.length>5)lines.push("외 "+(all.length-5)+"건");
+ lines.push("","［영업 정보］",
+  "마지막 연락: "+contactDate,
+  "다음 연락 예정: "+(seller.nextContactDate||"미설정"),
+  "최근 제안 결과: "+(seller.proposalResult||"미설정"),
+  "선호 연락 채널: "+(seller.contactChannel||"미등록")
+ );
+ if(seller.preferredConditions)lines.push("협업 조건: "+seller.preferredConditions);
+ const notes=group.members.map(x=>x.note||x.notes).filter(Boolean);
+ if(notes.length)lines.push("특이사항: "+[...new Set(notes)].join(" / "));
+ if(mostRecentEvent)lines.push("","［최근 이벤트 기록］",
+  (mostRecentEvent.product||mostRecentEvent.productName||"상품 미확인")+": "+mostRecentEvent.event);
+ lines.push("","※ 내부 업무 공유용 · 팔로워 수는 실시간 수치가 아닌 저장된 기록입니다.");
+ return lines.join("\n");
+}
+async function copySellerKakaoInfo(id){
+ const message=sellerKakaoSummary(id);
+ if(!message)return notify("셀러 정보를 찾지 못했습니다.");
  try{
   if(!navigator.clipboard?.writeText)throw new Error("clipboard unavailable");
-  await navigator.clipboard.writeText(link);
-  notify("팀원용 셀러 상세 링크를 복사했습니다. 로그인 권한이 필요합니다.");
+  await navigator.clipboard.writeText(message);
+  notify("카카오톡에 붙여넣을 셀러 정보를 복사했습니다.");
  }catch{
-  window.prompt("내부 팀원에게 전달할 링크입니다. 복사해주세요.",link);
+  window.prompt("내용을 전체 선택해 복사한 뒤 카카오톡에 붙여넣으세요.",message);
  }
 }
 let currentSellerPopupId=null;
@@ -1137,7 +1196,7 @@ function openSellerPopup(id){
  document.body.classList.add("seller-popup-open");
  body.scrollTop=0;
  // All actions work in place without navigating away from the seller list.
- body.querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerProfileLink(btn.dataset.sellerShare)));
+ body.querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerKakaoInfo(btn.dataset.sellerShare)));
  body.querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
  body.querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>{
   const sellerId=btn.dataset.sellerNewBuy;
@@ -1284,7 +1343,7 @@ function sellerDetailPage(){
   '<div class="seller-profile-note"><span>셀러 메모 및 특이사항</span><p>'+h(note||"등록된 메모가 없습니다.")+'</p></div>';
  return '<div class="detail-nav"><button data-nav="sellers" class="mini-button">셀러 목록</button>'+
   '<div class="seller-detail-actions">'+
-  '<button type="button" class="secondary" data-seller-share="'+h(seller.id)+'">공유 링크 복사</button>'+
+  '<button type="button" class="secondary" data-seller-share="'+h(seller.id)+'">카톡용 정보 복사</button>'+
   '<button type="button" class="secondary" data-seller-excel="'+h(seller.id)+'">거래 이력 엑셀</button>'+
   '<button type="button" class="secondary" data-seller-new-buy="'+h(seller.id)+'">공구 등록</button>'+
   '<button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div></div>'+
@@ -1496,7 +1555,7 @@ function render(){
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
- $("#page-body").querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerProfileLink(btn.dataset.sellerShare)));
+ $("#page-body").querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerKakaoInfo(btn.dataset.sellerShare)));
  $("#page-body").querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
  $("#page-body").querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>openBuyModalSafely(null,btn.dataset.sellerNewBuy)));
  $("#page-body").querySelectorAll("[data-brand-sellers]").forEach(btn=>btn.addEventListener("click",()=>showProductInsightSellers(btn.dataset.brandSellers,true)));
