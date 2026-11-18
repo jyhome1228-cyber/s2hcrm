@@ -578,3 +578,12 @@ body.s2h-modal-open{overflow:hidden}
 .seller-profile-note p{white-space:pre-wrap;line-height:1.7;color:#476071;font-size:12px;margin:8px 0 0}
 @media(max-width:1080px){.seller-profile-stats,.seller-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.seller-profile-header{flex-direction:column}.seller-profile-stats,.seller-profile-grid{grid-template-columns:1fr 1fr}.seller-profile-item{padding:12px}}
+
+/* Seller profile actions: secure internal share + Excel trade history */
+.seller-detail-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.seller-detail-actions button{white-space:nowrap;min-height:38px;font-size:12px}
+.seller-detail-actions .secondary{background:#fff;border:1px solid #d9e6ec;color:#286078}
+.seller-detail-actions .secondary:hover{background:#edf7fa;border-color:#a9d4e3}
+.seller-profile-grid .seller-profile-item strong{white-space:normal}
+@media(max-width:820px){.detail-nav{align-items:flex-start;flex-direction:column}.seller-detail-actions{justify-content:flex-start;width:100%}}
+@media(max-width:560px){.seller-detail-actions button{flex:1 1 calc(50% - 8px)}}
