@@ -89,7 +89,7 @@ function start() {
         const ref=kind==="products"?collection(db,kind):query(collection(db,kind),orderBy("createdAt","desc"));
         const off=onSnapshot(ref,snapshot=>{
           const records=snapshot.docs.map(d=>({id:d.id,...d.data()}));
-          if(kind==="sellers")state.sellers=records;
+          if(kind==="sellers"){state.sellers=records;restoreSellerLink();}
           if(kind==="groupbuys")state.buys=records;
           if(kind==="products")state.products=records;
           if(kind==="activities")state.activities=records;
@@ -140,8 +140,8 @@ togglePassword.addEventListener("click",()=>{
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 // Backdrop clicks must not dismiss a form while the operator is registering or editing data.
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))e.preventDefault();});
-document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>navigateTo(btn.dataset.page)));
-$("#home-logo").addEventListener("click",()=>{state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
+document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{clearSellerLink();navigateTo(btn.dataset.page);}));
+$("#home-logo").addEventListener("click",()=>{clearSellerLink();state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
 $("#add-button").onclick=()=>state.page==="schedule"?openBuyModalSafely():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -1096,6 +1096,98 @@ function sellerGroups(){
 function matchingSellerGroup(sellerId){
  return sellerGroups().find(g=>g.ids.has(sellerId))||null;
 }
+// Internal seller sharing: the URL contains only an ID. Data is still protected by
+// Firebase Authentication and the existing active-staff Firestore rules.
+function sellerProfileUrl(id){
+ const url=new URL(window.location.href);
+ url.hash="seller="+encodeURIComponent(id);
+ return url.href;
+}
+async function copySellerProfileLink(id){
+ if(!matchingSellerGroup(id))return notify("셀러 정보를 찾지 못했습니다.");
+ const link=sellerProfileUrl(id);
+ try{
+  if(!navigator.clipboard?.writeText)throw new Error("clipboard unavailable");
+  await navigator.clipboard.writeText(link);
+  notify("팀원용 셀러 상세 링크를 복사했습니다. 로그인 권한이 필요합니다.");
+ }catch{
+  window.prompt("내부 팀원에게 전달할 링크입니다. 복사해주세요.",link);
+ }
+}
+function restoreSellerLink(){
+ if(!state.user)return false;
+ const hash=window.location.hash;
+ if(!hash.startsWith("#seller="))return false;
+ let id="";
+ try{id=decodeURIComponent(hash.slice(8));}catch{return false;}
+ if(!id||!matchingSellerGroup(id))return false;
+ state.selectedSellerId=id;
+ state.page="sellerDetail";
+ return true;
+}
+function clearSellerLink(){
+ if(window.location.hash.startsWith("#seller="))history.replaceState(null,"",window.location.pathname+window.location.search);
+}
+let excelWriterPromise=null;
+function loadExcelWriter(){
+ if(window.XLSX?.utils?.aoa_to_sheet)return Promise.resolve(window.XLSX);
+ if(excelWriterPromise)return excelWriterPromise;
+ excelWriterPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");
+  script.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  script.async=true;
+  script.onload=()=>window.XLSX?.utils?.aoa_to_sheet?resolve(window.XLSX):reject(new Error("엑셀 라이브러리 초기화에 실패했습니다."));
+  script.onerror=()=>reject(new Error("엑셀 생성 모듈을 불러오지 못했습니다. 네트워크 연결을 확인해주세요."));
+  document.head.appendChild(script);
+ }).catch(error=>{excelWriterPromise=null;throw error;});
+ return excelWriterPromise;
+}
+function excelSafe(value){
+ const text=String(value??"");
+ // Treat user-entered fields as literal text to prevent spreadsheet formula execution.
+ return /^[\s]*[=+\-@\t\r]/u.test(text)?"'"+text:text;
+}
+async function exportSellerTrades(id){
+ if(state.demo)return notify("미리보기에서는 실제 거래 기록을 내보낼 수 없습니다.");
+ const group=matchingSellerGroup(id);
+ if(!group)return notify("셀러 정보를 찾지 못했습니다.");
+ const buys=[...group.histories].sort((a,b)=>(b.startDate||"").localeCompare(a.startDate||""));
+ if(!buys.length)return notify("내보낼 거래 이력이 없습니다.");
+ showLoading("거래 이력 엑셀 파일을 준비하고 있습니다");
+ try{
+  const XLSX=await loadExcelWriter();
+  const headers=["셀러명","기존 기록 셀러명","상품명","시작일","종료일","진행 상태","진행 회차","팔로워 수(기록)","마이크로/일반","결제창","정산 요청","인스타그램 URL","비고 및 특이사항","이벤트","공구 ID"];
+  const rows=buys.map(b=>[
+   group.selected.name,b.sellerName||group.selected.name,b.product||b.productName||"",
+   b.startDate||"",b.endDate||"",b.status||"",
+   b.round||"",b.followers??"",b.legacyCategory||"",b.paymentWindow||"",
+   b.settlementRequest||"",b.instagramUrl||group.channel||"",
+   b.note??b.memo??"",b.event||"",b.id||""
+  ].map(excelSafe));
+  const workbook=XLSX.utils.book_new();
+  const worksheet=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  worksheet["!cols"]=[{wch:20},{wch:20},{wch:32},{wch:15},{wch:15},{wch:14},{wch:13},{wch:18},{wch:17},{wch:32},{wch:22},{wch:34},{wch:48},{wch:38},{wch:28}];
+  worksheet["!autofilter"]={ref:worksheet["!ref"]};
+  XLSX.utils.book_append_sheet(workbook,worksheet,"거래 이력");
+  const summary=[
+   ["S2H 셀러 거래 이력"],
+   ["셀러명",group.selected.name],
+   ["인스타그램",group.channel||""],
+   ["전체 거래 건수",buys.length],
+   ["첫 거래 시작일",[...buys].map(b=>b.startDate).filter(Boolean).sort()[0]||""],
+   ["최근 거래 종료일",[...buys].map(b=>b.endDate).filter(Boolean).sort().at(-1)||""],
+   ["다운로드 기준일",todayLocal()],
+   ["안내","기존 공구 원본 기록을 기준으로 생성했습니다. 수익·매출 금액은 포함되지 않습니다."]
+  ];
+  const wsSummary=XLSX.utils.aoa_to_sheet(summary.map(row=>row.map(excelSafe)));
+  wsSummary["!cols"]=[{wch:23},{wch:75}];
+  XLSX.utils.book_append_sheet(workbook,wsSummary,"셀러 요약");
+  const safeName=String(group.selected.name||"셀러").replace(/[\\/:*?"<>|]/g,"_").slice(0,55);
+  XLSX.writeFile(workbook,"S2H_"+safeName+"_거래이력_"+todayLocal()+".xlsx",{bookType:"xlsx",compression:true});
+  notify("총 "+buys.length+"건의 거래 이력을 엑셀로 내보냈습니다.");
+ }catch(error){notify("엑셀 내보내기 실패: "+(error?.message||"다시 시도해주세요."));}
+ finally{hideLoading();}
+}
 function sellerDetailPage(){
  const group=matchingSellerGroup(state.selectedSellerId);
  if(!group)return wrap("셀러 상세","<p>셀러를 선택해주세요.</p>");
@@ -1345,12 +1437,15 @@ function render(){
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
  if(state.page==="import"&&!state.demo&&state.staff?.role==="admin"){mountSeedImporter(db);mountBackupExport(db);}
- $("#page-body").querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",()=>{state.page=el.dataset.nav;render();}));
+ $("#page-body").querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",()=>{clearSellerLink();state.page=el.dataset.nav;render();}));
 
  $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;render();}else{state.weekStart=null;changeMonth(Number(el.dataset.move));}}));
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
+ $("#page-body").querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerProfileLink(btn.dataset.sellerShare)));
+ $("#page-body").querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
+ $("#page-body").querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>openBuyModalSafely()));
  $("#page-body").querySelectorAll("[data-brand-sellers]").forEach(btn=>btn.addEventListener("click",()=>showProductInsightSellers(btn.dataset.brandSellers,true)));
  $("#page-body").querySelectorAll("[data-brand-detail]").forEach(btn=>btn.addEventListener("click",()=>brandProductModal(btn.dataset.brandDetail)));
  $("#page-body").querySelectorAll("[data-audit-family]").forEach(btn=>btn.addEventListener("click",()=>productFamilyModal(btn.dataset.auditFamily)));
