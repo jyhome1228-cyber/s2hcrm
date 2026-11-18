@@ -1106,6 +1106,79 @@ function sellerProfileUrl(id){
  url.hash="seller="+encodeURIComponent(id);
  return url.href;
 }
+// KakaoTalk proposal composer: draft first, copy explicitly, save a CRM activity only on request.
+function proposalMessage(sellerName,product,start,end){
+ const recipient=String(sellerName||"").trim();
+ const productName=String(product||"").trim();
+ const dateLabel=start&&end?
+  start.replace(/-/g,".")+" ~ "+end.replace(/-/g,".") :
+  start?start.replace(/-/g,".")+"부터 (종료일 협의)":
+  end?"~ "+end.replace(/-/g,".")+" (시작일 협의)":"상호 협의";
+ return "안녕하세요, "+recipient+"님.\nS2H입니다.\n\n"+
+  "이번에 ["+productName+"] 상품의 공동구매 진행을 제안드리고자 연락드립니다.\n\n"+
+  "희망 진행 기간은 "+dateLabel+"이며, 상세 일정과 운영 조건은 협의를 통해 조율하고자 합니다.\n\n"+
+  "상품에 관심 있으시거나 진행 가능 여부를 검토해 보실 수 있다면 편하게 회신 부탁드립니다.\n감사합니다.\nS2H 드림";
+}
+function sellerProposalModal(sellerId){
+ const group=matchingSellerGroup(sellerId);
+ if(!group)return notify("셀러 정보를 찾지 못했습니다.");
+ const options=productMasterGroups().filter(g=>g.active).sort((a,b)=>a.name.localeCompare(b.name,"ko-KR",{numeric:true}));
+ if(!options.length)return notify("제안할 운영 상품이 없습니다. 상품관리에서 먼저 상품을 등록해주세요.");
+ const seller=group.selected;
+ const fields='<div class="full proposal-intro"><strong>'+h(seller.name)+'님께 보낼 공구 제안</strong>'+
+  '<p>제안 상품과 희망 기간을 선택하면 카카오톡에 보낼 문구가 자동으로 작성됩니다. 복사만으로는 실제 발송되거나 CRM에 저장되지 않습니다.</p></div>'+
+  '<label class="full">제안 상품<select id="proposal-product" name="proposalProduct" required>'+
+  '<option value="">상품을 선택해주세요</option>'+
+  options.map(g=>'<option value="'+h(g.name)+'">'+h(g.name)+'</option>').join("")+'</select></label>'+
+  '<label>희망 시작일<input type="date" id="proposal-start" name="proposalStart"/></label>'+
+  '<label>희망 종료일<input type="date" id="proposal-end" name="proposalEnd"/></label>'+
+  '<label class="full">카카오톡 제안 문구<textarea id="proposal-message" name="proposalMessage" rows="10" placeholder="상품을 선택하면 제안 문구가 생성됩니다. 직접 수정할 수 있습니다." required></textarea></label>'+
+  '<div class="full proposal-actions"><button type="button" class="secondary" id="proposal-copy">카톡 문구 복사</button>'+
+  '<span class="proposal-status" id="proposal-status" aria-live="polite">제안 상품을 먼저 선택해주세요.</span></div>'+
+  '<p class="full panel-note">희망 기간은 제안 단계의 일정이며 확정된 공구 일정이 아닙니다. 실제 발송 후에는 제안 기록을 저장할 수 있습니다.</p>';
+ openModal("공구 제안하기",fields,async data=>{
+  if(state.demo)throw Error("미리보기에서는 기록을 저장할 수 없습니다.");
+  const product=String(data.proposalProduct||"").trim();
+  const message=String(data.proposalMessage||"").trim();
+  if(!product||!options.some(g=>g.name===product))throw Error("제안 상품을 선택해주세요.");
+  if(data.proposalStart&&data.proposalEnd&&data.proposalEnd<data.proposalStart)throw Error("종료일이 시작일보다 빠릅니다.");
+  if(!message)throw Error("제안 문구를 입력해주세요.");
+  await addDoc(collection(db,"activities"),{
+   sellerId:seller.id,sellerName:seller.name,type:"공구 제안",
+   product,proposedStartDate:data.proposalStart||null,proposedEndDate:data.proposalEnd||null,
+   proposalStatus:"제안 기록",contactOwner:state.staff?.name||state.user.email,
+   memo:message,actorUid:state.user.uid,actorName:state.staff?.name||state.user.email,
+   createdAt:serverTimestamp()
+  });
+ });
+ const submit=$("#modal-form button[type=submit]");
+ if(submit)submit.textContent="제안 기록 저장";
+ const product=$("#proposal-product"),start=$("#proposal-start"),end=$("#proposal-end"),
+  message=$("#proposal-message"),copy=$("#proposal-copy"),status=$("#proposal-status");
+ const update=()=>{
+  if(!product.value){message.value="";status.textContent="제안 상품을 먼저 선택해주세요.";return;}
+  message.value=proposalMessage(seller.name,product.value,start.value,end.value);
+  status.textContent="문구가 생성되었습니다. 필요하면 직접 수정하세요.";
+ };
+ product.addEventListener("change",update);
+ start.addEventListener("change",update);
+ end.addEventListener("change",update);
+ copy.addEventListener("click",async()=>{
+  if(!product.value)return notify("제안 상품을 선택해주세요.");
+  if(start.value&&end.value&&end.value<start.value)return notify("종료일이 시작일보다 빠릅니다.");
+  if(!message.value.trim())return notify("복사할 제안 문구가 없습니다.");
+  try{
+   if(!navigator.clipboard?.writeText)throw Error("clipboard");
+   await navigator.clipboard.writeText(message.value);
+   status.textContent="복사되었습니다. 카카오톡 대화창에 붙여넣으세요.";
+   notify("공구 제안 문구를 복사했습니다.");
+  }catch{
+   message.focus();message.select();
+   status.textContent="문구를 선택했습니다. 직접 복사해주세요.";
+   notify("문구를 선택했습니다. 복사한 후 카카오톡에 붙여넣으세요.");
+  }
+ });
+}
 function sellerKakaoSummary(id){
  const group=matchingSellerGroup(id);
  if(!group)return "";
@@ -1198,6 +1271,9 @@ function openSellerPopup(id){
  // All actions work in place without navigating away from the seller list.
  body.querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerKakaoInfo(btn.dataset.sellerShare)));
  body.querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
+ body.querySelectorAll("[data-seller-proposal]").forEach(btn=>btn.addEventListener("click",()=>{
+  const id=btn.dataset.sellerProposal;closeSellerPopup(false);sellerProposalModal(id);
+ }));
  body.querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>{
   const sellerId=btn.dataset.sellerNewBuy;
   closeSellerPopup(false);openBuyModalSafely(null,sellerId);
@@ -1345,6 +1421,7 @@ function sellerDetailPage(){
   '<div class="seller-detail-actions">'+
   '<button type="button" class="secondary" data-seller-share="'+h(seller.id)+'">카톡용 정보 복사</button>'+
   '<button type="button" class="secondary" data-seller-excel="'+h(seller.id)+'">거래 이력 엑셀</button>'+
+  '<button type="button" class="secondary" data-seller-proposal="'+h(seller.id)+'">제안하기</button>'+
   '<button type="button" class="secondary" data-seller-new-buy="'+h(seller.id)+'">공구 등록</button>'+
   '<button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div></div>'+
   wrap("셀러 기본정보",summary+details)+
@@ -1557,6 +1634,7 @@ function render(){
  bindSearchInput("#product-search","productSearch");
  $("#page-body").querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerKakaoInfo(btn.dataset.sellerShare)));
  $("#page-body").querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
+ $("#page-body").querySelectorAll("[data-seller-proposal]").forEach(btn=>btn.addEventListener("click",()=>sellerProposalModal(btn.dataset.sellerProposal)));
  $("#page-body").querySelectorAll("[data-seller-new-buy]").forEach(btn=>btn.addEventListener("click",()=>openBuyModalSafely(null,btn.dataset.sellerNewBuy)));
  $("#page-body").querySelectorAll("[data-brand-sellers]").forEach(btn=>btn.addEventListener("click",()=>showProductInsightSellers(btn.dataset.brandSellers,true)));
  $("#page-body").querySelectorAll("[data-brand-detail]").forEach(btn=>btn.addEventListener("click",()=>brandProductModal(btn.dataset.brandDetail)));
