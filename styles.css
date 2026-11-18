@@ -556,3 +556,25 @@ body.s2h-modal-open{overflow:hidden}
 .product-brand-name:focus-visible{outline:2px solid #0089b3;outline-offset:3px;border-radius:3px}
 .product-family-detail .mini-button{margin:2px 2px 2px 0}
 #modal .product-family-detail .table-wrap{max-height:360px}
+
+/* Direct seller profile navigation and richer seller detail hierarchy */
+.seller-name-link{display:inline;border:0;background:transparent;padding:2px 0;color:#243d4c;font-size:12px;font-weight:750;text-align:left;cursor:pointer}
+.seller-name-link:hover{color:#0089b3;text-decoration:underline;text-underline-offset:3px}
+.seller-name-link:focus-visible{outline:2px solid #0089b3;outline-offset:3px;border-radius:3px}
+.seller-profile-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:5px 0 20px;border-bottom:1px solid #e6edf1}
+.seller-profile-header h2{margin:5px 0 7px;font-size:24px;letter-spacing:-.6px;color:#233c49}
+.seller-profile-header p{font-size:11px;color:#8b9aa4;margin:8px 0 0}
+.seller-profile-eyebrow{font-size:10px;font-weight:750;letter-spacing:1.5px;color:#0089b3}
+.seller-profile-channel{font-size:13px}
+.seller-profile-channel a{color:#0089b3}
+.seller-profile-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:18px 0 20px;border-bottom:1px solid #e6edf1}
+.seller-profile-item{min-width:0;background:#f5f8fa;border-radius:9px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.seller-profile-item span,.seller-profile-note span{font-size:11px;color:#80929e;font-weight:600}
+.seller-profile-item strong{color:#2b4756;font-size:13px;font-weight:700;overflow-wrap:anywhere;line-height:1.5}
+.seller-profile-item a{color:#0089b3;overflow-wrap:anywhere}
+.seller-profile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding-top:20px}
+.seller-profile-grid .seller-profile-item{background:#fff;border:1px solid #e4ebef}
+.seller-profile-note{margin-top:14px;border:1px solid #e4ebef;border-radius:9px;padding:16px}
+.seller-profile-note p{white-space:pre-wrap;line-height:1.7;color:#476071;font-size:12px;margin:8px 0 0}
+@media(max-width:1080px){.seller-profile-stats,.seller-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.seller-profile-header{flex-direction:column}.seller-profile-stats,.seller-profile-grid{grid-template-columns:1fr 1fr}.seller-profile-item{padding:12px}}
