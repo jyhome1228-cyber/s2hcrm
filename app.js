@@ -548,7 +548,7 @@ function dashboard(){
  const running=valid.filter(b=>b.startDate<=today&&b.endDate>=today);
  const opening=valid.filter(b=>b.startDate===today);
  const upcoming=valid.filter(b=>b.startDate>today).sort((a,b)=>a.startDate.localeCompare(b.startDate));
- const nextWeek=upcoming.filter(b=>b.startDate<=datePlus(today,7));
+ const nextWeek=valid.filter(b=>b.startDate>=today&&b.startDate<=datePlus(today,6));
  const monthly=monthlyBuys().filter(b=>b.status!=="취소");
  const kpis='<div class="metrics metrics-dashboard">'
   +metric("전체 셀러",sellerGroups().length.toLocaleString("ko-KR"),"등록된 셀러")
