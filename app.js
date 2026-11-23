@@ -543,33 +543,46 @@ function opportunitiesData(){
  }).filter(Boolean).sort((a,b)=>a.rank-b.rank||b.gap-a.gap);
 }
 function dashboard(){
- const today=todayLocal(), rem=reminders(), opp=opportunitiesData(), active=opp.filter(x=>x.level==="최근 활성").length;
- const running=state.buys.filter(b=>b.status!=="취소"&&b.startDate<=today&&b.endDate>=today);
- const upcoming=state.buys.filter(b=>b.status!=="취소"&&b.startDate>today).sort((a,b)=>a.startDate.localeCompare(b.startDate));
- const month=state.buys.filter(b=>b.status!=="취소"&&b.startDate?.slice(0,7)===today.slice(0,7));
- const alertCount=rem.length, dormant=opp.filter(x=>["관심 필요","재접촉 우선","장기 공백"].includes(x.level)).length;
-
- const kpis='<div class="metrics metrics-dashboard">'+metric("전체 셀러",sellerGroups().length.toLocaleString("ko-KR"),"중복 계정 통합")+metric("오늘 연락 필요",alertCount,"연락 예정일 경과")+metric("진행 중 공구",running.length,"현재 진행 중")+metric("선택한 달 공구",monthlyBuys().length,"월별 등록된 일정")+'</div>';
- const actionRows=rem.slice(0,6).map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong><small class="table-sub">마지막 공구 '+h(x.buy.endDate)+'</small></td><td>'+h(x.buy.product)+'</td><td><span class="status alert">'+h(x.due)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
- const monthly=monthlyBuys();
- const monthlyPanel=wrap("월별 공구 현황",'<div class="monthly-tools"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><div class="monthly-actions"><button type="button" class="primary" data-quick="buy">+ 공구 등록</button><button class="panel-link" data-nav="schedule">전체 보기</button></div></div>'+table(["셀러","상품","시작일","종료일","상태","수정"],monthlyRows(monthly.slice(0,10))));
- const actionPanel=wrap("오늘 할 일",'<p class="panel-description">최근 공구와 직접 등록한 후속 연락 일정만 표시합니다.</p>'+table(["셀러","최근 상품","재접촉 예정","실행"],actionRows),'<button data-nav="reminders" class="panel-link">전체 보기</button>');
- const scheduleRows=[...running,...upcoming].slice(0,6).map(b=>'<tr><td><strong>'+h(b.sellerName)+'</strong></td><td>'+h(b.product)+'</td><td>'+h(b.startDate.slice(5))+' ~ '+h(b.endDate.slice(5))+'</td><td><span class="status '+(b.startDate<=today?"good":"")+'">'+(b.startDate<=today?"진행 중":"예정")+'</span></td></tr>');
- const schedule=wrap("예정 공구",table(["셀러","상품","일정","상태"],scheduleRows),'<button data-nav="schedule" class="panel-link">전체 보기</button>');
- const high=opp.filter(x=>x.rank<=2).slice(0,5);
- const opportunityRows=high.map(x=>'<div class="opportunity-row"><div><strong>'+h(x.seller.name)+'</strong><small>최근 공구 '+h(x.last.product)+' · '+x.count+'회 진행</small></div><div class="opportunity-right"><span class="status '+(x.rank===0?"alert":"")+'">'+h(x.level)+'</span><small>'+x.gap+'일 공백</small></div></div>').join("");
- const opportunities=wrap("재접촉 대상",'<p class="panel-description">과거 진행 이력과 공구 공백을 기반으로 분류한 후보입니다.</p>'+(opportunityRows||'<div class="empty">해당되는 후보가 없습니다.</div>')+'<p class="panel-note">※ 현재 거래 이력을 기준으로 분류했습니다.</p>','<button data-nav="opportunities" class="panel-link">전체 보기</button>');
- const recent=state.activities.slice(0,5).map(a=>'<div class="activity-row"><span class="activity-dot"></span><div><strong>'+h(a.sellerName)+'</strong><p>'+h(a.type)+' · '+h(a.memo)+'</p></div><small>'+h(dt(a.createdAt))+'</small></div>').join("");
- const activity=wrap("최근 팀 활동",recent||'<div class="empty">아직 기록된 활동이 없습니다.</div>','<button data-nav="activity" class="panel-link">전체 보기</button>');
- const productCounts={};state.buys.filter(b=>b.status!=="취소").forEach(b=>{productCounts[b.product]=(productCounts[b.product]||0)+1;});
- const topProducts=Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).slice(0,5),max=Math.max(1,...topProducts.map(x=>x[1]));
- const products=wrap("상품별 공구 진행 이력",'<p class="panel-description">공구 진행 횟수 기준</p>'+(topProducts.map(([name,count])=>'<div class="product-bar-row"><div><span>'+h(name)+'</span><strong>'+count+'건</strong></div><div class="product-track"><span style="width:'+(count/max*100)+'%"></span></div></div>').join("")||'<div class="empty">상품 이력이 없습니다.</div>'),'<button data-nav="products" class="panel-link">상품 보기</button>');
- const distribution=[["최근 활성",active],["재접촉 후보",dormant],["공구 예정 및 최근 연락",opp.filter(x=>["공구 예정","최근 연락"].includes(x.level)).length],["과거 공구 없음",Math.max(0,state.sellers.length-opp.length)]];
- const distributionUI=wrap("셀러 현황",'<div class="distribution-chart"><div class="donut" style="--p:'+(state.sellers.length?(active/state.sellers.length*100):0)+'%"><div><strong>'+state.sellers.length+'</strong><small>전체 셀러</small></div></div><div class="distribution-legend">'+distribution.map((x,i)=>'<div><span class="legend-dot legend-'+i+'"></span><span>'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join("")+'</div></div><p class="panel-note">※ 등록된 데이터 기준의 참고 집계입니다.</p>');
- const mainCalendar=wrap("공구 캘린더",monthPicker()+calendarModeControls()+'<div class="home-calendar-sub"><span>등록된 일정 '+monthly.length+'건</span><span>오늘은 '+h(today)+'</span><button type="button" class="panel-link" data-nav="schedule">월별 대장 보기</button><button type="button" class="primary home-calendar-add" data-quick="buy">+ 공구 등록</button></div>'+monthGrid(state.calendarMode==='week'?state.buys:monthly,{compact:true,weekOnly:state.calendarMode==='week'}));
- const quick='<div class="dashboard-actions"><div><strong>빠른 등록</strong></div><div class="quick-actions"><button data-quick="seller">+ 셀러 등록</button><button data-quick="buy">+ 공구 등록</button><button data-quick="activity">+ 연락 기록</button></div></div>';
- return (state.demo?'<div class="demo-alert">미리보기 전용 화면입니다. 아래 셀러와 상품은 모두 가상 예시이며 실제 S2H 데이터가 아닙니다.</div>':'')+mainCalendar+kpis+monthlyPanel+actionPanel+'<div class="layout-two">'+schedule+'</div><div class="layout-two">'+products+distributionUI+'</div>'+activity+'<div class="dashboard-footer">S2H CORPORATION · INTERNAL SELLER OPERATIONS</div>';
+ const today=todayLocal(),rem=reminders();
+ const valid=state.buys.filter(b=>b.status!=="취소"&&b.startDate&&b.endDate);
+ const running=valid.filter(b=>b.startDate<=today&&b.endDate>=today);
+ const opening=valid.filter(b=>b.startDate===today);
+ const upcoming=valid.filter(b=>b.startDate>today).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+ const nextWeek=upcoming.filter(b=>b.startDate<=datePlus(today,7));
+ const monthly=monthlyBuys().filter(b=>b.status!=="취소");
+ const kpis='<div class="metrics metrics-dashboard">'
+  +metric("전체 셀러",sellerGroups().length.toLocaleString("ko-KR"),"등록된 셀러")
+  +metric("진행 중 공구",running.length,"오늘 기준")
+  +metric("7일 내 오픈",nextWeek.length,"예정된 공구")
+  +metric("후속 연락 필요",rem.length,"확인할 셀러")
+  +'</div>';
+ const quick='<div class="dashboard-actions"><strong>빠른 작업</strong><div class="quick-actions">'
+  +'<button type="button" data-quick="seller">셀러 등록</button>'
+  +'<button type="button" data-quick="buy">공구 등록</button>'
+  +'<button type="button" data-quick="activity">연락 기록</button>'
+  +'</div></div>';
+ const workRows=[
+  ...opening.map(b=>'<tr><td><span class="dash-task-type">오늘 오픈</span></td><td><strong>'+h(b.sellerName||"미확인")+'</strong><small class="dash-item-sub">'+h(b.product||b.productName||"상품 미확인")+'</small></td><td><button type="button" class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">일정 확인</button></td></tr>'),
+  ...rem.map(x=>'<tr><td><span class="dash-task-type">연락 필요</span></td><td><strong>'+h(x.seller.name)+'</strong><small class="dash-item-sub">'+h(x.buy?.product||"후속 연락")+' · '+h(x.due||"")+'</small></td><td><button type="button" class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>')
+ ].slice(0,8);
+ const workPanel=wrap("오늘 확인할 업무",workRows.length?table(["구분","셀러 및 상품","처리"],workRows):'<div class="dash-empty">오늘 오픈하거나 후속 연락할 일정이 없습니다.</div>','<button type="button" class="panel-link" data-nav="reminders">리마인드 보기</button>');
+ const upcomingRows=upcoming.slice(0,6).map(b=>'<tr><td><strong>'+h(b.startDate.slice(5).replace("-","."))+'</strong></td><td>'+h(b.sellerName||"미확인")+'<small class="dash-item-sub">'+h(b.product||b.productName||"상품 미확인")+'</small></td><td><button type="button" class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">확인</button></td></tr>');
+ const upcomingPanel=wrap("다가오는 공구",upcomingRows.length?table(["오픈일","셀러 및 상품","일정"],upcomingRows):'<div class="dash-empty">예정된 공구가 없습니다.</div>','<button type="button" class="panel-link" data-nav="schedule">전체 보기</button>');
+ const calendar=wrap("공구 캘린더",
+  '<div class="dashboard-calendar-tools">'+monthPicker()+calendarModeControls()+'</div>'
+  +'<div class="dashboard-calendar-meta"><span>'+h(shownMonth())+' · '+monthly.length+'건</span><button type="button" class="panel-link" data-nav="schedule">공구 일정 관리</button></div>'
+  +monthGrid(state.calendarMode==="week"?valid:monthly,{compact:true,weekOnly:state.calendarMode==="week"}));
+ const monthlyPanel=wrap("월별 공구 현황",
+  table(["셀러","상품","시작일","종료일","상태","관리"],monthlyRows(monthly.slice(0,8))),
+  '<button type="button" class="panel-link" data-nav="schedule">전체 보기</button>');
+ const recent=state.activities.slice(0,6).map(a=>'<div class="activity-row"><div><strong>'+h(a.sellerName||"셀러 미확인")+'</strong><p>'+h(a.type||"활동")+' · '+h(a.memo||"")+'</p></div><small>'+h(dt(a.createdAt))+'</small></div>').join("");
+ const activity=wrap("최근 활동",recent||'<div class="dash-empty">등록된 활동이 없습니다.</div>','<button type="button" class="panel-link" data-nav="activity">전체 보기</button>');
+ return (state.demo?'<div class="demo-alert">미리보기 데이터입니다. 실제 업무 데이터가 아니며 저장할 수 없습니다.</div>':"")
+  +'<div class="dashboard-v2">'+kpis+quick
+  +'<div class="dashboard-daily">'+workPanel+upcomingPanel+'</div>'
+  +calendar+'<div class="dashboard-secondary">'+monthlyPanel+activity+'</div></div>';
 }
+
 function masterProductName(product){
  return String(product?.standardName||product?.productName||product?.name||"").trim();
 }
@@ -1616,8 +1629,8 @@ function render(){
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  $("#today").textContent=todayLocal();
- $("#add-button").textContent=state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
- $("#add-button").onclick=state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
+ $("#add-button").textContent=state.page==="dashboard"||state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
+ $("#add-button").onclick=state.page==="dashboard"||state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
  if(currentSellerPopupId&&!$("#seller-detail-modal").classList.contains("hidden")){
