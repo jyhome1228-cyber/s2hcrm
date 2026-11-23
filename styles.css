@@ -624,3 +624,210 @@ body.seller-popup-open{overflow:hidden}
 #modal .proposal-actions button{background:#e8f5fa;border:1px solid #c8e7f1;color:#007fa6;font-weight:750;padding:11px 16px;border-radius:7px}
 #modal .proposal-actions button:hover{background:#d8eef6}
 #modal .proposal-status{font-size:11px;color:#768e9b;line-height:1.6}
+
+
+/* S2H CRM — Phase 1 / white editorial operations interface, 2026-11-24
+   Palette: white + original S2H #0089B3 + neutral ink. No decorative cards. */
+:root{
+ --s2h:#0089b3;
+ --s2h-dark:#00749a;
+ --ink:#202326;
+ --muted:#666b70;
+ --line:#dedfe0;
+ font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ color:var(--ink);
+ background:#fff;
+}
+html,body{background:#fff;color:var(--ink)}
+body,.app,.main{background:#fff}
+.main{min-width:0}
+.content{max-width:1600px;width:100%;padding:36px 42px 70px;margin:0 auto}
+.sidebar{
+ width:226px;min-width:226px;position:sticky;top:0;height:100vh;
+ background:#fff;border-right:1px solid var(--line);padding:28px 13px 22px;
+}
+.sidebar .brand-home{
+ margin:0 8px 25px;padding:0 7px 24px;width:calc(100% - 16px);
+ border-bottom:1px solid var(--line);border-radius:0;
+}
+.sidebar .brand-logo img{filter:none;width:132px;height:48px}
+.sidebar .brand-logo .brand-sub{display:none}
+.sidebar .nav{gap:14px}
+.sidebar .nav-group{gap:0}
+.sidebar .nav-section{display:none}
+.sidebar .nav-link{
+ height:43px;min-height:43px;gap:12px;
+ padding:0 12px;border:0;border-left:2px solid transparent;border-radius:0;
+ background:#fff;color:#41484d;transition:color .16s ease,background .16s ease;
+}
+.sidebar .nav-link span{font-size:13px;font-weight:500}
+.sidebar .nav-link .nav-icon{color:#737b80}
+.sidebar .nav-link:hover{border:0;border-left:2px solid transparent;background:#f6f8f9;color:#202326}
+.sidebar .nav-link.active{
+ border:0;border-left:2px solid var(--s2h);background:#fff;
+ color:var(--s2h);box-shadow:none;font-weight:700;
+}
+.sidebar .nav-link.active .nav-icon{color:var(--s2h)}
+.sidebar .nav-link.active span{font-weight:700}
+.sidebar .sidebar-bottom{border-top:1px solid var(--line);color:#60676b;letter-spacing:.06em;font-size:10px;padding:18px 12px 0}
+.topbar{height:59px;min-height:59px;border-bottom:1px solid var(--line);background:#fff;color:#555d62;padding:0 42px}
+.top-right{gap:14px}
+.avatar{border-radius:0;background:var(--s2h);color:#fff;width:26px;height:26px;font-weight:700}
+.heading{margin-bottom:24px;align-items:center;gap:18px}
+.heading h1{font-size:25px;font-weight:700;letter-spacing:-.04em;color:#202326}
+.primary,.secondary,.mini-button{
+ border-radius:2px;box-shadow:none;transition:background .15s,border-color .15s,color .15s;
+}
+.primary{background:var(--s2h);border:1px solid var(--s2h);color:#fff;padding:11px 18px;font-size:12px;font-weight:650}
+.primary:hover{background:var(--s2h-dark);border-color:var(--s2h-dark)}
+.secondary{background:#fff;border:1px solid #b9bfc3;color:#343a3e}
+.secondary:hover{border-color:var(--s2h);color:var(--s2h)}
+.mini-button{background:#fff;border:1px solid #cbd0d2;color:#3d4549;padding:7px 10px;font-size:11px}
+.mini-button:hover{background:#fff;border-color:var(--s2h);color:var(--s2h)}
+.panel-link{color:var(--s2h);font-size:12px;font-weight:600;white-space:nowrap;padding:4px 0}
+.panel-link:hover{text-decoration:underline;text-underline-offset:3px}
+.status{border-radius:2px;background:#f4f4f4;color:#3b4449}
+.status.good{background:#fff;color:var(--s2h);border:1px solid var(--s2h)}
+.status.alert{background:#fff;color:var(--s2h);border:1px solid var(--s2h)}
+.metric,.panel{background:#fff;border:1px solid var(--line);border-radius:0;box-shadow:none}
+th{background:#fff;color:#596269;font-size:11px;font-weight:600;border-bottom:1px solid #d9dddf;padding:12px 12px}
+td{color:#30383d;font-size:12px;border-bottom:1px solid #e5e7e8;padding:13px 12px}
+tbody tr:last-child td{border-bottom:0}
+table{font-variant-numeric:tabular-nums}
+.month-buttons button,.month-buttons input,
+.cal-week-navigator button,.cal-mode-switch button,.cal-display-controls button,
+.schedule-switch button{border-radius:2px}
+.month-buttons button,.month-buttons input,.cal-week-navigator button{
+ color:#30383d;border:1px solid #cfd4d7;background:#fff
+}
+.cal-mode-switch,.schedule-switch{background:#fff;border:1px solid #cfd4d7;border-radius:2px;padding:0;gap:0}
+.cal-mode-switch button{color:#566066;background:#fff;border-radius:0;box-shadow:none}
+.cal-mode-switch button.selected{color:#fff;background:var(--s2h);box-shadow:none}
+.cal-week-navigator button{color:var(--s2h)}
+/* Dashboard only: line-oriented sections rather than nested boxes */
+.dashboard-v2{display:flex;flex-direction:column;gap:0;width:100%}
+.dashboard-v2 .metrics-dashboard{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ border-top:2px solid #22282b;border-bottom:1px solid var(--line);
+ gap:0;margin:0 0 10px
+}
+.dashboard-v2 .metrics-dashboard .metric{
+ min-width:0;background:#fff;border:0;border-right:1px solid var(--line);
+ border-radius:0;box-shadow:none;padding:20px 22px 21px;
+}
+.dashboard-v2 .metrics-dashboard .metric:first-child{border-top:0}
+.dashboard-v2 .metrics-dashboard .metric:last-child{border-right:0}
+.dashboard-v2 .metrics-dashboard .metric:before{display:none}
+.dashboard-v2 .metrics-dashboard .metric .label{color:#50585d;font-size:12px;font-weight:600;letter-spacing:-.02em}
+.dashboard-v2 .metrics-dashboard .metric .number{color:#181d20;font-size:34px;line-height:1.15;letter-spacing:-.06em;font-weight:700;margin:13px 0 0}
+.dashboard-v2 .metrics-dashboard .metric .sub{display:none}
+.dashboard-v2 .dashboard-actions{
+ display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:18px;
+ background:#fff;border:0;border-radius:0;padding:7px 0 14px;
+ margin:0 0 24px
+}
+.dashboard-v2 .dashboard-actions strong{font-size:11px;font-weight:500;color:#6d7478}
+.dashboard-v2 .dashboard-actions .quick-actions{display:flex;gap:13px;flex-wrap:wrap}
+.dashboard-v2 .dashboard-actions .quick-actions button,
+.dashboard-v2 .dashboard-actions .quick-actions button:first-child{
+ padding:5px 0;border:0;border-bottom:1px solid transparent;border-radius:0;
+ background:transparent;color:#323a3e;font-size:12px;font-weight:600
+}
+.dashboard-v2 .dashboard-actions .quick-actions button:hover,
+.dashboard-v2 .dashboard-actions .quick-actions button:first-child:hover{color:var(--s2h);border-bottom-color:var(--s2h)}
+.dashboard-v2 .panel{
+ background:#fff;box-shadow:none;border:0;border-top:1px solid #242a2e;
+ border-radius:0;padding:18px 0 8px;margin:0;min-width:0
+}
+.dashboard-v2 .panel-title{margin:0 0 17px;min-height:24px;gap:16px}
+.dashboard-v2 .panel-title h2{font-size:16px;line-height:1.4;letter-spacing:-.035em;font-weight:700;color:#202326}
+.dashboard-daily{display:grid;grid-template-columns:minmax(0,1.17fr) minmax(0,1fr);gap:38px;margin:0 0 30px}
+.dashboard-daily .panel{min-width:0}
+.dashboard-v2 .dash-empty{font-size:12px;color:#737b80;padding:36px 10px;text-align:center;border-bottom:1px solid #e5e7e8}
+.dash-task-type{color:var(--s2h);font-size:11px;font-weight:650;white-space:nowrap}
+.dash-item-sub{display:block;margin-top:5px;color:#737b80;font-size:11px;font-weight:400;line-height:1.4}
+.dashboard-v2 .table-wrap{overflow-x:auto;max-width:100%}
+.dashboard-v2 .table-wrap table{min-width:0}
+.dashboard-v2 .table-wrap td{vertical-align:middle}
+.dashboard-v2 .table-wrap th:last-child,.dashboard-v2 .table-wrap td:last-child{text-align:right}
+.dashboard-v2 > .panel{margin:0 0 34px}
+.dashboard-calendar-tools{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.dashboard-calendar-tools .month-controls{margin:0 0 12px}
+.dashboard-calendar-tools .cal-display-controls{margin:0 0 12px}
+.dashboard-calendar-meta{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 15px;font-size:12px;color:#666e72}
+.dashboard-v2 .cal-scroll{background:#fff;border:1px solid #d9dddf;border-radius:0}
+.dashboard-v2 .cal-weekdays,.dashboard-v2 .cal-weekdays .cal-week{background:#fff}
+.dashboard-v2 .cal-weekdays .cal-week{color:#586166;border-bottom:1px solid #d9dddf}
+.dashboard-v2 .cal-week-row{background:#fff;border-bottom-color:#d9dddf}
+.dashboard-v2 .cal-bg-day{background:#fff;border-right-color:#e2e4e6}
+.dashboard-v2 .cal-bg-day.cal-outside{background:#f9fafb}
+.dashboard-v2 .cal-bg-day.cal-today{background:#fff;border-top:2px solid var(--s2h)}
+.dashboard-v2 .cal-date-head b{color:#373f43}
+.dashboard-v2 .cal-today .cal-date-head b{background:var(--s2h);color:#fff;border-radius:2px}
+.dashboard-v2 .cal-date-head small{color:#666e72}
+.dashboard-v2 .cal-range{
+ border:1px solid var(--s2h);border-radius:2px;box-shadow:none;
+ background:#fff;color:var(--s2h);padding:0 10px;
+ height:32px;min-height:32px;font-size:11px;font-weight:600;
+ margin:0 3px;transition:background .15s,color .15s;
+}
+.dashboard-v2 .cal-range:hover{box-shadow:none;background:#eaf7fb;color:#006f92}
+.dashboard-v2 .cal-range-active{background:var(--s2h);border-color:var(--s2h);color:#fff}
+.dashboard-v2 .cal-range-active:hover{background:var(--s2h-dark);color:#fff}
+.dashboard-v2 .cal-range-upcoming{background:#fff;border-color:var(--s2h);color:var(--s2h)}
+.dashboard-v2 .cal-range-completed{background:#fff;border-color:#cdd2d5;color:#656d72}
+.dashboard-v2 .cal-range-continue{border-left:0}
+.dashboard-v2 .cal-range-start{border-left:1px solid}
+.dashboard-v2 .cal-expand{border:0;border-radius:0;background:transparent;color:var(--s2h);padding:4px 8px}
+.dashboard-secondary{display:grid;grid-template-columns:minmax(0,1.38fr) minmax(0,1fr);gap:38px;margin:0}
+.dashboard-v2 .activity-row{border-bottom:1px solid #e5e7e8;gap:14px;padding:15px 0}
+.dashboard-v2 .activity-row p{margin:5px 0 0;color:#6c7479;font-size:12px}
+.dashboard-v2 .activity-row > small{color:#6a7277;font-size:11px}
+.dashboard-v2 .activity-row:last-child{border-bottom:0}
+.dashboard-v2 .demo-alert{border:1px solid var(--line);background:#fff;color:#333}
+:focus-visible{outline:2px solid var(--s2h);outline-offset:2px}
+@media(max-width:1100px){
+ .content{padding:30px 28px 60px}
+ .dashboard-daily,.dashboard-secondary{gap:23px}
+ .dashboard-v2 .metrics-dashboard .metric{padding:18px 15px}
+ .dashboard-v2 .metrics-dashboard .metric .number{font-size:29px}
+}
+@media(max-width:900px){
+ .dashboard-daily,.dashboard-secondary{grid-template-columns:1fr;gap:24px}
+ .dashboard-v2 .panel{padding-top:18px}
+}
+@media(max-width:720px){
+ .app{display:block}
+ .sidebar{position:relative;height:auto;width:100%;min-width:0;padding:10px 16px;border-right:0;border-bottom:1px solid var(--line)}
+ .sidebar .brand-home{width:auto;margin:0 0 4px;padding:0 0 9px;border-bottom:1px solid var(--line)}
+ .sidebar .brand-logo img{width:104px;height:37px}
+ .sidebar .nav{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;gap:8px;padding:5px 0 3px}
+ .sidebar .nav-group{display:flex;flex-direction:row;gap:3px;flex:0 0 auto}
+ .sidebar .nav-link{height:38px;min-height:38px;white-space:nowrap;width:auto;padding:0 10px;gap:7px}
+ .sidebar .nav-link span{font-size:12px}
+ .sidebar .sidebar-bottom{display:none}
+ .topbar{padding:0 17px;height:51px;min-height:51px}
+ .content{padding:24px 16px 50px}
+ .heading{margin-bottom:18px}
+ .heading h1{font-size:23px}
+ .heading .primary{white-space:nowrap;padding:10px 13px}
+ .dashboard-v2 .metrics-dashboard{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .dashboard-v2 .metrics-dashboard .metric{border-bottom:1px solid var(--line);padding:18px 12px}
+ .dashboard-v2 .metrics-dashboard .metric:nth-child(2){border-right:0}
+ .dashboard-v2 .metrics-dashboard .metric:nth-child(n+3){border-bottom:0}
+ .dashboard-v2 .metrics-dashboard .metric .number{font-size:28px}
+ .dashboard-v2 .dashboard-actions{justify-content:flex-start;align-items:center;flex-direction:row;flex-wrap:wrap;margin-bottom:21px}
+ .dashboard-v2 .dashboard-actions .quick-actions{flex-direction:row;gap:13px}
+ .dashboard-v2 .dashboard-actions .quick-actions button{width:auto}
+ .dashboard-calendar-tools{align-items:flex-start}
+ .dashboard-calendar-tools .month-controls,.dashboard-calendar-tools .cal-display-controls{margin-bottom:5px}
+ .dashboard-v2 .cal-scroll{overflow-x:auto}
+ .dashboard-v2 .cal-weekdays,.dashboard-v2 .cal-weeks{min-width:900px}
+ .dashboard-daily,.dashboard-secondary{gap:25px}
+}
+@media(max-width:380px){
+ .dashboard-v2 .metrics-dashboard .metric{padding:15px 10px}
+ .dashboard-v2 .metrics-dashboard .metric .number{font-size:26px}
+ .dashboard-v2 .dashboard-actions strong{display:none}
+}
+
