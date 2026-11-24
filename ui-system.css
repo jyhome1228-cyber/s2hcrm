@@ -121,8 +121,9 @@
 }
 #app #logout:hover{color:var(--s2h)}
 #app .content{
-  width:100%;max-width:1560px;margin:0 auto;
-  padding:34px 40px 72px;min-width:0;
+  /* Fluid workspace: fill the space beside the fixed sidebar. */
+  width:100%;max-width:none;margin:0;
+  padding:34px clamp(24px,2vw,44px) 72px;min-width:0;
 }
 #app .heading{
   display:flex;align-items:center;justify-content:space-between;
