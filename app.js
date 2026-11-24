@@ -779,10 +779,24 @@ function monthGrid(list,options={}){
  const monthEnd=datePlus(new Date(Date.UTC(y,m,0)).toISOString().slice(0,10),0);
  const firstWeekStart=options.weekOnly?activeWeekStart():datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
  const lastWeekEnd=options.weekOnly?datePlus(firstWeekStart,6):datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
- const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&b.status!=="취소");
- const maxVisible=options.compact?3:(options.weekOnly?7:5);
+ const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&(options.showCanceled||b.status!=="취소"));
+ const maxVisible=options.connected?3:(options.compact?3:(options.weekOnly?7:5));
  const weekCount=Math.round(daysBetween(firstWeekStart,lastWeekEnd)+1)/7;
  const weeks=[];
+ // Keep a stable lane throughout the month so a multi-day groupbuy stays visually connected.
+ const connectedLanes=new Map();
+ if(options.connected){
+  const chronological=[...allowed].sort((a,b)=>a.startDate.localeCompare(b.startDate)||
+   daysBetween(b.startDate,b.endDate)-daysBetween(a.startDate,a.endDate)||
+   String(a.id).localeCompare(String(b.id)));
+  const occupiedUntil=[];
+  for(const entry of chronological){
+   let lane=occupiedUntil.findIndex(end=>end<entry.startDate);
+   if(lane<0)lane=occupiedUntil.length;
+   occupiedUntil[lane]=entry.endDate;
+   connectedLanes.set(entry.id,lane);
+  }
+ }
  const fmt=date=>date.slice(5).replace("-",".");
  for(let w=0;w<weekCount;w++){
   const weekStart=datePlus(firstWeekStart,w*7),weekEnd=datePlus(weekStart,6);
@@ -794,8 +808,8 @@ function monthGrid(list,options={}){
   })).sort((a,b)=>a.from.localeCompare(b.from)||daysBetween(b.from,b.to)-daysBetween(a.from,a.to)||String(a.sellerName).localeCompare(String(b.sellerName),"ko-KR"));
   const laneEnds=[];
   for(const e of events){
-   let lane=laneEnds.findIndex(last=>last<e.from);
-   if(lane<0)lane=laneEnds.length;
+   let lane=options.connected?connectedLanes.get(e.id):laneEnds.findIndex(last=>last<e.from);
+   if(lane==null||lane<0)lane=laneEnds.length;
    laneEnds[lane]=e.to;e.lane=lane;
   }
   const weekId=weekStart;
@@ -818,7 +832,7 @@ function monthGrid(list,options={}){
   }).join("");
   const hiddenCount=events.filter(e=>e.lane>=maxVisible).length;
   const more=laneEnds.length>maxVisible?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기':'+'+hiddenCount+'건 더보기')+'</button>':'';
-  weeks.push('<section class="cal-week-row'+(options.compact?' cal-week-compact':'')+'" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
+  weeks.push('<section class="cal-week-row'+(options.compact?' cal-week-compact':'')+(options.connected?' cal-week-connected':'')+'" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
  }
  return '<div class="cal-scroll"><div class="cal-weekdays">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+'</div><div class="cal-weeks">'+weeks.join("")+'</div></div>';
 }
@@ -925,7 +939,7 @@ function dashboard(){
     '<p class="prep-dashboard-empty">현재 오픈 3일 이내에 준비 확인이 필요한 공구가 없습니다.</p>')
   +'</section>';
  const calendar='<section class="ops-major-section ops-major-calendar">'
-  +'<div class="ops-major-head"><div><h2>공구 캘린더</h2><p>월간은 간결하게, 주간은 기간별로 확인합니다.</p></div>'
+  +'<div class="ops-major-head"><div><h2>공구 캘린더</h2><p>공구 일정은 시작일부터 종료일까지 이어집니다.</p></div>'
   +'<button type="button" class="panel-link" data-nav="schedule">전체 공구 일정</button></div>'
   +'<div class="ops-calendar-controls">'+monthPicker()+calendarModeControls()+'</div>'
   +'<div class="ops-calendar-legend"><span>선택한 달 '+monthlyBuys().filter(b=>b.status!=="취소").length+'건</span>'
@@ -933,7 +947,7 @@ function dashboard(){
   +'<span class="ops-legend-item"><i class="is-upcoming"></i>예정</span>'
   +'<span class="ops-legend-item"><i class="is-past"></i>완료</span>'
   +'<span class="ops-calendar-hint">날짜 선택 후 오른쪽에서 확인</span></div>'
-  +(state.calendarMode==="week"?monthGrid(valid,{weekOnly:true,selectDates:true}):summaryMonthCalendar(valid))
+  +monthGrid(valid,{connected:true,weekOnly:state.calendarMode==="week",selectDates:true})
   +'</section>';
  const month=shownMonth(),week=activeWeekStart();
  const fallbackDate=state.calendarMode==="week"
@@ -1983,11 +1997,9 @@ function schedulePage(){
  const content=state.scheduleView==="calendar"?
   calendarModeControls()+
   '<p class="ops-schedule-note">'+(state.calendarMode==="month"?
-   '날짜별 공구가 리스트로 표시됩니다. 공구를 누르면 수정할 수 있고, 더보기로 전체 목록을 펼칠 수 있습니다.':
+   '같은 공구는 날짜를 가로질러 이어집니다. 공구 막대를 누르면 수정할 수 있습니다.':
    '기간 막대를 눌러 공구를 수정하고, 날짜를 눌러 공구를 등록할 수 있습니다.')+'</p>'+
-  (state.calendarMode==="week"?
-   monthGrid(sorted,{weekOnly:true}):
-   summaryMonthCalendar(calendarItems,{showCanceled:state.scheduleStatusFilter==="canceled",limit:3})) :
+  monthGrid(calendarItems,{connected:true,weekOnly:state.calendarMode==="week",showCanceled:state.scheduleStatusFilter==="canceled"}) :
   state.scheduleView==="detail"?
   table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","비고","상태","수정"],monthlyRows(sorted,true)):
   table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows);
