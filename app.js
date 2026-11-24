@@ -1791,6 +1791,7 @@ function schedulePage(){
    +'<td><strong>'+h(b.product||b.productName||"상품 미확인")+'</strong></td>'
    +'<td class="ops-schedule-date">'+h(b.startDate||"-")+' ~ '+h(b.endDate||"-")+'</td>'
    +'<td><span class="status '+(status==="진행 중"?"good":status==="취소"?"alert":"")+'">'+h(status)+'</span></td>'
+   +'<td><button type="button" class="ops-prep-button" data-prep-open="'+h(b.id)+'" '+(status==="취소"?"disabled":"")+'>'+h(prepProgress(b,todayLocal()).recorded?("확인 "+prepProgress(b,todayLocal()).done+"/"+prepProgress(b,todayLocal()).total):"확인 전")+'</button></td>'
    +'<td><button class="mini-button" type="button" data-act="edit-buy" data-id="'+h(b.id)+'">상세·수정</button></td></tr>';
  });
  const sorting='<div class="ops-schedule-results"><span>조회 결과 <strong>'+sorted.length+'</strong>건</span>'
@@ -1805,7 +1806,7 @@ function schedulePage(){
   monthGrid(sorted,{weekOnly:state.calendarMode==="week"}) :
   state.scheduleView==="detail"?
   table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","비고","상태","수정"],monthlyRows(sorted,true)):
-  table(["셀러명","상품","공구 기간","진행 상태","관리"],viewRows);
+  table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows);
  return '<div class="ops-schedule-page">'
   +'<div class="ops-schedule-heading"><div><strong>공구 운영 일정</strong><p>월별 진행 상황을 빠르게 확인하고 필요한 공구를 수정합니다.</p></div>'
   +'<span>선택 기간 '+base.length+'건</span></div>'
@@ -2017,6 +2018,9 @@ function render(){
 
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
+ $("#page-body").querySelectorAll("[data-prep-open]").forEach(button=>button.addEventListener("click",()=>{
+  preflightModal(button.dataset.prepOpen);
+ }));
  $("#page-body").querySelectorAll("[data-dashboard-task]").forEach(button=>button.addEventListener("click",()=>{
   state.dashboardTaskFilter=button.dataset.dashboardTask;render();
  }));
