@@ -808,8 +808,11 @@ function monthGrid(list,options={}){
     to:b.endDate<weekEnd?b.endDate:weekEnd
   })).sort((a,b)=>a.from.localeCompare(b.from)||daysBetween(b.from,b.to)-daysBetween(a.from,a.to)||String(a.sellerName).localeCompare(String(b.sellerName),"ko-KR"));
   const laneEnds=[];
+  // Compress unused global lanes each week, preserving relative order without hiding lone carry-over events.
+  const occupiedGlobalLanes=options.connected?[...new Set(events.map(e=>connectedLanes.get(e.id)))].sort((a,b)=>a-b):[];
+  const localLaneByGlobal=new Map(occupiedGlobalLanes.map((id,index)=>[id,index]));
   for(const e of events){
-   let lane=options.connected?connectedLanes.get(e.id):laneEnds.findIndex(last=>last<e.from);
+   let lane=options.connected?localLaneByGlobal.get(connectedLanes.get(e.id)):laneEnds.findIndex(last=>last<e.from);
    if(lane==null||lane<0)lane=laneEnds.length;
    laneEnds[lane]=e.to;e.lane=lane;
   }
