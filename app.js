@@ -564,7 +564,7 @@ function monthGrid(list,options={}){
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
-   return '<div class="cal-bg-day '+(!inMonth?'cal-outside ':'')+(date===todayLocal()?'cal-today':'')+'" style="grid-column:'+(day+1)+';grid-row:1 / -1"><button type="button" class="cal-day-add" data-calendar-add="'+h(date)+'" title="'+h(date)+' 공구 등록" aria-label="'+h(date)+' 날짜에 공구 등록"><span class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</span></button></div>';
+   return '<button type="button" class="cal-bg-day cal-day-add '+(!inMonth?'cal-outside ':'')+(date===todayLocal()?'cal-today':'')+'" style="grid-column:'+(day+1)+';grid-row:1 / -1" data-calendar-add="'+h(date)+'" title="'+h(date)+' 공구 등록" aria-label="'+h(date)+' 날짜에 공구 등록"><span class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</span></button>';
   }).join("");
   const bars=events.filter(e=>e.lane<visible).map(e=>{
    const startCol=daysBetween(weekStart,e.from)+1,span=daysBetween(e.from,e.to)+1;
