@@ -27,7 +27,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -639,6 +639,34 @@ function compactCalendar(list,options={}){
   +'</div>';
 }
 
+function summaryMonthCalendar(list){
+ const month=shownMonth(),today=todayLocal();
+ const [year,mo]=month.split("-").map(Number);
+ const first=weekStartFor(month+"-01");
+ const lastDay=new Date(Date.UTC(year,mo,0)).toISOString().slice(0,10);
+ const last=datePlus(lastDay,6-new Date(lastDay+"T00:00:00Z").getUTCDay());
+ const selected=state.calendarSelectedDate&&state.calendarSelectedDate>=first&&state.calendarSelectedDate<=last
+  ?state.calendarSelectedDate:(today>=first&&today<=last?today:month+"-01");
+ const weekdays=["일","월","화","수","목","금","토"].map(day=>'<span class="flow-month-weekday">'+day+'</span>').join("");
+ const cells=[];
+ for(let date=first;date<=last;date=datePlus(date,1)){
+  const events=list.filter(b=>b.id&&b.status!=="취소"&&b.startDate&&b.endDate&&b.startDate<=date&&b.endDate>=date);
+  const openings=events.filter(b=>b.startDate===date);
+  const prominent=(openings[0]||events[0])||null;
+  const badge=prominent?'<span class="flow-month-event '+(prominent.startDate>today?"is-upcoming":prominent.endDate<today?"is-completed":"is-active")+'" title="'+h((prominent.sellerName||"셀러 미확인")+" · "+(prominent.product||prominent.productName||"상품 미확인"))+'">'
+   +h(prominent.sellerName||prominent.product||"공구")+'</span>':"";
+  const more=events.length>1?'<span class="flow-month-more">+'+(events.length-1)+'건</span>':"";
+  const isSelected=date===selected,isToday=date===today,isOther=date.slice(0,7)!==month;
+  cells.push('<button type="button" class="flow-month-cell'+(isToday?' is-today':'')+(isSelected?' is-selected':'')+(isOther?' is-outside':'')+'"'
+   +' data-calendar-date="'+h(date)+'" aria-pressed="'+isSelected+'" aria-label="'+h(calendarDateLabel(date))+' 공구 '+events.length+'건 보기">'
+   +'<span class="flow-month-date"><strong>'+Number(date.slice(-2))+'</strong>'+(openings.length?'<small>오픈 '+openings.length+'</small>':"")+'</span>'
+   +badge+more+'</button>');
+ }
+ return '<div class="flow-month-calendar" aria-label="'+h(month)+' 공구 월간 캘린더">'
+  +'<div class="flow-month-weekdays">'+weekdays+'</div>'
+  +'<div class="flow-month-days">'+cells.join("")+'</div></div>';
+}
+
 function monthGrid(list,options={}){
  const [y,m]=shownMonth().split("-").map(Number);
  const monthStart=shownMonth()+"-01";
@@ -670,7 +698,8 @@ function monthGrid(list,options={}){
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
-   return '<button type="button" class="cal-bg-day cal-day-add '+(!inMonth?'cal-outside ':'')+(date===todayLocal()?'cal-today':'')+'" style="grid-column:'+(day+1)+';grid-row:1 / -1" data-calendar-add="'+h(date)+'" title="'+h(date)+' 공구 등록" aria-label="'+h(date)+' 날짜에 공구 등록"><span class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</span></button>';
+   const selectDate=options.selectDates===true;
+   return '<button type="button" class="cal-bg-day cal-day-add '+(!inMonth?'cal-outside ':'')+(date===todayLocal()?'cal-today':'')+'" style="grid-column:'+(day+1)+';grid-row:1 / -1" '+(selectDate?'data-calendar-date':'data-calendar-add')+'="'+h(date)+'" title="'+h(date)+(selectDate?' 공구 보기':' 공구 등록')+'" aria-label="'+h(date)+(selectDate?' 날짜 공구 보기':' 날짜에 공구 등록')+'"><span class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</span></button>';
   }).join("");
   const bars=events.filter(e=>e.lane<visible).map(e=>{
    const startCol=daysBetween(weekStart,e.from)+1,span=daysBetween(e.from,e.to)+1;
