@@ -1,0 +1,166 @@
+/* S2H CRM Phase 3: preparation checklist and opening-readiness status */
+#app .ops-major-prep{
+ border-top:1px solid #25343c;
+ padding:25px 0 30px;
+ margin:0 0 25px;
+}
+#app .ops-major-prep .ops-major-head{margin-bottom:17px}
+#app .prep-dashboard-count{
+ display:inline-flex;align-items:center;white-space:nowrap;
+ border:1px solid #b6dae8;background:#f2fafc;
+ padding:6px 11px;border-radius:2px;
+ color:#007c9c;font-size:12px;font-weight:700;
+}
+#app .prep-dashboard-list{width:100%;border-top:1px solid #e1e8eb}
+#app .prep-dashboard-row{
+ display:grid;grid-template-columns:105px minmax(0,1fr) auto;
+ align-items:center;gap:18px;min-height:79px;
+ border-bottom:1px solid #e3e8ea;padding:12px 8px;
+}
+#app .prep-dashboard-row:hover{background:#fbfdfe}
+#app .prep-dashboard-due{font-size:13px;font-weight:750;color:#007a9d}
+#app .prep-dashboard-description{
+ display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;
+}
+#app .prep-dashboard-description strong{color:#26353d;font-size:14px;font-weight:700}
+#app .prep-dashboard-description span{color:#455760;font-size:13px;overflow-wrap:anywhere}
+#app .prep-dashboard-description small{color:#74828a;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+#app .prep-dashboard-open,
+#app .ops-prep-button,
+#modal.buy-editor-modal .buy-editor-prep-open{
+ border:1px solid #afc5ce;border-radius:2px;background:#fff;
+ color:#006f92;font-size:12px;font-weight:650;cursor:pointer;
+ min-height:35px;padding:8px 12px;white-space:nowrap;
+}
+#app .prep-dashboard-open:hover,
+#app .ops-prep-button:hover,
+#modal.buy-editor-modal .buy-editor-prep-open:hover{
+ background:#eff8fb;border-color:#0089b3;color:#006887;
+}
+#app .ops-prep-button{padding:6px 10px;min-height:32px}
+#app .ops-prep-button:disabled{cursor:not-allowed;color:#89949a;border-color:#dce3e7;background:#f9fafb}
+#app .prep-dashboard-more,
+#app .prep-dashboard-empty{
+ color:#617178;font-size:12px;line-height:1.6;margin:0;padding:18px 9px;
+}
+#modal.buy-editor-modal .buy-editor-prep-open{
+ display:block;width:100%;min-height:43px;text-align:center;
+ grid-column:1/-1;margin-bottom:4px;
+}
+#modal.prep-modal .modal-panel{
+ width:min(760px,calc(100vw - 24px));
+ max-height:min(850px,calc(100dvh - 24px));
+ background:#fff;border:1px solid #d5e0e4;border-radius:3px;
+ box-shadow:0 20px 70px rgba(20,43,54,.2);
+}
+#modal.prep-modal .modal-head{
+ flex-shrink:0;min-height:67px;padding:19px 26px;
+ border-bottom:1px solid #e1e8eb;background:#fff;
+}
+#modal.prep-modal .modal-head h2{
+ font-size:21px;font-weight:750;letter-spacing:-.045em;color:#202e35;margin:0;
+}
+#modal.prep-modal #modal-fields{padding:21px 26px 28px;scrollbar-width:thin}
+#modal.prep-modal .modal-fields{
+ display:flex;flex-direction:column;align-items:stretch;gap:0;
+ min-width:0;
+}
+#modal.prep-modal .modal-fields>*{min-width:0}
+#modal.prep-modal .prep-modal-head{
+ display:flex;flex-direction:column;gap:6px;
+ padding:0 0 18px;border-bottom:1px solid #e2e9eb;
+}
+#modal.prep-modal .prep-modal-head strong{font-size:17px;font-weight:750;color:#243039}
+#modal.prep-modal .prep-modal-head span{font-size:13px;color:#4d5e67;overflow-wrap:anywhere}
+#modal.prep-modal .prep-modal-head small{font-size:12px;color:#708088}
+#modal.prep-modal .prep-owner,
+#modal.prep-modal .prep-link,
+#modal.prep-modal .prep-memo{
+ display:flex;flex-direction:column;gap:8px;
+ font-size:13px;color:#40535c;font-weight:700;
+ margin:17px 0 0;
+}
+#modal.prep-modal .prep-owner select,
+#modal.prep-modal .prep-link input,
+#modal.prep-modal .prep-memo textarea{
+ display:block;width:100%;height:43px;
+ border:1px solid #cfd9dd;border-radius:2px;
+ background:#fff;color:#26373f;font-size:13px;font-weight:500;
+ padding:10px 12px;margin:0;box-shadow:none;
+}
+#modal.prep-modal .prep-memo textarea{height:auto;min-height:82px;resize:vertical;line-height:1.6}
+#modal.prep-modal .prep-step-heading{
+ display:flex;align-items:baseline;gap:10px;
+ margin:25px 0 12px;flex-wrap:wrap;
+}
+#modal.prep-modal .prep-step-heading strong{font-size:16px;font-weight:750;color:#263139}
+#modal.prep-modal .prep-step-heading span{font-size:12px;color:#78878e}
+#modal.prep-modal .prep-check-list{
+ border-top:1px solid #dce5e8;border-bottom:1px solid #dce5e8;
+}
+#modal.prep-modal .prep-check-row{
+ display:flex;align-items:flex-start;gap:13px;
+ margin:0;padding:15px 7px;
+ border-bottom:1px solid #e9edef;cursor:pointer;
+}
+#modal.prep-modal .prep-check-row:last-child{border-bottom:0}
+#modal.prep-modal .prep-check-row:hover{background:#fcfefe}
+#modal.prep-modal .prep-check-row input[type=checkbox]{
+ appearance:auto;-webkit-appearance:checkbox;
+ width:19px;height:19px;min-width:19px;flex:0 0 19px;
+ margin:2px 0 0;padding:0;accent-color:#0089b3;
+ border-radius:2px;box-shadow:none;
+}
+#modal.prep-modal .prep-check-row.is-disabled{opacity:.6;cursor:not-allowed}
+#modal.prep-modal .prep-check-row.is-disabled input{cursor:not-allowed}
+#modal.prep-modal .prep-check-content{
+ display:flex;flex-direction:column;gap:4px;min-width:0;
+}
+#modal.prep-modal .prep-check-content strong{
+ font-size:13px;font-weight:700;color:#28363d;line-height:1.5;
+}
+#modal.prep-modal .prep-check-content small{
+ color:#52636b;font-weight:400;font-size:12px;line-height:1.55;
+}
+#modal.prep-modal .prep-check-content em{
+ font-size:11px;font-style:normal;color:#7c8b93;line-height:1.5;
+}
+#modal.prep-modal .prep-check-row.is-done .prep-check-content em{color:#007a9d}
+#modal.prep-modal .prep-history{
+ margin:28px 0 0;padding-top:17px;border-top:1px solid #e0e7ea;
+}
+#modal.prep-modal .prep-history>strong{
+ display:block;color:#2a3940;font-size:14px;font-weight:750;margin-bottom:12px;
+}
+#modal.prep-modal .prep-history-row{
+ display:grid;grid-template-columns:110px minmax(0,1fr) 130px;gap:10px;
+ border-bottom:1px solid #e9edef;padding:11px 0;
+ font-size:12px;color:#53656d;line-height:1.55;
+}
+#modal.prep-modal .prep-history-row strong{font-size:12px;font-weight:700;color:#26373f}
+#modal.prep-modal .prep-history-row span{overflow-wrap:anywhere}
+#modal.prep-modal .prep-history-row small{color:#71818a;font-size:11px;text-align:right}
+#modal.prep-modal .prep-history-empty{color:#76868e;font-size:12px;margin:12px 0}
+#modal.prep-modal .modal-actions{
+ border-top:1px solid #dfe7e9;background:#fff;
+ box-shadow:none;padding:15px 26px;
+}
+#modal.prep-modal .modal-actions button{border-radius:2px;min-height:42px;min-width:88px;font-size:13px}
+#modal.prep-modal .modal-actions .primary{color:#fff;background:#0089b3;border:1px solid #0089b3}
+#modal.prep-modal .modal-actions .secondary{color:#45545d;background:#fff;border:1px solid #c8d2d7}
+#modal.prep-modal :is(input,select,textarea):focus{border-color:#0089b3;outline:2px solid rgba(0,137,179,.13);outline-offset:0}
+@media(max-width:720px){
+ #app .prep-dashboard-row{grid-template-columns:68px minmax(0,1fr) auto;gap:10px;padding:11px 3px}
+ #app .prep-dashboard-description strong{font-size:13px}
+ #app .prep-dashboard-description span{font-size:12px}
+ #app .prep-dashboard-description small{font-size:11px}
+ #app .prep-dashboard-due{font-size:12px}
+ #app .prep-dashboard-open{font-size:11px;padding:7px;min-height:33px}
+ #app .ops-major-prep{padding:22px 0;margin:0 0 20px}
+ #modal.prep-modal .modal-panel{max-height:calc(100dvh - 12px);width:100%;border-radius:2px}
+ #modal.prep-modal #modal-fields{padding:16px 17px 22px}
+ #modal.prep-modal .modal-head{padding:15px 17px;min-height:58px}
+ #modal.prep-modal .prep-history-row{grid-template-columns:1fr;gap:3px}
+ #modal.prep-modal .prep-history-row small{text-align:left}
+ #modal.prep-modal .modal-actions{padding:12px 17px}
+}
