@@ -172,3 +172,26 @@
  #page-body .cal-weekdays,#page-body .cal-weeks{min-width:840px}
 }
 
+
+/* S2H CRM: temporary admin-only inspection notice */
+#maintenance.maintenance-screen{
+ position:fixed;inset:0;z-index:250;display:flex;align-items:center;
+ justify-content:center;min-height:100vh;min-height:100dvh;
+ width:100%;padding:24px;background:#fff;color:#222a30;text-align:center;
+}
+#maintenance .maintenance-content{display:flex;flex-direction:column;align-items:center;max-width:500px;width:100%;margin:auto}
+#maintenance .maintenance-logo{display:block;width:152px;max-width:55%;height:auto;margin:0 auto 42px}
+#maintenance h1{font-family:Pretendard,sans-serif;font-size:25px;letter-spacing:-.05em;font-weight:700;line-height:1.4;margin:0 0 16px}
+#maintenance p{font-size:14px;line-height:1.85;color:#606b71;margin:0;word-break:keep-all}
+#maintenance-admin-login{
+ margin:42px 0 0;padding:10px 1px;border:0;border-bottom:1px solid #cbd4d8;
+ border-radius:0;background:transparent;color:#536269;font-size:12px;font-weight:600;
+}
+#maintenance-admin-login:hover{color:#0089b3;border-bottom-color:#0089b3}
+#maintenance-admin-login:focus-visible{outline:2px solid #0089b3;outline-offset:3px}
+@media(max-width:520px){
+ #maintenance .maintenance-logo{width:132px;margin-bottom:32px}
+ #maintenance h1{font-size:22px}
+ #maintenance p{font-size:13px}
+}
+
