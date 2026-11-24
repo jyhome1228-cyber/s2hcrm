@@ -1,0 +1,157 @@
+/* S2H CRM: Notion-inspired calendar with clear independent event lists.
+   Applies to the dashboard and to the full groupbuy schedule's monthly view. */
+#app .notion-month-calendar{
+ width:100%;min-width:0;border:1px solid #e0e7ec;
+ border-radius:10px;overflow:hidden;background:#e6ecf0;
+ box-shadow:none;
+}
+#app .notion-month-weekdays,
+#app .notion-month-grid{
+ display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+ gap:1px;background:#e4eaf0;
+}
+#app .notion-month-weekday{
+ background:#f7f9fb;min-height:37px;
+ display:flex;align-items:center;justify-content:center;
+ font-size:11px;font-weight:700;color:#617581;line-height:1;
+}
+#app .notion-month-weekday:first-child{color:#b46973}
+#app .notion-month-cell{
+ min-width:0;min-height:151px;
+ display:flex;flex-direction:column;align-items:stretch;
+ gap:5px;background:#fff;
+ padding:8px 7px 9px;color:#293941;position:relative;
+}
+#app .notion-month-cell.is-outside{background:#fafbfc}
+#app .notion-month-cell.is-selected{
+ background:#f3faff;box-shadow:inset 0 0 0 2px #168ab1;
+ z-index:1;
+}
+#app .notion-month-cell.is-today:not(.is-selected){background:#f9fcfe}
+#app .notion-month-date{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:4px;min-width:0;width:100%;min-height:25px;
+ padding:0 1px;background:transparent;border:0;border-radius:3px;
+ text-align:left;cursor:pointer;
+}
+#app .notion-month-date:hover strong{color:#007da4}
+#app .notion-month-date strong{
+ font-size:12px;font-weight:750;line-height:23px;
+ color:#2f414b;font-variant-numeric:tabular-nums;
+}
+#app .notion-month-cell.is-outside .notion-month-date strong{color:#a5b1b9}
+#app .notion-month-cell.is-today .notion-month-date strong{
+ background:#0089b3;color:#fff;
+ border-radius:6px;width:24px;height:24px;
+ display:grid;place-items:center;
+}
+#app .notion-month-date small{
+ white-space:nowrap;color:#0787ae;font-size:10px;
+ line-height:1.3;font-weight:700;
+}
+#app .notion-month-events{
+ display:flex;flex-direction:column;align-items:stretch;
+ gap:4px;min-width:0;
+}
+#app .notion-month-event{
+ display:flex;align-items:flex-start;gap:5px;
+ border:0;border-radius:5px;
+ min-width:0;width:100%;min-height:26px;
+ padding:5px 6px;
+ text-align:left;background:#f3f6f8;color:#354b58;
+ cursor:pointer;box-shadow:none;
+ transition:background .14s ease;
+}
+#app .notion-month-event:hover{background:#eaf5f9}
+#app .notion-month-event:focus-visible,
+#app .notion-month-date:focus-visible,
+#app .notion-month-more:focus-visible{
+ outline:2px solid #0089b3;outline-offset:1px;
+}
+#app .notion-event-dot{
+ flex:0 0 6px;width:6px;height:6px;
+ border-radius:50%;margin-top:5px;
+ background:#a0afb7;
+}
+#app .notion-month-event.is-running .notion-event-dot{background:#0089b3}
+#app .notion-month-event.is-upcoming .notion-event-dot{background:#55bad7}
+#app .notion-month-event.is-completed .notion-event-dot{background:#b4c0c7}
+#app .notion-month-event.is-canceled .notion-event-dot{background:#b8bec3}
+#app .notion-month-event.is-running{background:#e9f5fa;color:#12698b}
+#app .notion-month-event.is-upcoming{background:#f1f8fb;color:#457385}
+#app .notion-month-event.is-completed{background:#f4f6f7;color:#60717a}
+#app .notion-month-event.is-canceled{background:#f7f7f7;color:#9a9fa3}
+#app .notion-event-text{
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ overflow:hidden;min-width:0;flex:1 1 auto;
+ line-height:1.35;font-size:11px;font-weight:600;
+ white-space:normal;overflow-wrap:anywhere;word-break:keep-all;
+}
+#app .notion-event-start{
+ flex:0 0 auto;align-self:flex-start;
+ margin:0;padding:1px 3px;
+ background:#fff;border:1px solid #d3e8f0;
+ border-radius:3px;font-size:9px;font-weight:700;
+ line-height:1.25;color:#007e9f;
+}
+#app .notion-month-more{
+ display:inline-flex;align-items:center;
+ align-self:flex-start;min-height:21px;
+ border:0;border-radius:4px;
+ padding:3px 6px;margin:0;
+ background:transparent;color:#1684a8;
+ font-size:11px;font-weight:700;
+ text-align:left;cursor:pointer;
+}
+#app .notion-month-more:hover{
+ color:#006f93;background:#eaf6fa;
+}
+#app .notion-month-empty{display:block;flex:1;min-height:12px}
+#app .dashboard-v5 .dashboard-primary-calendar .notion-month-calendar{
+ border-radius:10px;
+}
+#app .dashboard-v5 .flow-date-list{
+ max-height:510px;overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:thin;
+}
+#app .dashboard-v5 .dashboard-primary-aside{
+ position:sticky;top:78px;align-self:start;
+}
+/* Full schedule: use the same per-date event lists rather than a continuous bar month view. */
+#app .ops-schedule-main.is-calendar:has(.notion-month-calendar){
+ border-top:0;padding-top:4px;
+}
+#app .ops-schedule-main .notion-month-cell{
+ min-height:162px;padding:9px 8px;
+}
+#app .ops-schedule-main .notion-month-event{
+ min-height:28px;padding:6px 7px;
+}
+#app .ops-schedule-main .notion-event-text{font-size:12px}
+#app .ops-schedule-main .notion-month-weekday{min-height:40px}
+@media(max-width:1390px){
+ #app .dashboard-v5 .notion-month-cell{min-height:145px;padding:7px 5px;gap:4px}
+ #app .dashboard-v5 .notion-month-event{padding:5px 4px;gap:4px}
+ #app .dashboard-v5 .notion-event-text{font-size:10px}
+ #app .dashboard-v5 .notion-event-start{display:none}
+}
+@media(max-width:1080px){
+ #app .dashboard-v5 .dashboard-primary-aside{position:static}
+}
+@media(max-width:720px){
+ #app .notion-month-calendar{
+  width:100%;max-width:100%;overflow-x:auto;border-radius:8px;
+ }
+ #app .notion-month-weekdays,
+ #app .notion-month-grid{
+  min-width:665px;
+ }
+ #app .notion-month-cell,
+ #app .dashboard-v5 .notion-month-cell{
+  min-height:138px;padding:7px 5px;gap:4px;
+ }
+ #app .notion-month-weekday{min-height:32px}
+ #app .notion-event-text{font-size:10px}
+ #app .notion-event-start{display:none}
+ #app .dashboard-v5 .flow-date-list{max-height:460px}
+}
