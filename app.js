@@ -26,7 +26,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -654,10 +654,17 @@ function dashboard(){
   ...opening.map(b=>({category:"오늘 오픈",seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",meta:"종료 "+b.endDate.slice(5).replace("-","."),action:"edit-buy",id:b.id,label:"공구 확인"})),
   ...rem.map(x=>({category:x.overdue>0?"연락 지연":"연락 필요",seller:x.seller.name,product:x.buy?.product||"후속 연락",meta:"연락 기준일 "+(x.due||"-"),action:"contact",id:x.seller.id,label:"연락 기록"}))
  ];
+ const activeTasks=state.dashboardTaskFilter==="opening"?tasks.filter(t=>t.action==="edit-buy"):
+  state.dashboardTaskFilter==="contact"?tasks.filter(t=>t.action==="contact"):tasks;
+ const taskFilters='<div class="ops-task-filters" role="group" aria-label="오늘 업무 필터">'
+  +[["all","전체",tasks.length],["opening","오늘 오픈",opening.length],["contact","연락 필요",rem.length]]
+   .map(([key,label,count])=>'<button type="button" data-dashboard-task="'+key+'" aria-pressed="'+(state.dashboardTaskFilter===key)+'" class="'+(state.dashboardTaskFilter===key?"selected":"")+'">'+label+' <span>'+count+'</span></button>').join("")
+  +'</div>';
  const taskPanel=wrap("오늘 처리할 업무",
-  '<p class="ops-panel-summary">오늘 오픈 '+opening.length+'건 · 연락 확인 '+rem.length+'건</p><div class="ops-work-list">'
-  +(tasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">오늘 처리할 업무가 없습니다.</div>')+'</div>'
-  +(tasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
+  '<p class="ops-panel-summary">오늘 오픈 '+opening.length+'건 · 연락 확인 '+rem.length+'건</p>'
+  +taskFilters+'<div class="ops-work-list">'
+  +(activeTasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">해당 조건의 업무가 없습니다.</div>')+'</div>'
+  +(activeTasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
   '<button type="button" class="panel-link" data-nav="reminders">연락 대상 보기</button>');
  const futureItems=upcoming.slice(0,6).map(b=>({
   category:b.startDate.slice(5).replace("-",".")+" 오픈",
@@ -1699,7 +1706,7 @@ function schedulePage(){
   +'<div class="ops-schedule-heading"><div><strong>공구 운영 일정</strong><p>월별 진행 상황을 빠르게 확인하고 필요한 공구를 수정합니다.</p></div>'
   +'<span>선택 기간 '+base.length+'건</span></div>'
   +'<div class="ops-schedule-month">'+monthPicker()+'</div>'
-  +toolbar+sorting+'<div class="ops-schedule-main '+(state.scheduleView==="calendar"?"is-calendar":"")+'">'+content+'</div>'
+  +toolbar+sorting+'<div class="ops-schedule-main '+(state.scheduleView==="calendar"?"is-calendar":state.scheduleView==="detail"?"is-detail":"")+'">'+content+'</div>'
   +'</div>';
 }
 
@@ -1906,6 +1913,10 @@ function render(){
 
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
+ $("#page-body").querySelectorAll("[data-dashboard-task]").forEach(button=>button.addEventListener("click",()=>{
+  state.dashboardTaskFilter=button.dataset.dashboardTask;render();
+ }));
+
  bindSearchInput("#seller-search","search");
  $("#page-body").querySelectorAll("[data-seller-filter]").forEach(button=>button.addEventListener("click",()=>{
   state.sellerOperationFilter=button.dataset.sellerFilter;state.sellerPage=1;render();
