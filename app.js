@@ -60,9 +60,25 @@ const f = (name,label,type="text",val="",required=false,full=false) => '<label c
 const textarea = (name,label,val="") => '<label class="full">'+h(label)+'<textarea name="'+h(name)+'">'+h(val)+'</textarea></label>';
 const select = (name,label,options,val="") => '<label>'+h(label)+'<select name="'+h(name)+'">'+options.map(([v,t])=>'<option value="'+h(v)+'" '+(v===val?'selected':'')+'>'+h(t)+'</option>').join("")+'</select></label>';
 
+const MAINTENANCE_MODE=true; // Temporary S2H CRM inspection mode
+function showMaintenance(){
+ if(!MAINTENANCE_MODE)return;
+ const gate=$("#maintenance");
+ if(gate)gate.classList.remove("hidden");
+ $("#login").classList.add("hidden");
+ $("#app").classList.add("hidden");
+}
+function showAdminLogin(){
+ if(!MAINTENANCE_MODE)return;
+ $("#maintenance")?.classList.add("hidden");
+ $("#login").classList.remove("hidden");
+}
+$("#maintenance-admin-login")?.addEventListener("click",showAdminLogin);
+
 let db,auth;
 function start() {
   if (!firebaseConfigured) {
+    if(MAINTENANCE_MODE)showMaintenance();
     $("#login-error").textContent="Firebase 연결 전입니다. 현재는 미리보기로 화면 구성을 확인할 수 있어요."; $("#preview-button").classList.remove("hidden"); $("#preview-hint").classList.remove("hidden");
     $("#login-form").querySelector("button").disabled=true;
     return;
@@ -71,13 +87,20 @@ function start() {
   auth=getAuth(app);db=getFirestore(app);
   onAuthStateChanged(auth, async user => {
     clearListeners();
-    if (!user){state.user=null;state.staff=null;$("#login").classList.remove("hidden");$("#app").classList.add("hidden");return;}
+    if (!user){state.user=null;state.staff=null;if(MAINTENANCE_MODE)showMaintenance();else{$("#login").classList.remove("hidden");$("#app").classList.add("hidden");}return;}
     try {
       const userDoc=await getDoc(doc(db,"users",user.uid));
       if (!userDoc.exists() || userDoc.data().active!==true) {
         $("#login-error").textContent="사용 권한이 없습니다. 관리자에게 Firebase users 권한 등록을 요청하세요.";
         await signOut(auth);return;
       }
+      if(MAINTENANCE_MODE&&userDoc.data().role!=="admin"){
+        state.user=null;state.staff=null;
+        showMaintenance();
+        await signOut(auth);
+        return;
+      }
+      $("#maintenance")?.classList.add("hidden");
       state.user=user;state.staff=userDoc.data();
       const pendingInitial=new Set(["sellers","groupbuys","products","activities"]);
       showLoading("S2H 데이터를 불러오는 중입니다");
@@ -124,7 +147,7 @@ $("#login-form").addEventListener("submit",async e=>{
   }
 });
 $("#logout").onclick=()=>{if(state.demo){location.reload();return;}signOut(auth);};
-$("#preview-button").onclick=()=>enterPreview();
+$("#preview-button").onclick=()=>{if(MAINTENANCE_MODE)return showMaintenance();enterPreview();};
 const togglePassword=$("#toggle-password");
 togglePassword.addEventListener("click",()=>{
  const password=$("#password"),visible=password.type==="password";
@@ -561,6 +584,7 @@ function monthGrid(list,options={}){
 
 function sampleDate(days){return datePlus(todayLocal(),days);}
 function enterPreview(){
+ if(MAINTENANCE_MODE){showMaintenance();return;}
  state.demo=true;state.user={uid:"demo",email:"preview@s2h.local"};state.staff={name:"미리보기"};
  const sellers=[
  ["sample1","샘플 셀러 A",32],["sample2","샘플 셀러 B",30],["sample3","샘플 셀러 C",30],["sample4","샘플 셀러 D",45],["sample5","샘플 셀러 E",30],["sample6","샘플 셀러 F",30]
