@@ -55,3 +55,34 @@
 - 최종 브라우저 화면, Firebase 실계정 로그인 및 모바일 UI 점검은 별도 필요.
 - 운영 재개 전 Firestore Security Rules 점검도 필요. 현재 점검 모드는 기본적으로 UI 접근 제한이며 보안 규칙 자체를 바꾸지 않았음.
 
+## STEP 3 구현 및 운영 검수 (2026-11-24)
+
+### 반영 내용
+- 공구별 `readiness` 필드를 신규 사용. 기존 `sellers`·`products`·`groupbuys`·`activities` 컬렉션과 원본 공구 필드는 유지.
+- 준비 확인 5항목: 공구 구성표 전달, 홍보 콘텐츠 전달, 결제 링크 전달, 공구 조건 최종 확인, 실제 오픈 확인.
+- 담당자 지정: 활성 사용자 `users` 목록에서 선택. 담당자 정보와 단계별 확인자·확인 시각 저장.
+- 오픈 전 4개 준비 항목을 점검하며 실제 오픈 확인은 오픈일 이전 체크 불가.
+- 대시보드에 오픈 전 D-3부터 오픈 후 2일까지 준비 미확인 대상 노출. 기존 이력이 없는 데이터는 '확인 기록 없음'으로 표시.
+- 준비 체크 저장 시 Firebase `writeBatch`로 `groupbuys/{id}.readiness` 갱신과 `activities` 활동기록 생성 묶음 처리. 상태 변경이 없으면 중복 활동 로그 생성하지 않음.
+- 공구 일정의 간편 목록과 공구 수정창에서 준비 체크 열기. 활동기록과 전체 데이터 백업에서 이력 확인 가능.
+- UI는 화이트/블루 `phase3-preflight.css`를 추가하여 기존 SaaS 디자인과 통일.
+- 일정 기준 알림은 CRM에 접속했을 때 표시하는 인앱 알림임. 카카오톡·이메일·푸시로 자동 발송되지 않음.
+
+### 데이터 규칙
+- `readiness.ownerUid`, `ownerName`, `paymentUrl`, `memo`, `checks`, `updatedAt`, `updatedByUid`, `updatedByName`.
+- `checks.{composition,creative,payment,terms,opening}`에는 `done`, `actorUid`, `actorName`, `at` 저장.
+- `activities/{id}`에 `groupbuyId`, `sellerId`, `sellerName`, `type: 공구 준비 확인`, `memo`, `actorUid`, `actorName`, `contactOwner`, `createdAt` 기록.
+- 원본 데이터에 체크 기록이 없다면 미완료로 단정하지 말고 미확인으로 표시한다.
+
+### 검증
+- [x] JavaScript 문법 및 새 정적 자산 연결 확인
+- [x] D-3/D-1/당일 준비 대상·완료·취소·기존 미기록 판정 단위 테스트
+- [x] 준비 체크 폼 필드, 담당자 옵션, 오픈 전 완료 차단, 기존 공구 필드 보존 시뮬레이션
+- [x] 저장 시 원자적 공구 업데이트 및 활동 로그 생성 경로, 변경 없는 저장의 중복 로그 방지 시뮬레이션
+- [ ] 실제 Firebase 관리자 계정으로 생성·변경·복원 후 재조회 검수
+- [ ] 데스크톱·모바일 브라우저 육안 확인(로그인, 목록, 팝업, 세로 스크롤, 캘린더)
+- [ ] Firestore Rules 현장 점검·보안 검수(현재 점검 화면만 관리자 중심으로 제한; 기존 Rules는 active 직원에게 직접 DB 접근 가능)
+- [ ] 실사용 검수 완료 후 점검 모드 종료
+
+**점검 모드 `MAINTENANCE_MODE=true`는 검수 완료 전까지 유지.**
+
