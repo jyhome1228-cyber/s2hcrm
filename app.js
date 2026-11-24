@@ -833,7 +833,9 @@ function dashboard(){
  const fallbackDate=state.calendarMode==="week"
   ?(today>=week&&today<=datePlus(week,6)?today:week):
     (month===today.slice(0,7)?today:month+"-01");
- const selectedDate=state.calendarSelectedDate||fallbackDate;
+ const requestedDate=state.calendarSelectedDate||fallbackDate;
+ const selectedDate=state.calendarMode==="week" && (requestedDate<week||requestedDate>datePlus(week,6)) ? fallbackDate :
+  state.calendarMode==="month" && requestedDate.slice(0,7)!==month ? fallbackDate : requestedDate;
  const selectedBuys=valid.filter(b=>b.startDate<=selectedDate&&b.endDate>=selectedDate)
   .sort((a,b)=>Number(b.startDate===selectedDate)-Number(a.startDate===selectedDate)||a.startDate.localeCompare(b.startDate)||String(a.sellerName||"").localeCompare(String(b.sellerName||""),"ko-KR"));
  const selectedRows=selectedBuys.slice(0,6).map(b=>{
@@ -2068,7 +2070,9 @@ function render(){
  $("#page-body").querySelectorAll("[data-calendar-mode]").forEach(el=>el.addEventListener("click",()=>{
   const next=el.dataset.calendarMode;
   if(next==="week"&&state.calendarMode!=="week")state.weekStart=weekStartFor(shownMonth()===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
-  state.calendarMode=next;render();
+  state.calendarMode=next;
+  if(state.page==="dashboard")state.calendarSelectedDate=null;
+  render();
  }));
  $("#page-body").querySelectorAll("[data-week-move]").forEach(el=>el.addEventListener("click",()=>weekNavigation(Number(el.dataset.weekMove))));
 
