@@ -552,7 +552,7 @@ function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'
 
 
 function shownMonth(){return state.selectedMonth||todayLocal().slice(0,7);}
-function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);const next=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);if(next<todayLocal().slice(0,4)+"-01")return;state.selectedMonth=next;state.calendarSelectedDate=null;render();}
+function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);const next=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);if(next<"2010-01"||next>"2035-12")return;state.selectedMonth=next;state.calendarSelectedDate=null;state.weekStart=null;render();}
 function weekStartFor(date){return datePlus(date,-new Date(date+"T00:00:00Z").getUTCDay());}
 function activeWeekStart(){const month=shownMonth(),today=todayLocal();return state.weekStart||weekStartFor(month===today.slice(0,7)?today:month+"-01");}
 function weekNavigation(delta){state.weekStart=datePlus(activeWeekStart(),7*delta);state.selectedMonth=datePlus(state.weekStart,3).slice(0,7);state.calendarSelectedDate=null;render();}
