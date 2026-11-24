@@ -2,9 +2,10 @@ import { firebaseConfig, firebaseConfigured } from "./firebase-config.js";
 import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js?v=20261117-auto-family-3";
 import { mountSeedImporter } from "./import-seed-ui.js";
 import { mountBackupExport } from "./backup-export.js";
+import { PREP_STEPS,prepProgress,prepAlerts,prepDueLabel } from "./preflight-utils.js?v=20261124-p3-1";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
 let screenBusyCount=0;
@@ -26,7 +27,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -108,6 +109,13 @@ function start() {
       if(importNav)importNav.classList.toggle("hidden",state.staff.role!=="admin");
       $("#whoami").textContent=state.staff.name || user.email;
       $("#login").classList.add("hidden");$("#app").classList.remove("hidden");
+      // Active staff names for assignment. Access is already granted to active staff by Firestore rules.
+      const staffUnsub=onSnapshot(collection(db,"users"),snapshot=>{
+        state.staffUsers=snapshot.docs.map(d=>({uid:d.id,...d.data()}))
+          .filter(person=>person.active===true).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR"));
+        if(state.page==="dashboard"||state.page==="schedule")render();
+      },err=>{console.warn("담당자 목록을 불러오지 못했습니다:",err?.code||err);});
+      state.unsubs.push(staffUnsub);
       ["sellers","groupbuys","products","activities"].forEach(kind=>{
         const ref=kind==="products"?collection(db,kind):query(collection(db,kind),orderBy("createdAt","desc"));
         const off=onSnapshot(ref,snapshot=>{
@@ -126,7 +134,7 @@ function start() {
     } catch(err){$("#login-error").textContent=err.message;await signOut(auth);}
   });
 }
-function clearListeners(){state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];}
+function clearListeners(){state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];}
 $("#login-form").addEventListener("submit",async e=>{
   e.preventDefault();$("#login-error").textContent="";
   try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}
@@ -191,7 +199,7 @@ $("#modal-form").addEventListener("submit",async e=>{
 });
 function openModal(title,fields,save){
  if(modalSaving)return;
- $("#modal").classList.remove("buy-editor-modal");
+ $("#modal").classList.remove("buy-editor-modal","prep-modal");
  $("#modal-title").textContent=title;
  $("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div><div id="modal-save-feedback" class="modal-save-feedback" role="alert"></div>';
  const submit=$("#modal-form button[type=submit]");
@@ -202,8 +210,86 @@ function openModal(title,fields,save){
 }
 function closeModal(){
  if(modalSaving)return;
- $("#modal").classList.add("hidden");$("#modal").classList.remove("buy-editor-modal");document.body.classList.remove("s2h-modal-open");
+ $("#modal").classList.add("hidden");$("#modal").classList.remove("buy-editor-modal","prep-modal");document.body.classList.remove("s2h-modal-open");
  state.modalSave=null;$("#modal-form").reset();
+}
+function preflightModal(buyId){
+ if(state.demo)return notify("미리보기에서는 준비 상태를 저장할 수 없습니다.");
+ const buy=state.buys.find(item=>item.id===buyId);
+ if(!buy)return notify("해당 공구 기록을 찾지 못했습니다.");
+ if(buy.status==="취소")return notify("취소된 공구는 준비 체크를 수정할 수 없습니다.");
+ const pre=buy.readiness||{},oldChecks=pre.checks||{},today=todayLocal();
+ const ownerPool=new Map((state.staffUsers||[]).map(user=>[user.uid,user.name||user.uid]));
+ if(state.user?.uid&&!ownerPool.has(state.user.uid))ownerPool.set(state.user.uid,state.staff?.name||"현재 사용자");
+ if(pre.ownerUid&&!ownerPool.has(pre.ownerUid))ownerPool.set(pre.ownerUid,pre.ownerName||"이전 담당자");
+ const selectedOwner=pre.ownerUid||"";
+ const ownerOptions='<option value="">담당자 미지정</option>'
+  +[...ownerPool].map(([uid,name])=>'<option value="'+h(uid)+'" '+(uid===selectedOwner?'selected':'')+'>'+h(name)+'</option>').join("");
+ const checked=PREP_STEPS.map(step=>{
+  const record=oldChecks[step.key]||{};
+  const disabled=step.key==="opening"&&today<buy.startDate;
+  const detail=record.done?('마지막 확인: '+(record.actorName||"기록 없음")+(record.at?' · '+dt(record.at):"")):
+   disabled?"오픈일 이후 확인 가능":"아직 확인되지 않았습니다";
+  return '<label class="prep-check-row'+(record.done?' is-done':'')+(disabled?' is-disabled':'')+'">'
+   +'<input type="checkbox" name="prep_'+h(step.key)+'" '+(record.done?'checked ':'')+(disabled?'disabled ':'')+'/>'
+   +'<span class="prep-check-content"><strong>'+h(step.label)+'</strong><small>'+h(step.help)+'</small>'
+   +'<em>'+h(detail)+'</em></span></label>';
+ }).join("");
+ const existingHistory=state.activities
+  .filter(a=>a.groupbuyId===buy.id&&a.type==="공구 준비 확인")
+  .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,8);
+ const history=existingHistory.length?existingHistory.map(a=>
+   '<div class="prep-history-row"><strong>'+h(a.actorName||"담당자")+'</strong><span>'+h(a.memo||"준비 상태 변경")+'</span><small>'+h(dt(a.createdAt))+'</small></div>').join(""):
+   '<p class="prep-history-empty">아직 저장된 준비 확인 이력이 없습니다.</p>';
+ const progress=prepProgress(buy,today);
+ const fields='<div class="prep-modal-head full"><strong>'+h(buy.sellerName||"셀러 미확인")+'</strong>'
+  +'<span>'+h(buy.product||buy.productName||"상품 미확인")+' · '+h(buy.startDate||"-")+' ~ '+h(buy.endDate||"-")+'</span>'
+  +'<small>'+(!progress.recorded?'기존 기록의 준비 여부가 아직 확인되지 않았습니다.':('현재 '+progress.done+'/'+progress.total+'개 항목 확인'))+'</small></div>'
+  +'<label class="prep-owner full">담당자<select name="prepOwner">'+ownerOptions+'</select></label>'
+  +'<div class="prep-step-heading full"><strong>오픈 준비 체크</strong><span>실제 확인 후 완료로 표시하세요.</span></div>'
+  +'<div class="prep-check-list full">'+checked+'</div>'
+  +'<label class="prep-link full">결제 링크 (선택)<input name="prepPaymentUrl" type="url" placeholder="https://" value="'+h(pre.paymentUrl||"")+'"/></label>'
+  +'<label class="prep-memo full">담당자 메모<textarea name="prepMemo" rows="3" placeholder="전달 방법, 확인 요청 사항 등을 기록하세요.">'+h(pre.memo||"")+'</textarea></label>'
+  +'<div class="prep-history full"><strong>최근 확인 이력</strong>'+history+'</div>';
+ openModal("공구 오픈 준비",fields,async formData=>{
+  const latest=state.buys.find(item=>item.id===buyId);
+  if(!latest)throw Error("공구 기록을 찾을 수 없습니다.");
+  const previous=latest.readiness||{},previousChecks=previous.checks||{},nextChecks={...previousChecks};
+  const ownerUid=String(formData.prepOwner||"");
+  const ownerName=ownerUid?(ownerPool.get(ownerUid)||previous.ownerName||"담당자"):"";
+  const changes=[];
+  for(const step of PREP_STEPS){
+   const old=previousChecks[step.key]||{},locked=step.key==="opening"&&today<latest.startDate;
+   const done=locked?old.done===true:Boolean(formData["prep_"+step.key]);
+   if(done!==Boolean(old.done)){
+    nextChecks[step.key]=done?{done:true,actorUid:state.user.uid,actorName:state.staff?.name||state.user.email,at:serverTimestamp()}:
+      {done:false,actorUid:state.user.uid,actorName:state.staff?.name||state.user.email,at:null};
+    changes.push(step.short+(done?" 완료":" 미확인으로 변경"));
+   } else if(Object.prototype.hasOwnProperty.call(previousChecks,step.key)){
+    nextChecks[step.key]=old;
+   }
+  }
+  const paymentUrl=String(formData.prepPaymentUrl||"").trim();
+  const memo=String(formData.prepMemo||"").trim();
+  if(ownerUid!==String(previous.ownerUid||""))changes.push("담당자 "+(ownerName||"미지정"));
+  if(paymentUrl!==String(previous.paymentUrl||""))changes.push("결제 링크 기록 변경");
+  if(memo!==String(previous.memo||""))changes.push("메모 변경");
+  if(!changes.length)return;
+  const actor=state.staff?.name||state.user.email;
+  const update={
+   ...previous,ownerUid,ownerName,checks:nextChecks,paymentUrl,memo,
+   updatedAt:serverTimestamp(),updatedByUid:state.user.uid,updatedByName:actor
+  };
+  const batch=writeBatch(db);
+  batch.update(doc(db,"groupbuys",buyId),{readiness:update});
+  batch.set(doc(collection(db,"activities")),{
+   sellerId:latest.sellerId||"",sellerName:latest.sellerName||"",groupbuyId:buyId,
+   type:"공구 준비 확인",memo:changes.join(" · "),
+   actorUid:state.user.uid,actorName:actor,contactOwner:ownerName||actor,createdAt:serverTimestamp()
+  });
+  await batch.commit();
+ });
+ $("#modal").classList.add("prep-modal");
 }
 function sellerModal(item=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
