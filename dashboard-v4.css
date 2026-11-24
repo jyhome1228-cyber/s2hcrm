@@ -195,3 +195,77 @@
  #maintenance p{font-size:13px}
 }
 
+
+/* FIX: calendar date headings and bars on independent fixed grid rows */
+#page-body .cal-week-row{
+ display:grid;
+ grid-template-columns:repeat(7,minmax(0,1fr));
+ grid-template-rows:44px repeat(var(--cal-visible-rows),42px) 34px;
+ height:var(--cal-row-height);
+ min-height:var(--cal-row-height);
+ align-content:start;
+ position:relative;
+}
+#page-body .cal-week-row>.cal-bg-day.cal-day-add{
+ grid-row:1 / -1;
+ position:relative;
+ z-index:0;
+ display:flex;
+ flex-direction:column;
+ align-items:stretch;
+ justify-content:flex-start;
+ align-self:stretch;
+ justify-self:stretch;
+ width:100%;
+ height:100%;
+ min-width:0;
+ margin:0;
+ padding:0 8px;
+ appearance:none;
+ -webkit-appearance:none;
+ outline-offset:-2px;
+ background:#fff;
+ color:#27343b;
+ border:0;
+ border-right:1px solid #e5eaec;
+ border-radius:0;
+ text-align:left;
+ font:inherit;
+ box-shadow:none;
+}
+#page-body .cal-week-row>.cal-bg-day.cal-day-add.cal-outside{background:#fafafa}
+#page-body .cal-week-row>.cal-bg-day.cal-day-add.cal-today{background:#f3fafd}
+#page-body .cal-week-row>.cal-bg-day.cal-day-add:hover{background:#f2f9fb}
+#page-body .cal-week-row>.cal-bg-day.cal-day-add>.cal-date-head{
+ display:flex;
+ flex:0 0 44px;
+ width:100%;
+ min-width:0;
+ height:44px;
+ max-height:44px;
+ align-items:center;
+ justify-content:space-between;
+ gap:4px;
+ position:relative;
+ inset:auto;
+ margin:0;
+ padding:0;
+ line-height:1;
+}
+#page-body .cal-week-row>.cal-range{
+ position:relative;
+ z-index:2;
+ align-self:center;
+ min-width:0;
+ margin-top:0;
+ margin-bottom:0;
+}
+#page-body .cal-week-row>.cal-expand{
+ position:relative;
+ z-index:3;
+ align-self:center;
+}
+#page-body .cal-week-row>.cal-bg-day.cal-day-add:focus-visible{
+ outline:2px solid #0089b3;
+}
+
