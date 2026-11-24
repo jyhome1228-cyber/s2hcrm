@@ -616,7 +616,7 @@ function dashboard(){
  ];
  const actionPanel=wrap("오늘 확인할 업무",
   actionRows.length?table(["구분","셀러 및 상품","관리"],actionRows.slice(0,5)):'<div class="dash-empty">오늘 확인할 업무가 없습니다.</div>',
-  '<button type="button" class="panel-link" data-nav="reminders">전체 '+actionRows.length+'건 확인</button>');
+  '<button type="button" class="panel-link" data-nav="reminders">연락 대상 전체 보기</button>');
  const nextRows=upcoming.slice(0,5).map(b=>'<tr><td><strong>'+h(b.startDate.slice(5).replace("-","."))+'</strong></td><td><strong>'+h(b.sellerName||"미확인")+'</strong><small class="dash-item-sub">'+h(b.product||b.productName||"상품 미확인")+'</small></td><td><button type="button" class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">상세</button></td></tr>');
  const nextPanel=wrap("다가오는 공구",
   nextRows.length?table(["오픈일","셀러 및 상품","관리"],nextRows):'<div class="dash-empty">등록된 예정 공구가 없습니다.</div>',
