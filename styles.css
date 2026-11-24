@@ -1176,3 +1176,26 @@ table{font-variant-numeric:tabular-nums}
  #login .login-center-logo{width:145px;margin-bottom:34px}
 }
 
+
+/* Login alignment fix — center against viewport, not the page container. */
+#login.login{
+ position:fixed;inset:0;z-index:100;
+ display:flex;align-items:center;justify-content:center;
+ width:100vw;max-width:none;height:100vh;height:100dvh;min-height:0;
+ padding:24px;margin:0;box-sizing:border-box;
+ overflow-x:hidden;overflow-y:auto;background:#fff;
+}
+#login .login-box{
+ flex:0 1 380px;width:min(380px,calc(100vw - 48px));
+ max-width:380px;min-width:0;
+ margin:auto;padding:0;
+ border:0;border-radius:0;background:transparent;box-shadow:none;
+}
+#login .login-center-logo{display:block;width:162px;max-width:100%;height:auto;margin:0 auto 39px}
+#login #login-form{width:100%;max-width:none}
+@media(max-width:480px){
+ #login.login{padding:22px}
+ #login .login-box{width:min(380px,calc(100vw - 44px));max-width:380px;margin:auto}
+ #login .login-center-logo{width:145px;margin:0 auto 33px}
+}
+
