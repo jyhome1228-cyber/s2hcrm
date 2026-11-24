@@ -358,20 +358,21 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
  const defaultStart=item?.startDate||presetDate||defaultDate;
  const categoryOptions=[["","선택 안 함"],["마이크로","마이크로"],["일반","일반"]];
  const fields=
-  '<div class="buy-editor-heading full"><p>공구 정보</p><strong>'+(item?"기존 공구 내용 수정":"새로운 공동구매 일정 등록")+'</strong></div>'
-  +(item?.id?'<button type="button" class="buy-editor-prep-open full" data-prep-from-editor="'+h(item.id)+'">오픈 준비 체크 및 담당자 확인</button>':"")
- +'<section class="buy-editor-section full" aria-label="기본 정보"><div class="buy-editor-section-title"><h3>기본 정보</h3><p>셀러, 상품, 공구 기간과 진행 상태</p></div><div class="buy-editor-fields">'
- +'<div class="combo-wrap buy-span-full"><label for="seller-combo">셀러</label><input id="seller-combo" type="text" autocomplete="off" placeholder="셀러명 또는 인스타그램 계정 검색" value="'+h(originalSeller?.name||"")+'" aria-autocomplete="list" aria-expanded="false"/><input id="seller-id" name="sellerId" type="hidden" value="'+h(selectedSellerId)+'"/><div id="seller-suggestions" class="combo-options hidden" role="listbox"></div></div>'
+  '<div class="buy-editor-meta full"><span>'+(item?"공구 정보를 수정하고 변경사항을 저장하세요.":"셀러와 상품, 진행 일정을 입력하세요.")+'</span>'
+  +(item?.id?'<button type="button" class="buy-editor-prep-open" data-prep-from-editor="'+h(item.id)+'">오픈 준비 체크</button>':"")+'</div>'
+ +'<section class="buy-editor-section full" aria-label="기본 정보"><div class="buy-editor-section-title"><h3>기본 정보</h3><p>셀러 · 상품 · 일정</p></div><div class="buy-editor-fields">'
+ +'<div class="combo-wrap"><label for="seller-combo">셀러</label><input id="seller-combo" type="text" autocomplete="off" placeholder="셀러명 또는 인스타그램 계정 검색" value="'+h(originalSeller?.name||"")+'" aria-autocomplete="list" aria-expanded="false"/><input id="seller-id" name="sellerId" type="hidden" value="'+h(selectedSellerId)+'"/><div id="seller-suggestions" class="combo-options hidden" role="listbox"></div></div>'
  +'<div class="inline-create hidden buy-span-full" id="create-seller"><strong>신규 셀러 등록</strong><div class="inline-create-grid"><label>셀러명<input id="new-seller-name" type="text"/></label><label>인스타그램 계정<input id="new-seller-handle" type="text" placeholder="@계정"/></label><label>팔로워 수<input id="new-seller-followers" type="number" min="0"/></label><label>연락처<input id="new-seller-contact" type="text"/></label></div><div class="inline-create-buttons"><button type="button" class="secondary" id="cancel-new-seller">취소</button><button type="button" class="primary" id="save-new-seller">셀러 등록</button></div></div>'
- +'<div class="seller-linked-data hidden buy-span-full" id="linked-seller-info" aria-live="polite"></div>'
- +'<div class="combo-wrap buy-span-full"><label for="product-combo">상품명</label><input id="product-combo" type="text" autocomplete="off" placeholder="상품명 검색" value="'+h(selectedProduct?.name||initialProduct)+'" aria-autocomplete="list" aria-expanded="false"/><input id="product-id" name="productId" type="hidden" value="'+h(selectedProduct?.id||"")+'"/><div id="product-suggestions" class="combo-options hidden" role="listbox"></div></div>'
+
+ +'<div class="combo-wrap"><label for="product-combo">상품명</label><input id="product-combo" type="text" autocomplete="off" placeholder="상품명 검색" value="'+h(selectedProduct?.name||initialProduct)+'" aria-autocomplete="list" aria-expanded="false"/><input id="product-id" name="productId" type="hidden" value="'+h(selectedProduct?.id||"")+'"/><div id="product-suggestions" class="combo-options hidden" role="listbox"></div></div>'
  +'<div class="inline-create hidden buy-span-full" id="create-product"><strong>신규 상품 등록</strong><label>상품명<input id="new-product-name" type="text"/></label><div class="inline-create-buttons"><button type="button" class="secondary" id="cancel-new-product">취소</button><button type="button" class="primary" id="save-new-product">상품 등록</button></div></div>'
+ +'<div class="seller-linked-data hidden buy-span-full" id="linked-seller-info" aria-live="polite"></div>'
  +f("startDate","공구 시작일","date",defaultStart,true)
  +f("endDate","공구 종료일","date",item?.endDate||defaultStart,true)
  +select("status","진행 상태",[["예정","예정"],["진행중","진행 중"],["진행 중","진행 중 (기존 기록)"],["완료","완료"],["취소","취소"],["기록","기록 (기존 자료)"]],item?.status||"예정")
  +f("round","진행 회차","text",item?.round||"")
  +'</div></section>'
- +'<section class="buy-editor-section full" aria-label="운영 정보"><div class="buy-editor-section-title"><h3>운영 정보</h3><p>셀러 규모와 결제·정산 관련 기록</p></div><div class="buy-editor-fields">'
+ +'<section class="buy-editor-section full" aria-label="운영 정보"><div class="buy-editor-section-title"><h3>운영 정보</h3><p>결제 · 정산 · 셀러 정보</p></div><div class="buy-editor-fields">'
  +f("followers","팔로워 수","number",item?.followers??"")
  +select("legacyCategory","셀러 구분",categoryOptions,item?.legacyCategory||"")
  +f("paymentWindow","결제창 기록","text",item?.paymentWindow||"")
