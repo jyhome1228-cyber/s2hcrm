@@ -113,7 +113,7 @@
  margin:0 0 7px;
  line-height:1.45;
 }
-#modal.buy-editor-modal .buy-editor-fields :is(input,select,textarea){
+#modal.buy-editor-modal .buy-editor-fields :is(input:not([type="hidden"]),select,textarea){
  display:block;
  width:100%;
  max-width:100%;
@@ -128,12 +128,12 @@
  min-width:0;
  box-sizing:border-box;
 }
-#modal.buy-editor-modal .buy-editor-fields :is(input,select){
+#modal.buy-editor-modal .buy-editor-fields :is(input:not([type="hidden"]),select){
  min-height:44px;
  height:44px;
  padding:9px 12px;
 }
-#modal.buy-editor-modal .buy-editor-fields>.combo-wrap>input{
+#modal.buy-editor-modal .buy-editor-fields>.combo-wrap>input[type="text"]{
  height:44px;
  min-height:44px;
  margin:0;
@@ -145,7 +145,7 @@
  line-height:1.65;
  resize:vertical;
 }
-#modal.buy-editor-modal .buy-editor-fields :is(input,select,textarea):focus{
+#modal.buy-editor-modal .buy-editor-fields :is(input:not([type="hidden"]),select,textarea):focus{
  outline:2px solid rgba(0,137,179,.14);
  outline-offset:0;
  border-color:#0089b3;
@@ -253,3 +253,5 @@
  #modal.buy-editor-modal .modal-actions{padding:12px 17px}
  #modal.buy-editor-modal .modal-actions button{min-width:84px}
 }
+
+#modal.buy-editor-modal .buy-editor-fields input[type="hidden"]{display:none!important}
