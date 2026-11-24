@@ -1098,3 +1098,81 @@ table{font-variant-numeric:tabular-nums}
  .simple-agenda-add{font-size:11px}
 }
 
+
+/* S2H CRM centered sign-in — only logo and login form */
+#login.login{
+  display:grid;
+  place-items:center;
+  min-height:100vh;
+  min-height:100dvh;
+  padding:24px;
+  margin:0;
+  width:100%;
+  background:#fff;
+  color:#202326;
+}
+#login .login-box{
+  width:min(380px,100%);
+  max-width:100%;
+  margin:0;
+  padding:0;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+#login .login-center-logo{
+  display:block;
+  width:164px;
+  height:auto;
+  max-width:100%;
+  object-fit:contain;
+  margin:0 auto 42px;
+  filter:none;
+}
+#login .login-screen-reader-title{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip-path:inset(50%);
+  white-space:nowrap;
+}
+#login #login-form{display:flex;flex-direction:column;margin:0}
+#login #login-form label{
+  margin:0 0 21px;
+  color:#263239;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:-.02em;
+}
+#login #login-form input{
+  width:100%;
+  height:50px;
+  margin-top:9px;
+  border:1px solid #c9d0d4;
+  background:#fff;
+  color:#202326;
+  border-radius:2px;
+  box-shadow:none;
+  padding:0 15px;
+  font-size:14px;
+}
+#login #login-form .password-field{margin-top:9px}
+#login #login-form .password-field input{margin-top:0;padding-right:54px}
+#login #login-form .login-submit{
+  height:50px;
+  margin:7px 0 0;
+  border-radius:2px;
+  background:#0089b3;
+  color:#fff;
+  font-size:14px;
+}
+#login #login-error:not(:empty){margin-top:16px}
+#login #preview-button{margin-top:14px}
+@media(max-width:480px){
+ #login.login{padding:22px}
+ #login .login-box{width:min(380px,100%);padding:0;margin:0}
+ #login .login-center-logo{width:145px;margin-bottom:34px}
+}
+
