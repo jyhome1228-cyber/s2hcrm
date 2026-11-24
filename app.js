@@ -762,6 +762,24 @@ function dashboard(){
   '<p class="ops-panel-summary">가까운 오픈 일정부터 표시합니다.</p><div class="ops-work-list">'
   +(futureItems.map(itemRow).join("")||'<div class="dash-empty">예정된 공구가 없습니다.</div>')+'</div>',
   '<button type="button" class="panel-link" data-nav="schedule">전체 일정 보기</button>');
+
+ const preparation=prepAlerts(state.buys,today);
+ const prepRows=preparation.slice(0,8).map(b=>{
+  const prep=b.readiness||{};
+  return '<div class="prep-dashboard-row">'
+   +'<span class="prep-dashboard-due">'+h(prepDueLabel(b.daysUntil))+'</span>'
+   +'<div class="prep-dashboard-description"><strong>'+h(b.sellerName||"셀러 미확인")+'</strong>'
+   +'<span>'+h(b.product||b.productName||"상품 미확인")+'</span>'
+   +'<small>담당자 '+h(prep.ownerName||"미지정")+' · '+h(b.progress.recorded?'준비 '+b.progress.done+'/'+b.progress.total+'개 확인':'준비 확인 기록 없음')+'</small></div>'
+   +'<button type="button" class="prep-dashboard-open" data-prep-open="'+h(b.id)+'">준비 확인</button></div>';
+ }).join("");
+ const prepPanel='<section class="ops-major-section ops-major-prep">'
+  +'<div class="ops-major-head"><div><h2>오픈 준비 확인</h2><p>오픈 3일 전부터 구성표·홍보물·결제 링크 등의 준비 여부를 확인합니다.</p></div>'
+  +'<span class="prep-dashboard-count">확인 필요 '+preparation.length+'건</span></div>'
+  +(preparation.length?'<div class="prep-dashboard-list">'+prepRows+'</div>'
+  +(preparation.length>8?'<p class="prep-dashboard-more">우선 확인할 8건을 표시합니다. 전체 일정은 공구 일정에서 확인할 수 있습니다.</p>':""):
+    '<p class="prep-dashboard-empty">현재 오픈 3일 이내에 준비 확인이 필요한 공구가 없습니다.</p>')
+  +'</section>';
  const calendar='<section class="ops-major-section ops-major-calendar">'
   +'<div class="ops-major-head"><div><h2>공구 캘린더</h2><p>진행 기간을 월간 또는 주간으로 확인할 수 있습니다.</p></div>'
   +'<button type="button" class="panel-link" data-nav="schedule">전체 공구 일정</button></div>'
@@ -785,7 +803,7 @@ function dashboard(){
   +'</div><section class="ops-major-section ops-major-today">'
   +'<div class="ops-major-head"><div><h2>업무 현황</h2><p>오픈 일정과 연락이 필요한 셀러를 우선 확인합니다.</p></div></div>'
   +kpis+'<div class="dashboard-daily">'+taskPanel+nextPanel+'</div></section>'
-  +calendar+activity+'</div>';
+  +prepPanel+calendar+activity+'</div>';
 }
 
 function masterProductName(product){
