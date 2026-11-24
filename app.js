@@ -137,7 +137,7 @@ function start() {
     } catch(err){$("#login-error").textContent=err.message;await signOut(auth);}
   });
 }
-function clearListeners(){state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];}
+function clearListeners(){closeWorkAlerts();state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];}
 $("#login-form").addEventListener("submit",async e=>{
   e.preventDefault();$("#login-error").textContent="";
   try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}
@@ -549,6 +549,88 @@ function reminders(){
   return {seller:s,buy:b||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
  }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue);
 }
+// In-app work alerts are actionable summaries, not push notifications or unread messages.
+let workAlertsCache=null;
+function currentWorkAlerts(){
+ const today=todayLocal();
+ if(workAlertsCache&&workAlertsCache.sellers===state.sellers&&workAlertsCache.buys===state.buys&&workAlertsCache.activities===state.activities&&workAlertsCache.today===today)return workAlertsCache.data;
+ const opening=state.buys.filter(b=>b.id&&b.startDate===today&&b.status!=="취소");
+ const preparation=prepAlerts(state.buys,today);
+ const contact=reminders();
+ const data={opening,preparation,contact,total:opening.length+preparation.length+contact.length};
+ workAlertsCache={sellers:state.sellers,buys:state.buys,activities:state.activities,today,data};
+ return data;
+}
+let workAlertEffectShown=false;
+function updateWorkAlerts(){
+ const button=$("#work-alert-button"),countEl=$("#work-alert-count"),list=$("#work-alert-list");
+ if(!button||!countEl||!list||!state.user)return;
+ const alerts=currentWorkAlerts(),count=alerts.total;
+ countEl.textContent=count>99?"99+":String(count);
+ countEl.classList.toggle("hidden",count===0);
+ button.classList.toggle("has-alerts",count>0);
+ button.setAttribute("aria-label",count?("업무 알림 "+count+"건 보기"):"업무 알림 없음");
+ button.title=count?("오늘 오픈 "+alerts.opening.length+"건 · 준비 확인 "+alerts.preparation.length+"건 · 연락 필요 "+alerts.contact.length+"건"):"현재 확인할 업무 알림이 없습니다";
+ if(count>0&&!workAlertEffectShown){
+  workAlertEffectShown=true;
+  button.classList.add("is-first-alert");
+ }
+ const section=(name,n,rows,view)=>{
+  if(!n)return "";
+  return '<section class="work-alert-group"><div class="work-alert-group-head"><strong>'+name+' <span>'+n+'</span></strong>'
+   +'<button type="button" data-alert-view="'+view+'">전체 보기</button></div>'
+   +'<div class="work-alert-group-rows">'+rows+'</div></section>';
+ };
+ const opening=alerts.opening.slice(0,3).map(b=>
+  '<button type="button" class="work-alert-item" data-alert-edit="'+h(b.id)+'"><span class="work-alert-item-mark is-opening"></span>'
+  +'<span><strong>'+h(b.sellerName||"셀러 미확인")+'</strong><small>'+h(b.product||b.productName||"상품 미확인")+' · 오늘 오픈</small></span></button>').join("");
+ const preparation=alerts.preparation.slice(0,4).map(b=>
+  '<button type="button" class="work-alert-item" data-alert-prep="'+h(b.id)+'"><span class="work-alert-item-mark is-preparation"></span>'
+  +'<span><strong>'+h(b.sellerName||"셀러 미확인")+'</strong><small>'+h(prepDueLabel(b.daysUntil))+' · '+h(b.progress.recorded?"준비 "+b.progress.done+"/"+b.progress.total+"개 확인":"준비 확인 기록 없음")+'</small></span></button>').join("");
+ const contact=alerts.contact.slice(0,3).map(x=>
+  '<button type="button" class="work-alert-item" data-alert-contact="'+h(x.seller.id)+'"><span class="work-alert-item-mark is-contact"></span>'
+  +'<span><strong>'+h(x.seller.name||"셀러 미확인")+'</strong><small>'+h(x.overdue>0?"연락 지연 "+x.overdue+"일":"오늘 연락 필요")+' · '+h(x.buy?.product||"후속 연락")+'</small></span></button>').join("");
+ list.innerHTML=count?
+  section("오늘 오픈",alerts.opening.length,opening,"schedule")
+  +section("오픈 준비 확인",alerts.preparation.length,preparation,"dashboard-prep")
+  +section("연락 필요",alerts.contact.length,contact,"reminders")
+  :'<p class="work-alert-empty">현재 확인할 업무가 없습니다.</p>';
+}
+function closeWorkAlerts(){
+ $("#work-alert-popover")?.classList.add("hidden");
+ $("#work-alert-button")?.setAttribute("aria-expanded","false");
+}
+$("#work-alert-button")?.addEventListener("click",()=>{
+ const pop=$("#work-alert-popover");
+ if(!pop)return;
+ const opening=pop.classList.contains("hidden");
+ pop.classList.toggle("hidden",!opening);
+ $("#work-alert-button").setAttribute("aria-expanded",String(opening));
+});
+$("#work-alert-close")?.addEventListener("click",closeWorkAlerts);
+$("#work-alert-list")?.addEventListener("click",event=>{
+ const button=event.target.closest("button");
+ if(!button)return;
+ const prepId=button.dataset.alertPrep,editId=button.dataset.alertEdit,contactId=button.dataset.alertContact,view=button.dataset.alertView;
+ closeWorkAlerts();
+ if(prepId)return preflightModal(prepId);
+ if(editId){const buy=state.buys.find(b=>b.id===editId);if(buy)openBuyModalSafely(buy);return;}
+ if(contactId)return activityModal(contactId);
+ if(view==="dashboard-prep"){
+  state.page="dashboard";state.dashboardPanelMode="tasks";render();
+  $("#page-body .ops-major-prep")?.scrollIntoView({behavior:"smooth",block:"start"});
+  return;
+ }
+ if(view==="schedule"||view==="reminders"){
+  state.page=view;render();
+ }
+});
+document.addEventListener("click",event=>{
+ if(!event.target.closest(".work-alert-wrap"))closeWorkAlerts();
+});
+document.addEventListener("keydown",event=>{
+ if(event.key==="Escape")closeWorkAlerts();
+});
 function metric(title,value,description){return '<div class="metric"><div class="label">'+title+'</div><div class="number">'+value+'</div><div class="sub">'+description+'</div></div>';}
 function wrap(title,body,right=""){return '<div class="panel"><div class="panel-title"><h2>'+title+'</h2>'+right+'</div>'+body+'</div>';}
 function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'+headers.map(v=>'<th>'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">등록된 데이터가 없습니다.</td></tr>')+'</tbody></table></div>';}
@@ -2063,6 +2145,7 @@ function render(){
  $("#add-button").onclick=state.page==="dashboard"||state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
  $("#page-body").innerHTML=view();
+ updateWorkAlerts();
  if(currentSellerPopupId&&!$("#seller-detail-modal").classList.contains("hidden")){
   const group=matchingSellerGroup(currentSellerPopupId);
   if(!group)closeSellerPopup();
