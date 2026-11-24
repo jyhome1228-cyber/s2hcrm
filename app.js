@@ -26,7 +26,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -1618,13 +1618,64 @@ function sellersPage(){
 }
 
 function schedulePage(){
- const list=monthlyBuys().filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
- const chooser='<div class="schedule-switch"><button data-view="list" class="'+(state.scheduleView==="list"?"selected":"")+'">목록</button><button data-view="calendar" class="'+(state.scheduleView==="calendar"?"selected":"")+'">달력</button></div>';
- const toolbar='<div class="ledger-toolbar"><input type="search" id="month-search" placeholder="셀러명, 상품명 검색" value="'+h(state.monthSearch)+'"/><span>총 '+list.length+'건</span>'+chooser+'</div>';
- const weekList=state.buys.filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLowerCase().includes(state.monthSearch.toLowerCase()));
- const content=state.scheduleView==="calendar"?monthGrid(state.calendarMode==="week"?weekList:list,{weekOnly:state.calendarMode==="week"}):table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","마이크로 및 일반","인스타그램","비고","상태","수정"],monthlyRows(list,true));
- return wrap("월별 공구 대장",monthPicker()+toolbar+(state.scheduleView==="calendar"?calendarModeControls():"")+content);
+ const statusKeys=[["all","전체"],["active","진행 중"],["upcoming","예정"],["completed","완료"],["canceled","취소"]];
+ const search=state.monthSearch.trim().toLocaleLowerCase();
+ const weekScoped=state.scheduleView==="calendar"&&state.calendarMode==="week";
+ const weekFrom=activeWeekStart(),weekTo=datePlus(weekFrom,6);
+ const base=weekScoped
+  ?state.buys.filter(b=>b.startDate&&b.endDate&&b.startDate<=weekTo&&b.endDate>=weekFrom)
+  :monthlyBuys();
+ const searchable=base.filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLocaleLowerCase().includes(search));
+ const matchesStatus=(b,key)=>key==="all"||(
+  key==="active"?scheduleStatus(b)==="진행 중":
+  key==="upcoming"?scheduleStatus(b)==="예정":
+  key==="completed"?scheduleStatus(b)==="완료":scheduleStatus(b)==="취소"
+ );
+ const filterCount=key=>searchable.filter(b=>matchesStatus(b,key)).length;
+ const list=searchable.filter(b=>matchesStatus(b,state.scheduleStatusFilter));
+ const sorted=[...list].sort((a,b)=>state.scheduleSort==="latest"?
+  (b.startDate||"").localeCompare(a.startDate||"") :
+  state.scheduleSort==="seller"?
+  String(a.sellerName||"").localeCompare(String(b.sellerName||""),"ko-KR") :
+  (a.startDate||"").localeCompare(b.startDate||"")||String(a.sellerName||"").localeCompare(String(b.sellerName||""),"ko-KR"));
+ const tabs='<div class="ops-schedule-view" role="group" aria-label="공구 일정 표시 방식">'
+  +[["list","간편 목록"],["detail","상세 대장"],["calendar","캘린더"]]
+   .map(([key,label])=>'<button type="button" data-view="'+key+'" class="'+(state.scheduleView===key?"selected":"")+'" aria-pressed="'+(state.scheduleView===key)+'">'+label+'</button>').join("")
+  +'</div>';
+ const toolbar='<div class="ops-schedule-toolbar"><div class="ops-schedule-toolbar-main">'
+  +'<input id="month-search" type="search" aria-label="셀러 또는 상품 검색" placeholder="셀러명 또는 상품명 검색" value="'+h(state.monthSearch)+'"/>'
+  +tabs+'</div><div class="ops-schedule-filters">'
+  +statusKeys.map(([key,label])=>'<button type="button" data-schedule-status="'+key+'" class="'+(state.scheduleStatusFilter===key?"selected":"")+'" aria-pressed="'+(state.scheduleStatusFilter===key)+'">'+label+' <span>'+filterCount(key)+'</span></button>').join("")
+  +'</div></div>';
+ const viewRows=sorted.map(b=>{
+  const status=scheduleStatus(b);
+  return '<tr><td><button type="button" class="seller-cell" data-act="view-seller" data-id="'+h(b.sellerId)+'">'+h(b.sellerName||"미확인")+'</button></td>'
+   +'<td><strong>'+h(b.product||b.productName||"상품 미확인")+'</strong></td>'
+   +'<td class="ops-schedule-date">'+h(b.startDate||"-")+' ~ '+h(b.endDate||"-")+'</td>'
+   +'<td><span class="status '+(status==="진행 중"?"good":status==="취소"?"alert":"")+'">'+h(status)+'</span></td>'
+   +'<td><button class="mini-button" type="button" data-act="edit-buy" data-id="'+h(b.id)+'">상세·수정</button></td></tr>';
+ });
+ const sorting='<div class="ops-schedule-results"><span>조회 결과 <strong>'+sorted.length+'</strong>건</span>'
+  +(state.scheduleView!=="calendar"?'<label>정렬<select id="schedule-sort" aria-label="공구 목록 정렬">'
+   +[["start","오픈일 빠른순"],["latest","오픈일 늦은순"],["seller","셀러 이름순"]]
+    .map(([v,label])=>'<option value="'+v+'" '+(state.scheduleSort===v?"selected":"")+'>'+label+'</option>').join("")
+   +'</select></label>':"")
+  +'</div>';
+ const content=state.scheduleView==="calendar"?
+  calendarModeControls()+
+  '<p class="ops-schedule-note">기간 막대를 누르면 공구 내용을 수정하고, 날짜를 누르면 공구를 등록할 수 있습니다.</p>'+
+  monthGrid(sorted,{weekOnly:state.calendarMode==="week"}) :
+  state.scheduleView==="detail"?
+  table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","비고","상태","수정"],monthlyRows(sorted,true)):
+  table(["셀러명","상품","공구 기간","진행 상태","관리"],viewRows);
+ return '<div class="ops-schedule-page">'
+  +'<div class="ops-schedule-heading"><div><strong>공구 운영 일정</strong><p>월별 진행 상황을 빠르게 확인하고 필요한 공구를 수정합니다.</p></div>'
+  +'<span>선택 기간 '+base.length+'건</span></div>'
+  +'<div class="ops-schedule-month">'+monthPicker()+'</div>'
+  +toolbar+sorting+'<div class="ops-schedule-main '+(state.scheduleView==="calendar"?"is-calendar":"")+'">'+content+'</div>'
+  +'</div>';
 }
+
 function reminderTemplates(seller,buy){
  const name=(seller?.name||"셀러").trim();
  const product=(buy?.product||buy?.productName||"이전 상품").trim();
@@ -1771,6 +1822,12 @@ function render(){
  $("#page-body").querySelectorAll("[data-insight-product]").forEach(el=>el.addEventListener("click",()=>showProductInsightSellers(el.dataset.insightProduct)));
 
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
+ $("#page-body").querySelectorAll("[data-schedule-status]").forEach(el=>el.addEventListener("click",()=>{
+  state.scheduleStatusFilter=el.dataset.scheduleStatus;render();
+ }));
+ const scheduleSort=$("#schedule-sort");
+ if(scheduleSort)scheduleSort.addEventListener("change",()=>{state.scheduleSort=scheduleSort.value;render();});
+
  $("#page-body").querySelectorAll("[data-calendar-mode]").forEach(el=>el.addEventListener("click",()=>{
   const next=el.dataset.calendarMode;
   if(next==="week"&&state.calendarMode!=="week")state.weekStart=weekStartFor(shownMonth()===todayLocal().slice(0,7)?todayLocal():shownMonth()+"-01");
