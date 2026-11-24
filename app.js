@@ -606,34 +606,47 @@ function dashboard(){
  const comingWeek=valid.filter(b=>b.startDate>=today&&b.startDate<=datePlus(today,6));
  const kpis='<div class="metrics metrics-dashboard">'
   +metric("오늘 오픈",opening.length,"오늘 시작하는 공구")
-  +metric("진행 중 공구",running.length,"오늘 진행 중")
-  +metric("7일 내 오픈",comingWeek.length,"오늘 포함")
-  +metric("연락 필요",rem.length,"후속 연락 대상")
+  +metric("진행 중",running.length,"현재 판매 중인 공구")
+  +metric("7일 내 오픈",comingWeek.length,"오늘 포함, 일주일")
+  +metric("연락 필요",rem.length,"후속 연락 확인 대상")
   +'</div>';
- const actionRows=[
-  ...opening.map(b=>'<tr><td><span class="dash-task-type">오늘 오픈</span></td><td><strong>'+h(b.sellerName||"미확인")+'</strong><small class="dash-item-sub">'+h(b.product||b.productName||"상품 미확인")+'</small></td><td><button type="button" class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">상세</button></td></tr>'),
-  ...rem.map(x=>'<tr><td><span class="dash-task-type">연락 필요</span></td><td><strong>'+h(x.seller.name)+'</strong><small class="dash-item-sub">'+h(x.buy?.product||"후속 연락")+' · '+h(x.due||"")+'</small></td><td><button type="button" class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>')
+ const itemRow=item=>'<div class="ops-work-row">'
+  +'<div class="ops-work-label">'+h(item.category)+'</div>'
+  +'<div class="ops-work-description"><strong>'+h(item.seller)+'</strong><span>'+h(item.product)+'</span><small>'+h(item.meta)+'</small></div>'
+  +'<button type="button" class="ops-work-action" data-act="'+h(item.action)+'" data-id="'+h(item.id)+'">'+h(item.label)+'</button>'
+  +'</div>';
+ const tasks=[
+  ...opening.map(b=>({category:"오늘 오픈",seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",meta:"종료 "+b.endDate.slice(5).replace("-","."),action:"edit-buy",id:b.id,label:"공구 확인"})),
+  ...rem.map(x=>({category:x.overdue>0?"연락 지연":"연락 필요",seller:x.seller.name,product:x.buy?.product||"후속 연락",meta:"연락 기준일 "+(x.due||"-"),action:"contact",id:x.seller.id,label:"연락 기록"}))
  ];
- const actionPanel=wrap("오늘 확인할 업무",
-  actionRows.length?table(["구분","셀러 및 상품","관리"],actionRows.slice(0,5)):'<div class="dash-empty">오늘 확인할 업무가 없습니다.</div>',
-  '<button type="button" class="panel-link" data-nav="reminders">연락 대상 전체 보기</button>');
- const nextRows=upcoming.slice(0,5).map(b=>'<tr><td><strong>'+h(b.startDate.slice(5).replace("-","."))+'</strong></td><td><strong>'+h(b.sellerName||"미확인")+'</strong><small class="dash-item-sub">'+h(b.product||b.productName||"상품 미확인")+'</small></td><td><button type="button" class="mini-button" data-act="edit-buy" data-id="'+h(b.id)+'">상세</button></td></tr>');
+ const taskPanel=wrap("오늘 처리할 업무",
+  '<p class="ops-panel-summary">오늘 오픈 '+opening.length+'건 · 연락 확인 '+rem.length+'건</p><div class="ops-work-list">'
+  +(tasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">오늘 처리할 업무가 없습니다.</div>')+'</div>'
+  +(tasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
+  '<button type="button" class="panel-link" data-nav="reminders">연락 대상 보기</button>');
+ const futureItems=upcoming.slice(0,6).map(b=>({
+  category:b.startDate.slice(5).replace("-",".")+" 오픈",
+  seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",
+  meta:"종료 "+b.endDate.slice(5).replace("-","."),
+  action:"edit-buy",id:b.id,label:"공구 확인"
+ }));
  const nextPanel=wrap("다가오는 공구",
-  nextRows.length?table(["오픈일","셀러 및 상품","관리"],nextRows):'<div class="dash-empty">등록된 예정 공구가 없습니다.</div>',
-  '<button type="button" class="panel-link" data-nav="schedule">공구 일정 보기</button>');
- const cal=wrap("공구 일정",
-  '<div class="dashboard-calendar-tools">'+monthPicker()+calendarModeControls()+'</div>'
+  '<p class="ops-panel-summary">가까운 오픈 일정부터 표시합니다.</p><div class="ops-work-list">'
+  +(futureItems.map(itemRow).join("")||'<div class="dash-empty">예정된 공구가 없습니다.</div>')+'</div>',
+  '<button type="button" class="panel-link" data-nav="schedule">전체 일정 보기</button>');
+ const calendar=wrap("공구 일정",
+  '<p class="ops-calendar-description">날짜를 누르면 해당 날짜의 공구를 확인할 수 있습니다.</p>'
+  +'<div class="dashboard-calendar-tools">'+monthPicker()+calendarModeControls()+'</div>'
   +compactCalendar(valid,{weekOnly:state.calendarMode==="week"}));
  const recent=state.activities.slice(0,4).map(a=>'<div class="activity-row"><div><strong>'+h(a.sellerName||"셀러 미확인")+'</strong><p>'+h(a.type||"활동")+' · '+h(a.memo||"")+'</p></div><small>'+h(dt(a.createdAt))+'</small></div>').join("");
  const activity=wrap("최근 업무 기록",recent||'<div class="dash-empty">기록된 활동이 없습니다.</div>',
   '<button type="button" class="panel-link" data-nav="activity">전체 기록 보기</button>');
  return (state.demo?'<div class="demo-alert">미리보기 데이터이며 실제 업무 정보가 아닙니다.</div>':"")
-  +'<div class="dashboard-v3"><div class="dashboard-intro">'
-  +'<div><strong>'+h(calendarDateLabel(today))+'</strong><span>오늘의 공구와 연락 업무를 확인하세요.</span></div>'
+  +'<div class="dashboard-v4"><div class="dashboard-intro">'
+  +'<div><strong>'+h(calendarDateLabel(today))+'</strong><span>오늘 처리할 공구와 연락 업무를 확인하세요.</span></div>'
   +'<div class="dashboard-intro-actions"><button type="button" data-quick="seller">셀러 등록</button><button type="button" data-quick="activity">연락 기록</button></div>'
-  +'</div>'+kpis
-  +'<div class="dashboard-daily">'+actionPanel+nextPanel+'</div>'
-  +cal+activity+'</div>';
+  +'</div>'+kpis+'<div class="dashboard-daily">'+taskPanel+nextPanel+'</div>'
+  +calendar+activity+'</div>';
 }
 
 function masterProductName(product){
