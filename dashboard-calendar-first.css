@@ -14,8 +14,8 @@
  margin:7px 0 3px;font-size:29px;line-height:1.25;
 }
 #app .dashboard-v4 .dashboard-primary-grid{
- display:grid;grid-template-columns:minmax(0,1.82fr) minmax(320px,.83fr);
- gap:32px;align-items:start;margin:0 0 35px;min-width:0;
+ display:grid;grid-template-columns:minmax(0,1fr) clamp(330px,25%,440px);
+ gap:28px;align-items:start;margin:0 0 35px;min-width:0;
 }
 #app .dashboard-v4 .dashboard-primary-grid>*{min-width:0}
 #app .dashboard-v4 .dashboard-primary-calendar .ops-major-calendar{
@@ -151,7 +151,7 @@
 }
 @media(max-width:1400px){
  #app .dashboard-v4 .dashboard-primary-grid{
-  grid-template-columns:minmax(0,1.55fr) minmax(300px,.87fr);
+  grid-template-columns:minmax(0,1fr) clamp(300px,27%,400px);
   gap:23px;
  }
 }
