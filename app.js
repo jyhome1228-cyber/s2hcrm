@@ -62,6 +62,8 @@ const textarea = (name,label,val="") => '<label class="full">'+h(label)+'<textar
 const select = (name,label,options,val="") => '<label>'+h(label)+'<select name="'+h(name)+'">'+options.map(([v,t])=>'<option value="'+h(v)+'" '+(v===val?'selected':'')+'>'+h(t)+'</option>').join("")+'</select></label>';
 
 const MAINTENANCE_MODE=true; // Temporary S2H CRM inspection mode
+// Keep the maintenance overlay hidden when regular access is restored.
+if(!MAINTENANCE_MODE)$("#maintenance")?.classList.add("hidden");
 function showMaintenance(){
  if(!MAINTENANCE_MODE)return;
  const gate=$("#maintenance");
@@ -80,6 +82,7 @@ let db,auth;
 function start() {
   if (!firebaseConfigured) {
     if(MAINTENANCE_MODE)showMaintenance();
+    else $("#login").classList.remove("hidden");
     $("#login-error").textContent="Firebase 연결 전입니다. 현재는 미리보기로 화면 구성을 확인할 수 있어요."; $("#preview-button").classList.remove("hidden"); $("#preview-hint").classList.remove("hidden");
     $("#login-form").querySelector("button").disabled=true;
     return;
