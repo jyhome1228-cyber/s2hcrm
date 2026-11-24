@@ -815,7 +815,7 @@ function monthGrid(list,options={}){
   }
   const weekId=weekStart;
   const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
-  const height=(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
+  const height=options.connected?(36+Math.max(visible,1)*30+24):(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
