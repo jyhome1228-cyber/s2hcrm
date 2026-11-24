@@ -1895,10 +1895,17 @@ function schedulePage(){
     .map(([v,label])=>'<option value="'+v+'" '+(state.scheduleSort===v?"selected":"")+'>'+label+'</option>').join("")
    +'</select></label>':"")
   +'</div>';
+ const calendarItems=state.buys.filter(b=>b.id&&b.startDate&&b.endDate&&
+  [b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLocaleLowerCase().includes(search)&&
+  matchesStatus(b,state.scheduleStatusFilter));
  const content=state.scheduleView==="calendar"?
   calendarModeControls()+
-  '<p class="ops-schedule-note">기간 막대를 누르면 공구 내용을 수정하고, 날짜를 누르면 공구를 등록할 수 있습니다.</p>'+
-  monthGrid(sorted,{weekOnly:state.calendarMode==="week"}) :
+  '<p class="ops-schedule-note">'+(state.calendarMode==="month"?
+   '날짜별 공구가 리스트로 표시됩니다. 공구를 누르면 수정할 수 있고, 더보기로 전체 목록을 펼칠 수 있습니다.':
+   '기간 막대를 눌러 공구를 수정하고, 날짜를 눌러 공구를 등록할 수 있습니다.')+'</p>'+
+  (state.calendarMode==="week"?
+   monthGrid(sorted,{weekOnly:true}):
+   summaryMonthCalendar(calendarItems,{showCanceled:state.scheduleStatusFilter==="canceled",limit:3})) :
   state.scheduleView==="detail"?
   table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","비고","상태","수정"],monthlyRows(sorted,true)):
   table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows);
