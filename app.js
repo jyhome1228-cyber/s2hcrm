@@ -168,6 +168,7 @@ $("#seller-detail-modal").addEventListener("click",event=>{if(event.target===$("
 $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))e.preventDefault();});
 document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{clearSellerLink();navigateTo(btn.dataset.page);}));
 $("#home-logo").addEventListener("click",()=>{clearSellerLink();state.page="dashboard";state.selectedMonth=todayLocal().slice(0,7);state.weekStart=null;state.search="";render();window.scrollTo?.({top:0,behavior:"smooth"});});
+$("#global-seller-search")?.addEventListener("click",()=>{clearSellerLink();state.page="sellers";state.search="";state.sellerPage=1;render();$("#seller-search")?.focus({preventScroll:true});});
 $("#add-button").onclick=()=>state.page==="schedule"?openBuyModalSafely():sellerModal();
 $("#modal-form").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -1739,6 +1740,7 @@ function render(){
  const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],productInsights:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
+ const crumb=$("#breadcrumb-page");if(crumb)crumb.textContent=title;
  $("#today").textContent=todayLocal();
  $("#add-button").textContent=state.page==="dashboard"||state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
  $("#add-button").onclick=state.page==="dashboard"||state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
