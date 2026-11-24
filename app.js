@@ -646,7 +646,7 @@ function monthGrid(list,options={}){
  const firstWeekStart=options.weekOnly?activeWeekStart():datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
  const lastWeekEnd=options.weekOnly?datePlus(firstWeekStart,6):datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
  const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&b.status!=="취소");
- const maxVisible=options.weekOnly?7:(options.compact?4:5);
+ const maxVisible=options.compact?3:(options.weekOnly?7:5);
  const weekCount=Math.round(daysBetween(firstWeekStart,lastWeekEnd)+1)/7;
  const weeks=[];
  const fmt=date=>date.slice(5).replace("-",".");
@@ -666,7 +666,7 @@ function monthGrid(list,options={}){
   }
   const weekId=weekStart;
   const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
-  const height=44+Math.max(visible,1)*42+34;
+  const height=(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
@@ -683,7 +683,7 @@ function monthGrid(list,options={}){
   }).join("");
   const hiddenCount=events.filter(e=>e.lane>=maxVisible).length;
   const more=laneEnds.length>maxVisible?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기':'+'+hiddenCount+'건 더보기')+'</button>':'';
-  weeks.push('<section class="cal-week-row" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
+  weeks.push('<section class="cal-week-row'+(options.compact?' cal-week-compact':'')+'" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
  }
  return '<div class="cal-scroll"><div class="cal-weekdays">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+'</div><div class="cal-weeks">'+weeks.join("")+'</div></div>';
 }
@@ -761,7 +761,7 @@ function dashboard(){
   +(activeTasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">해당 조건의 업무가 없습니다.</div>')+'</div>'
   +(activeTasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
   '<button type="button" class="panel-link" data-nav="reminders">연락 대상 보기</button>');
- const futureItems=upcoming.slice(0,6).map(b=>({
+ const futureItems=upcoming.slice(0,4).map(b=>({
   category:b.startDate.slice(5).replace("-",".")+" 오픈",
   seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",
   meta:"종료 "+b.endDate.slice(5).replace("-","."),
@@ -809,10 +809,13 @@ function dashboard(){
   +'<div class="dashboard-v4"><div class="dashboard-intro">'
   +'<div><strong>'+h(calendarDateLabel(today))+'</strong><span>오늘 처리할 공구와 연락 업무를 확인하세요.</span></div>'
   +'<div class="dashboard-intro-actions"><button type="button" data-quick="seller">셀러 등록</button><button type="button" data-quick="activity">연락 기록</button></div>'
-  +'</div><section class="ops-major-section ops-major-today">'
-  +'<div class="ops-major-head"><div><h2>업무 현황</h2><p>오픈 일정과 연락이 필요한 셀러를 우선 확인합니다.</p></div></div>'
-  +kpis+'<div class="dashboard-daily">'+taskPanel+nextPanel+'</div></section>'
-  +prepPanel+calendar+activity+'</div>';
+  +'</div><section class="dashboard-overview" aria-label="오늘의 주요 지표">'
+  +kpis+'</section>'
+  +'<div class="dashboard-primary-grid">'
+  +'<div class="dashboard-primary-calendar">'+calendar+'</div>'
+  +'<aside class="dashboard-primary-aside" aria-label="오늘 업무와 예정 공구">'
+  +taskPanel+nextPanel+'</aside></div>'
+  +prepPanel+activity+'</div>';
 }
 
 function masterProductName(product){
