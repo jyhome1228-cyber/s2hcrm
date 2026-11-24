@@ -356,6 +356,7 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
  const categoryOptions=[["","선택 안 함"],["마이크로","마이크로"],["일반","일반"]];
  const fields=
   '<div class="buy-editor-heading full"><p>공구 정보</p><strong>'+(item?"기존 공구 내용 수정":"새로운 공동구매 일정 등록")+'</strong></div>'
+  +(item?.id?'<button type="button" class="buy-editor-prep-open full" data-prep-from-editor="'+h(item.id)+'">오픈 준비 체크 및 담당자 확인</button>':"")
  +'<section class="buy-editor-section full" aria-label="기본 정보"><div class="buy-editor-section-title"><h3>기본 정보</h3><p>셀러, 상품, 공구 기간과 진행 상태</p></div><div class="buy-editor-fields">'
  +'<div class="combo-wrap buy-span-full"><label for="seller-combo">셀러</label><input id="seller-combo" type="text" autocomplete="off" placeholder="셀러명 또는 인스타그램 계정 검색" value="'+h(originalSeller?.name||"")+'" aria-autocomplete="list" aria-expanded="false"/><input id="seller-id" name="sellerId" type="hidden" value="'+h(selectedSellerId)+'"/><div id="seller-suggestions" class="combo-options hidden" role="listbox"></div></div>'
  +'<div class="inline-create hidden buy-span-full" id="create-seller"><strong>신규 셀러 등록</strong><div class="inline-create-grid"><label>셀러명<input id="new-seller-name" type="text"/></label><label>인스타그램 계정<input id="new-seller-handle" type="text" placeholder="@계정"/></label><label>팔로워 수<input id="new-seller-followers" type="number" min="0"/></label><label>연락처<input id="new-seller-contact" type="text"/></label></div><div class="inline-create-buttons"><button type="button" class="secondary" id="cancel-new-seller">취소</button><button type="button" class="primary" id="save-new-seller">셀러 등록</button></div></div>'
@@ -404,6 +405,11 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
   else await addDoc(collection(db,"groupbuys"),{...record,source:"manual",createdByUid:state.user.uid,createdByName:state.staff?.name||state.user.email,createdAt:serverTimestamp()});
  });
  $("#modal").classList.add("buy-editor-modal");
+ const readinessButton=$("#modal-fields [data-prep-from-editor]");
+ if(readinessButton)readinessButton.addEventListener("click",()=>{
+  if(!window.confirm("현재 수정 중 저장하지 않은 내용은 사라집니다. 오픈 준비 체크로 이동할까요?"))return;
+  closeModal();preflightModal(item.id);
+ });
  const form=$("#modal-form");
  const $m=id=>document.getElementById(id);
  const sellerInput=$m("seller-combo"),productInput=$m("product-combo");
