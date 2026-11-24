@@ -26,7 +26,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -1769,8 +1769,32 @@ function reminderPage(){
   +wrap("최근 완료 기록",'<p class="panel-description">연락 완료로 기록한 셀러와 처리 직원, 다음 연락 예정일을 확인할 수 있습니다.</p>'+table(["처리일시","셀러","연락방법","연락내용","처리직원","다음 연락일"],completedRows));
 }
 function activityPage(){
- const rows=state.activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.type)+'</td><td>'+h(a.memo)+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName)+'</td></tr>');
- return wrap("전체 활동기록 · "+state.activities.length,table(["일시","셀러","유형","활동 내용","담당자","기록자"],rows));
+ const all=state.activities;
+ const types=[...new Set(all.map(a=>String(a.type||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko-KR"));
+ const search=state.activitySearch.trim().toLocaleLowerCase();
+ const matched=all.filter(a=>{
+  if(state.activityType!=="all"&&String(a.type||"")!==state.activityType)return false;
+  return !search||[a.sellerName,a.type,a.memo,a.actorName,a.contactOwner,a.channel].join(" ").toLocaleLowerCase().includes(search);
+ }).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+ const pageSize=35,pageCount=Math.max(1,Math.ceil(matched.length/pageSize));
+ state.activityPage=Math.min(pageCount,Math.max(1,state.activityPage));
+ const from=(state.activityPage-1)*pageSize;
+ const shown=matched.slice(from,from+pageSize);
+ const rows=shown.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName||"-")+'</strong></td><td><span class="status">'+h(a.type||"-")+'</span></td><td class="ops-activity-memo">'+h(a.memo||"-")+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td></tr>');
+ const toolbar='<div class="ops-activity-toolbar">'
+  +'<input id="activity-search" type="search" aria-label="활동 기록 검색" placeholder="셀러명, 담당자 또는 활동 내용 검색" value="'+h(state.activitySearch)+'"/>'
+  +'<label>유형<select id="activity-type" aria-label="활동 유형 필터">'
+   +'<option value="all">전체 유형</option>'
+   +types.map(type=>'<option value="'+h(type)+'" '+(type===state.activityType?"selected":"")+'>'+h(type)+'</option>').join("")
+  +'</select></label>'
+  +'<span>전체 '+all.length+'건 · 검색 '+matched.length+'건</span></div>';
+ const pagination='<div class="ops-activity-pagination"><span>'+(matched.length?(from+1)+'–'+Math.min(from+pageSize,matched.length)+' / '+matched.length:'조회 결과 없음')+'</span>'
+  +'<div><button type="button" class="secondary" data-activity-page="-1" '+(state.activityPage===1?"disabled":"")+'>이전</button>'
+  +'<strong>'+state.activityPage+' / '+pageCount+'</strong>'
+  +'<button type="button" class="secondary" data-activity-page="1" '+(state.activityPage===pageCount?"disabled":"")+'>다음</button></div></div>';
+ return wrap("활동 기록 · "+matched.length+"건",
+  '<p class="panel-description">누가 어떤 셀러에게 연락하거나 업무를 처리했는지 확인할 수 있습니다.</p>'
+  +toolbar+table(["일시","셀러","활동 유형","기록 내용","담당자"],rows)+pagination);
 }
 function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 초기 데이터 이전을 실행할 수 있습니다.</p>");
@@ -1788,6 +1812,7 @@ function bindSearchInput(selector,stateKey){
   state[stateKey]=input.value;
   if(stateKey==="search")state.sellerPage=1;
   if(stateKey==="productSearch")state.productPage=1;
+   if(stateKey==="activitySearch")state.activityPage=1;
  };
  const schedule=()=>{
   clearTimeout(searchRenderTimer);
@@ -1836,6 +1861,7 @@ function render(){
  const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.calendarSelectedDate=null;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
+ bindSearchInput("#activity-search","activitySearch");
  $("#page-body").querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerKakaoInfo(btn.dataset.sellerShare)));
  $("#page-body").querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
  $("#page-body").querySelectorAll("[data-seller-proposal]").forEach(btn=>btn.addEventListener("click",()=>sellerProposalModal(btn.dataset.sellerProposal)));
@@ -1884,6 +1910,12 @@ function render(){
  $("#page-body").querySelectorAll("[data-seller-filter]").forEach(button=>button.addEventListener("click",()=>{
   state.sellerOperationFilter=button.dataset.sellerFilter;state.sellerPage=1;render();
  }));
+ const activityType=$("#activity-type");
+ if(activityType)activityType.addEventListener("change",()=>{state.activityType=activityType.value;state.activityPage=1;render();});
+ $("#page-body").querySelectorAll("[data-activity-page]").forEach(button=>button.addEventListener("click",()=>{
+  state.activityPage+=Number(button.dataset.activityPage);render();
+ }));
+
  $("#page-body").querySelectorAll("[data-seller-page]").forEach(btn=>btn.addEventListener("click",()=>{state.sellerPage+=Number(btn.dataset.sellerPage);render();}));
  const exportSellers=$("#page-body [data-export-sellers]");
  if(exportSellers)exportSellers.addEventListener("click",sellerCSV);
