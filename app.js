@@ -862,7 +862,7 @@ function dashboard(){
   state.calendarMode==="month" && requestedDate.slice(0,7)!==month ? fallbackDate : requestedDate;
  const selectedBuys=valid.filter(b=>b.startDate<=selectedDate&&b.endDate>=selectedDate)
   .sort((a,b)=>Number(b.startDate===selectedDate)-Number(a.startDate===selectedDate)||a.startDate.localeCompare(b.startDate)||String(a.sellerName||"").localeCompare(String(b.sellerName||""),"ko-KR"));
- const selectedRows=selectedBuys.slice(0,6).map(b=>{
+ const selectedRows=selectedBuys.map(b=>{
   const label=b.startDate===selectedDate?"오늘 오픈":b.endDate===selectedDate?"종료":scheduleStatus(b);
   return '<div class="flow-date-event">'
    +'<div class="flow-date-event-copy"><strong>'+h(b.sellerName||"셀러 미확인")+'</strong>'
@@ -875,7 +875,7 @@ function dashboard(){
   +'<span>진행 공구 '+selectedBuys.length+'건</span></div>'
   +'<button type="button" class="flow-date-add" data-calendar-add="'+h(selectedDate)+'">공구 등록</button></div>'
   +'<div class="flow-date-list">'+(selectedRows||'<p class="flow-date-empty">선택한 날짜에 등록된 공구가 없습니다.</p>')+'</div>'
-  +(selectedBuys.length>6?'<p class="flow-date-overflow">우선 6건을 표시합니다. 전체 일정에서 나머지를 확인할 수 있습니다.</p>':"")
+  +""
   +'</div>';
  const showDate=state.dashboardPanelMode==="date";
  const sideTabs='<div class="flow-side-tabs" role="group" aria-label="대시보드 오른쪽 보기">'
