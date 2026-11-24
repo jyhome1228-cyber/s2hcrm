@@ -1,0 +1,191 @@
+/* S2H Dashboard 2026-11-24: calendar-first two-column operations workspace */
+#app .dashboard-v4 .dashboard-overview{
+ margin:0 0 27px;padding:0;min-width:0;
+}
+#app .dashboard-v4 .dashboard-overview .metrics-dashboard{
+ margin:0;border-top:1px solid #2e3c43;border-bottom:1px solid #dde5e9;
+}
+#app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric{
+ padding:14px 19px 17px;min-height:110px;
+}
+#app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric:first-child{padding-left:0}
+#app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric:last-child{padding-right:0}
+#app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric .number{
+ margin:7px 0 3px;font-size:29px;line-height:1.25;
+}
+#app .dashboard-v4 .dashboard-primary-grid{
+ display:grid;grid-template-columns:minmax(0,1.82fr) minmax(320px,.83fr);
+ gap:32px;align-items:start;margin:0 0 35px;min-width:0;
+}
+#app .dashboard-v4 .dashboard-primary-grid>*{min-width:0}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-major-calendar{
+ border-top:1px solid #293940;padding:20px 0 0;margin:0;min-width:0;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-major-head{
+ margin:0 0 18px;gap:12px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-major-head h2{
+ font-size:19px;letter-spacing:-.035em;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-major-head p{
+ font-size:12px;line-height:1.55;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-calendar-controls{
+ margin:0 0 10px;gap:8px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-calendar-legend{
+ gap:9px 13px;margin:0 0 10px;min-height:25px;
+ font-size:11px;line-height:1.5;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-calendar-legend>span:first-child{
+ margin-right:auto;white-space:nowrap;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .ops-calendar-hint{
+ display:none;
+}
+/* Original full-calendar pages keep their own fixed-width geometry.
+   Only dashboard compact bars are allowed to fit the available column. */
+#app .dashboard-v4 .dashboard-primary-calendar .cal-scroll{
+ width:100%;min-width:0;overflow-x:auto;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-weekdays,
+#app .dashboard-v4 .dashboard-primary-calendar .cal-weeks{
+ width:100%;min-width:0;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-weekdays .cal-week{
+ font-size:11px;padding:10px 3px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-week-row.cal-week-compact{
+ grid-template-columns:repeat(7,minmax(0,1fr));
+ grid-template-rows:38px repeat(var(--cal-visible-rows),34px) 27px;
+ min-height:var(--cal-row-height);height:var(--cal-row-height);
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-week-row.cal-week-compact>.cal-bg-day.cal-day-add{
+ padding:0 6px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-week-row.cal-week-compact>.cal-bg-day.cal-day-add>.cal-date-head{
+ height:38px;max-height:38px;flex:0 0 38px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-date-head b{
+ font-size:12px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-date-head small{
+ font-size:10px;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-week-row.cal-week-compact>.cal-range{
+ height:26px;min-height:26px;
+ padding:0 6px;margin:0 2px;border-radius:2px;
+ font-size:11px;font-weight:600;line-height:1.25;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#app .dashboard-v4 .dashboard-primary-calendar .cal-week-row.cal-week-compact>.cal-expand{
+ margin-left:6px;padding:3px 5px;min-height:22px;
+ font-size:11px;line-height:1.2;
+}
+#app .dashboard-v4 .dashboard-primary-aside{
+ display:flex;flex-direction:column;gap:23px;
+ min-width:0;padding:0;margin:0;
+}
+#app .dashboard-v4 .dashboard-primary-aside>.panel{
+ border-top:1px solid #293940!important;
+ padding:20px 0 0!important;margin:0!important;
+ border-left:0;border-right:0;border-bottom:0;
+ background:#fff;box-shadow:none;border-radius:0;
+}
+#app .dashboard-v4 .dashboard-primary-aside .panel-title{
+ margin:0 0 11px;gap:10px;
+}
+#app .dashboard-v4 .dashboard-primary-aside .panel-title h2{
+ font-size:17px;line-height:1.4;letter-spacing:-.035em;
+}
+#app .dashboard-v4 .dashboard-primary-aside .panel-link{
+ font-size:11px;white-space:nowrap;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-panel-summary{
+ font-size:11px;line-height:1.5;color:#66767e;margin:0 0 10px;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-task-filters{
+ gap:2px 4px;margin:0 0 6px;padding:0 0 9px;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-task-filters button{
+ padding:6px 7px;font-size:11px;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-task-filters button span{
+ font-size:10px;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-row{
+ display:grid;grid-template-columns:59px minmax(0,1fr) 67px;
+ align-items:center;gap:8px;
+ padding:10px 0;min-height:68px;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-label{
+ font-size:11px;line-height:1.45;word-break:keep-all;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-description{
+ gap:2px;min-width:0;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-description strong{
+ font-size:13px;line-height:1.45;font-weight:750;
+ overflow:hidden;max-width:100%;text-overflow:ellipsis;white-space:nowrap;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-description span{
+ font-size:11px;line-height:1.4;max-width:100%;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-description small{
+ font-size:10px;line-height:1.4;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-work-action{
+ justify-self:end;min-width:0;width:67px;min-height:30px;
+ padding:5px 4px;font-size:10px;font-weight:650;white-space:nowrap;
+ border-radius:2px;line-height:1.2;
+}
+#app .dashboard-v4 .dashboard-primary-aside .ops-more-note{
+ font-size:11px;color:#78868e;margin:10px 0 0;
+}
+#app .dashboard-v4 .dashboard-primary-aside .dash-empty{
+ text-align:left;font-size:12px;padding:22px 0;
+}
+#app .dashboard-v4 .ops-major-prep{
+ margin-top:3px;
+}
+@media(max-width:1400px){
+ #app .dashboard-v4 .dashboard-primary-grid{
+  grid-template-columns:minmax(0,1.55fr) minmax(300px,.87fr);
+  gap:23px;
+ }
+}
+@media(max-width:1260px){
+ #app .dashboard-v4 .dashboard-primary-grid{
+  grid-template-columns:minmax(0,1fr);
+  gap:24px;
+ }
+ #app .dashboard-v4 .dashboard-primary-calendar .cal-weekdays,
+ #app .dashboard-v4 .dashboard-primary-calendar .cal-weeks{
+  min-width:680px;
+ }
+ #app .dashboard-v4 .dashboard-primary-aside{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:22px;
+ }
+}
+@media(max-width:760px){
+ #app .dashboard-v4 .dashboard-overview .metrics-dashboard{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric{
+  min-height:100px;padding:13px 12px;
+ }
+ #app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric:first-child{padding-left:12px}
+ #app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric:last-child{padding-right:12px}
+ #app .dashboard-v4 .dashboard-overview .metrics-dashboard .metric .number{font-size:26px}
+ #app .dashboard-v4 .dashboard-primary-aside{display:flex;flex-direction:column;gap:22px}
+ #app .dashboard-v4 .dashboard-primary-grid{gap:22px;margin-bottom:28px}
+ #app .dashboard-v4 .dashboard-primary-calendar .ops-major-head{gap:8px;align-items:flex-start}
+ #app .dashboard-v4 .dashboard-primary-calendar .ops-major-head h2{font-size:18px}
+ #app .dashboard-v4 .dashboard-primary-calendar .ops-major-head .panel-link{font-size:11px}
+ #app .dashboard-v4 .dashboard-primary-calendar .cal-weekdays,
+ #app .dashboard-v4 .dashboard-primary-calendar .cal-weeks{min-width:680px}
+ #app .dashboard-v4 .dashboard-primary-aside .ops-work-row{
+  grid-template-columns:67px minmax(0,1fr) 70px;
+ }
+ #app .dashboard-v4 .dashboard-primary-aside .ops-work-action{width:70px}
+}
