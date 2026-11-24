@@ -175,3 +175,33 @@
  #app .ops-activity-memo{min-width:165px}
  #app .ops-activity-pagination{align-items:flex-start}
 }
+
+
+/* Dashboard daily task filters are understated inline controls. */
+#app .dashboard-v4 .ops-task-filters{
+ display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+ padding:0 0 11px;margin:0 0 4px;
+}
+#app .dashboard-v4 .ops-task-filters button{
+ display:inline-flex;align-items:center;gap:6px;
+ background:#fff;border:1px solid transparent;
+ border-radius:2px;padding:7px 9px;
+ color:#586870;font-weight:600;font-size:12px;
+}
+#app .dashboard-v4 .ops-task-filters button span{
+ font-size:11px;color:#78868d;font-variant-numeric:tabular-nums;
+}
+#app .dashboard-v4 .ops-task-filters button.selected{
+ color:#007da2;background:#eff9fc;border-color:#c8e7f0;
+}
+#app .dashboard-v4 .ops-task-filters button.selected span{color:#007da2}
+#app .dashboard-v4 .ops-task-filters button:hover{background:#f5f9fb}
+/* Detailed ledger retains horizontal scroll; short view stays compact. */
+#app .ops-schedule-main.is-detail .table-wrap{overflow-x:auto;width:100%}
+#app .ops-schedule-main.is-detail table{min-width:1390px}
+#app .ops-schedule-main.is-detail th,
+#app .ops-schedule-main.is-detail td{white-space:nowrap}
+@media(max-width:720px){
+ #app .dashboard-v4 .ops-task-filters button{font-size:11px;padding:6px 7px}
+ #app .dashboard-v4 .ops-task-filters button span{font-size:10px}
+}
