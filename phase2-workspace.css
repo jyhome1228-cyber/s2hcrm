@@ -1,0 +1,177 @@
+/* S2H CRM — STEP 2: Everyday operations / 2026-11-24
+   White-first SaaS controls for schedule, seller, product, activity. */
+#app .ops-schedule-page{
+ width:100%;
+ background:#fff;min-width:0;
+}
+#app .ops-schedule-heading{
+ display:flex;align-items:center;justify-content:space-between;gap:18px;
+ border-bottom:1px solid #dce3e7;padding:0 0 17px;margin:0 0 19px;
+}
+#app .ops-schedule-heading>div{min-width:0}
+#app .ops-schedule-heading strong{
+ display:block;font-size:17px;font-weight:700;color:#242f35;line-height:1.45;
+}
+#app .ops-schedule-heading p{margin:5px 0 0;font-size:12px;line-height:1.6;color:#718087}
+#app .ops-schedule-heading>span{font-size:12px;color:#56656c;white-space:nowrap}
+#app .ops-schedule-month{display:flex;align-items:center;margin-bottom:17px}
+#app .ops-schedule-month .month-controls{margin:0}
+#app .ops-schedule-toolbar{
+ display:flex;flex-direction:column;gap:14px;margin-bottom:14px;
+}
+#app .ops-schedule-toolbar-main{
+ display:flex;justify-content:space-between;align-items:center;gap:14px;
+ flex-wrap:wrap;min-width:0;
+}
+#app .ops-schedule-toolbar-main #month-search{
+ height:43px;min-width:210px;width:min(340px,100%);
+ margin:0;flex:1 1 250px;
+}
+#app .ops-schedule-view{
+ display:inline-flex;align-items:stretch;flex-wrap:nowrap;gap:0;
+ padding:0;border:1px solid #cdd7dc;background:#fff;border-radius:2px;
+}
+#app .ops-schedule-view button{
+ border:0;border-right:1px solid #e0e6e8;border-radius:0;background:#fff;
+ padding:10px 16px;min-height:41px;color:#4f5d64;
+ font-size:12px;font-weight:650;white-space:nowrap;
+}
+#app .ops-schedule-view button:last-child{border-right:0}
+#app .ops-schedule-view button:hover{background:#f3f8fa;color:#0089b3}
+#app .ops-schedule-view button.selected{background:#0089b3;color:#fff}
+#app .ops-schedule-view button.selected:hover{background:#00749a;color:#fff}
+#app .ops-schedule-filters{
+ display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+ border-bottom:1px solid #e3e9eb;padding:0 0 12px;
+}
+#app .ops-schedule-filters button{
+ display:inline-flex;align-items:center;gap:6px;
+ border:1px solid transparent;border-radius:2px;
+ background:transparent;color:#5a6970;
+ padding:8px 11px;font-size:12px;font-weight:600;
+}
+#app .ops-schedule-filters button span{font-variant-numeric:tabular-nums;color:#87939a}
+#app .ops-schedule-filters button:hover{background:#f4f9fb}
+#app .ops-schedule-filters button.selected{
+ color:#007c9e;background:#eef8fb;border:1px solid #c9e7f0;
+}
+#app .ops-schedule-filters button.selected span{color:#007c9e}
+#app .ops-schedule-results{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:12px;margin:0 0 12px;flex-wrap:wrap;
+ color:#6b7880;font-size:12px;
+}
+#app .ops-schedule-results strong{font-weight:700;color:#253139}
+#app .ops-schedule-results label,
+#app .ops-product-sort,
+#app .ops-activity-toolbar label{
+ display:inline-flex;align-items:center;gap:8px;
+ font-size:12px;color:#5a6970;font-weight:600;
+}
+#app .ops-schedule-results select,
+#app .ops-product-sort select,
+#app .ops-activity-toolbar select{
+ width:auto;min-width:150px;min-height:36px;
+ padding:7px 10px;background:#fff;border:1px solid #cdd7dc;
+ border-radius:2px;color:#34454d;font-size:12px;
+}
+#app .ops-schedule-main{
+ min-width:0;width:100%;
+ border-top:1px solid #dce3e7;
+}
+#app .ops-schedule-main .table-wrap{overflow-x:auto}
+#app .ops-schedule-main:not(.is-calendar) table{min-width:0;width:100%}
+#app .ops-schedule-main:not(.is-calendar) th{padding:14px 11px;background:#f8fafb}
+#app .ops-schedule-main:not(.is-calendar) td{padding:14px 11px}
+#app .ops-schedule-main .ops-schedule-date{
+ color:#5c6a71;white-space:normal;min-width:152px;
+ font-size:12px;font-variant-numeric:tabular-nums;
+}
+#app .ops-schedule-main .seller-cell{
+ font-weight:700;color:#293942;
+}
+#app .ops-schedule-main:not(.is-calendar) td:last-child{text-align:right;white-space:nowrap}
+#app .ops-schedule-main.is-calendar{padding-top:12px}
+#app .ops-schedule-main.is-calendar .cal-display-controls{margin:2px 0 12px}
+#app .ops-schedule-note{
+ font-size:12px;color:#63757e;margin:0 0 13px;line-height:1.5;
+}
+#app .ops-seller-filter{
+ display:flex;gap:5px;align-items:center;flex-wrap:wrap;
+ border-bottom:1px solid #e3e8eb;
+ padding:0 0 12px;margin:0 0 11px;
+}
+#app .ops-seller-filter button{
+ border:1px solid transparent;background:#fff;
+ border-radius:2px;padding:8px 12px;
+ font-size:12px;color:#56656d;
+ font-weight:650;white-space:nowrap;
+}
+#app .ops-seller-filter button span{color:#87949b;font-variant-numeric:tabular-nums}
+#app .ops-seller-filter button:hover{background:#f5f9fb;color:#007da2}
+#app .ops-seller-filter button.selected{
+ color:#007da2;background:#eff9fc;border-color:#c8e7f0;
+}
+#app .ops-seller-filter button.selected span{color:#007da2}
+#app .seller-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+#app .seller-tools .seller-search{flex:1 1 230px;min-width:0}
+#app .seller-tools #seller-search{width:100%;height:43px}
+#app .seller-tools .seller-results{font-size:12px;color:#65767e;white-space:nowrap}
+#app .seller-tools [data-export-sellers]{font-size:12px}
+#app .ops-product-results{
+ display:flex;align-items:center;justify-content:space-between;gap:13px;
+ flex-wrap:wrap;padding:0 0 14px;margin-top:15px;
+ color:#66767e;font-size:12px;border-bottom:1px solid #e2e8eb;
+}
+#app .product-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+#app .product-toolbar #product-search{width:min(400px,100%);flex:1 1 240px}
+#app .product-filters{display:flex;gap:5px;flex-wrap:wrap}
+#app .product-filters button{border-radius:2px;font-size:12px}
+#app .ops-activity-toolbar{
+ display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+ padding:0 0 16px;margin:0 0 10px;
+ border-bottom:1px solid #e1e7e9;
+}
+#app .ops-activity-toolbar #activity-search{
+ min-height:43px;height:43px;width:min(390px,100%);
+ flex:1 1 245px;padding:10px 13px;border:1px solid #cdd7db;
+ font-size:13px;
+}
+#app .ops-activity-toolbar>span{margin-left:auto;color:#65757d;font-size:12px;white-space:nowrap}
+#app .ops-activity-memo{
+ max-width:540px;min-width:200px;
+ white-space:normal;word-break:keep-all;color:#41525a;
+}
+#app .ops-activity-pagination{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ flex-wrap:wrap;padding:14px 0 0;
+ border-top:1px solid #e3e9eb;font-size:12px;color:#65747d;
+}
+#app .ops-activity-pagination>div{
+ display:flex;align-items:center;gap:10px;margin-left:auto;
+}
+#app .ops-activity-pagination strong{color:#36484f;font-weight:650}
+#app .ops-activity-pagination button{
+ padding:7px 12px;min-height:34px;font-size:12px;
+}
+@media(max-width:960px){
+ #app .ops-schedule-toolbar-main{align-items:stretch;flex-direction:column}
+ #app .ops-schedule-toolbar-main #month-search{max-width:none;flex:1 1 auto;width:100%}
+ #app .ops-schedule-view{align-self:flex-start}
+}
+@media(max-width:720px){
+ #app .ops-schedule-heading{align-items:flex-start;flex-direction:column;gap:8px}
+ #app .ops-schedule-heading strong{font-size:16px}
+ #app .ops-schedule-filters{gap:3px}
+ #app .ops-schedule-filters button{font-size:11px;padding:7px 8px}
+ #app .ops-schedule-view{max-width:100%;width:100%}
+ #app .ops-schedule-view button{flex:1;padding:9px 7px;font-size:11px}
+ #app .ops-schedule-main:not(.is-calendar) table{min-width:575px}
+ #app .ops-schedule-main.is-calendar .cal-scroll{overflow-x:auto}
+ #app .ops-seller-filter button{font-size:11px;padding:7px 9px}
+ #app .ops-activity-toolbar{align-items:stretch}
+ #app .ops-activity-toolbar #activity-search{width:100%;flex:1 1 100%}
+ #app .ops-activity-toolbar>span{margin:0}
+ #app .ops-activity-memo{min-width:165px}
+ #app .ops-activity-pagination{align-items:flex-start}
+}
