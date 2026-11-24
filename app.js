@@ -790,7 +790,7 @@ function dashboard(){
   +(activeTasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">해당 조건의 업무가 없습니다.</div>')+'</div>'
   +(activeTasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
   '<button type="button" class="panel-link" data-nav="reminders">연락 대상 보기</button>');
- const futureItems=upcoming.slice(0,4).map(b=>({
+ const futureItems=upcoming.slice(0,3).map(b=>({
   category:b.startDate.slice(5).replace("-",".")+" 오픈",
   seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",
   meta:"종료 "+b.endDate.slice(5).replace("-","."),
@@ -819,31 +819,59 @@ function dashboard(){
     '<p class="prep-dashboard-empty">현재 오픈 3일 이내에 준비 확인이 필요한 공구가 없습니다.</p>')
   +'</section>';
  const calendar='<section class="ops-major-section ops-major-calendar">'
-  +'<div class="ops-major-head"><div><h2>공구 캘린더</h2><p>진행 기간을 월간 또는 주간으로 확인할 수 있습니다.</p></div>'
+  +'<div class="ops-major-head"><div><h2>공구 캘린더</h2><p>월간은 간결하게, 주간은 기간별로 확인합니다.</p></div>'
   +'<button type="button" class="panel-link" data-nav="schedule">전체 공구 일정</button></div>'
   +'<div class="ops-calendar-controls">'+monthPicker()+calendarModeControls()+'</div>'
   +'<div class="ops-calendar-legend"><span>선택한 달 '+monthlyBuys().filter(b=>b.status!=="취소").length+'건</span>'
   +'<span class="ops-legend-item"><i class="is-active"></i>진행 중</span>'
   +'<span class="ops-legend-item"><i class="is-upcoming"></i>예정</span>'
   +'<span class="ops-legend-item"><i class="is-past"></i>완료</span>'
-  +'<span class="ops-calendar-hint">빈 날짜 클릭 시 공구 등록</span></div>'
-  +monthGrid(state.calendarMode==="week"?valid:monthlyBuys(),{compact:true,weekOnly:state.calendarMode==="week"})
+  +'<span class="ops-calendar-hint">날짜 선택 후 오른쪽에서 확인</span></div>'
+  +(state.calendarMode==="week"?monthGrid(valid,{weekOnly:true,selectDates:true}):summaryMonthCalendar(valid))
   +'</section>';
- const recent=state.activities.slice(0,4).map(a=>'<div class="activity-row"><div><strong>'+h(a.sellerName||"셀러 미확인")+'</strong><p>'+h(a.type||"활동")+' · '+h(a.memo||"")+'</p></div><small>'+h(dt(a.createdAt))+'</small></div>').join("");
+ const month=shownMonth(),week=activeWeekStart();
+ const fallbackDate=state.calendarMode==="week"
+  ?(today>=week&&today<=datePlus(week,6)?today:week):
+    (month===today.slice(0,7)?today:month+"-01");
+ const selectedDate=state.calendarSelectedDate||fallbackDate;
+ const selectedBuys=valid.filter(b=>b.startDate<=selectedDate&&b.endDate>=selectedDate)
+  .sort((a,b)=>Number(b.startDate===selectedDate)-Number(a.startDate===selectedDate)||a.startDate.localeCompare(b.startDate)||String(a.sellerName||"").localeCompare(String(b.sellerName||""),"ko-KR"));
+ const selectedRows=selectedBuys.slice(0,6).map(b=>{
+  const label=b.startDate===selectedDate?"오늘 오픈":b.endDate===selectedDate?"종료":scheduleStatus(b);
+  return '<div class="flow-date-event">'
+   +'<div class="flow-date-event-copy"><strong>'+h(b.sellerName||"셀러 미확인")+'</strong>'
+   +'<span>'+h(b.product||b.productName||"상품 미확인")+'</span>'
+   +'<small>'+h(b.startDate.slice(5).replace("-","."))+' ~ '+h(b.endDate.slice(5).replace("-","."))+' · '+h(label)+'</small></div>'
+   +'<button type="button" class="flow-date-event-action" data-act="edit-buy" data-id="'+h(b.id)+'">수정</button></div>';
+ }).join("");
+ const datePanel='<div class="flow-date-panel">'
+  +'<div class="flow-date-header"><div><strong>'+h(calendarDateLabel(selectedDate))+'</strong>'
+  +'<span>진행 공구 '+selectedBuys.length+'건</span></div>'
+  +'<button type="button" class="flow-date-add" data-calendar-add="'+h(selectedDate)+'">공구 등록</button></div>'
+  +'<div class="flow-date-list">'+(selectedRows||'<p class="flow-date-empty">선택한 날짜에 등록된 공구가 없습니다.</p>')+'</div>'
+  +(selectedBuys.length>6?'<p class="flow-date-overflow">우선 6건을 표시합니다. 전체 일정에서 나머지를 확인할 수 있습니다.</p>':"")
+  +'</div>';
+ const showDate=state.dashboardPanelMode==="date";
+ const sideTabs='<div class="flow-side-tabs" role="group" aria-label="대시보드 오른쪽 보기">'
+  +'<button type="button" data-dashboard-side="tasks" aria-pressed="'+(!showDate)+'" class="'+(!showDate?'selected':'')+'">오늘 업무 <span>'+tasks.length+'</span></button>'
+  +'<button type="button" data-dashboard-side="date" aria-pressed="'+showDate+'" class="'+(showDate?'selected':'')+'">선택 날짜 <span>'+selectedBuys.length+'</span></button>'
+  +'</div>';
+ const recent=state.activities.slice(0,3).map(a=>'<div class="activity-row"><div><strong>'+h(a.sellerName||"셀러 미확인")+'</strong><p>'+h(a.type||"활동")+' · '+h(a.memo||"")+'</p></div><small>'+h(dt(a.createdAt))+'</small></div>').join("");
  const activity='<section class="ops-major-section ops-major-activity">'
   +'<div class="ops-major-head"><div><h2>최근 업무 기록</h2><p>팀원들이 등록한 활동 내역입니다.</p></div>'
   +'<button type="button" class="panel-link" data-nav="activity">전체 기록 보기</button></div>'
   +'<div class="ops-activity-list">'+(recent||'<div class="dash-empty">기록된 활동이 없습니다.</div>')+'</div></section>';
  return (state.demo?'<div class="demo-alert">미리보기 데이터이며 실제 업무 정보가 아닙니다.</div>':"")
-  +'<div class="dashboard-v4"><div class="dashboard-intro">'
+  +'<div class="dashboard-v4 dashboard-v5"><div class="dashboard-intro">'
   +'<div><strong>'+h(calendarDateLabel(today))+'</strong><span>오늘 처리할 공구와 연락 업무를 확인하세요.</span></div>'
   +'<div class="dashboard-intro-actions"><button type="button" data-quick="seller">셀러 등록</button><button type="button" data-quick="activity">연락 기록</button></div>'
   +'</div><section class="dashboard-overview" aria-label="오늘의 주요 지표">'
   +kpis+'</section>'
   +'<div class="dashboard-primary-grid">'
   +'<div class="dashboard-primary-calendar">'+calendar+'</div>'
-  +'<aside class="dashboard-primary-aside" aria-label="오늘 업무와 예정 공구">'
-  +taskPanel+nextPanel+'</aside></div>'
+  +'<aside class="dashboard-primary-aside" aria-label="오늘 업무와 선택 날짜 공구">'
+  +'<div class="flow-side-main">'+sideTabs+(showDate?datePanel:taskPanel)+'</div>'
+  +nextPanel+'</aside></div>'
   +prepPanel+activity+'</div>';
 }
 
@@ -2048,7 +2076,9 @@ function render(){
   const date=el.dataset.calendarDate;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
   if(state.calendarMode!=="week"&&date.slice(0,7)!==shownMonth())state.selectedMonth=date.slice(0,7);
-  state.calendarSelectedDate=date;render();
+  state.calendarSelectedDate=date;
+  if(state.page==="dashboard")state.dashboardPanelMode="date";
+  render();
  }));
  $("#page-body").querySelectorAll("[data-calendar-add]").forEach(el=>el.addEventListener("click",()=>{
   const date=el.dataset.calendarAdd;
@@ -2061,6 +2091,9 @@ function render(){
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
  $("#page-body").querySelectorAll("[data-prep-open]").forEach(button=>button.addEventListener("click",()=>{
   preflightModal(button.dataset.prepOpen);
+ }));
+ $("#page-body").querySelectorAll("[data-dashboard-side]").forEach(button=>button.addEventListener("click",()=>{
+  state.dashboardPanelMode=button.dataset.dashboardSide;render();
  }));
  $("#page-body").querySelectorAll("[data-dashboard-task]").forEach(button=>button.addEventListener("click",()=>{
   state.dashboardTaskFilter=button.dataset.dashboardTask;render();
