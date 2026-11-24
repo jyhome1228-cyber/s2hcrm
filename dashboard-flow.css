@@ -1,0 +1,376 @@
+/* S2H CRM dashboard — Flow-inspired usability, original S2H identity.
+   Dashboard only. Other management pages keep their layouts. */
+#app .main:has(.dashboard-v5){background:#f6f8fa}
+#app .content:has(.dashboard-v5){background:transparent}
+#app .dashboard-v5{
+ --flow-ink:#263640;--flow-muted:#687984;--flow-line:#e4eaf0;
+ --flow-blue:#0089b3;--flow-soft:#eaf7fc;
+ color:var(--flow-ink);
+}
+#app .dashboard-v5 .dashboard-intro{
+ border:0;margin:0 0 19px;padding:0 2px;
+}
+#app .dashboard-v5 .dashboard-intro>div:first-child strong{
+ font-size:16px;letter-spacing:-.03em;color:#293a43;
+}
+#app .dashboard-v5 .dashboard-intro>div:first-child span{
+ font-size:12px;color:var(--flow-muted);
+}
+#app .dashboard-v5 .dashboard-intro-actions button{
+ border-radius:7px;padding:7px 0;
+ font-size:12px;font-weight:650;
+}
+#app .dashboard-v5 .dashboard-overview{margin-bottom:18px}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ background:#fff;border:1px solid #e4e9ee;
+ border-radius:13px;overflow:hidden;
+ box-shadow:0 3px 14px rgba(24,50,65,.03);
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric{
+ min-height:99px;padding:20px 23px!important;
+ border:0;border-right:1px solid #edf1f4;border-radius:0;
+ background:#fff;box-shadow:none;
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric:last-child{border-right:0}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .label{
+ color:#6a7a84;font-size:12px;font-weight:650;
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .number{
+ font-size:30px;line-height:1.2;letter-spacing:-.05em;
+ color:#23333c;font-weight:760;margin:9px 0 5px;
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .sub{
+ font-size:11px;color:#86939b;line-height:1.4;
+}
+#app .dashboard-v5 .dashboard-primary-grid{
+ grid-template-columns:minmax(0,1fr) clamp(330px,25%,420px);
+ gap:18px;align-items:start;margin:0 0 24px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar,
+#app .dashboard-v5 .flow-side-main,
+#app .dashboard-v5 .dashboard-primary-aside>.panel,
+#app .dashboard-v5 .ops-major-prep,
+#app .dashboard-v5 .ops-major-activity{
+ min-width:0;background:#fff;
+ border:1px solid #e3e9ee!important;border-radius:13px;
+ box-shadow:0 3px 15px rgba(22,52,66,.035);
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-calendar{
+ margin:0!important;padding:22px 22px 23px!important;
+ border:0!important;border-radius:13px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-head{
+ display:flex;align-items:flex-start;gap:15px;
+ margin-bottom:18px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-head h2{
+ font-size:19px;font-weight:760;color:#263640;letter-spacing:-.045em;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-head p{
+ font-size:12px;color:#7a8b94;margin-top:5px;line-height:1.5;
+}
+#app .dashboard-v5 .panel-link{
+ border:0;border-radius:0;
+ font-size:12px;color:#0783a8;font-weight:700;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-controls{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:10px;flex-wrap:wrap;margin:0 0 12px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .month-controls,
+#app .dashboard-v5 .dashboard-primary-calendar .cal-display-controls{margin:0}
+#app .dashboard-v5 .dashboard-primary-calendar .month-buttons{
+ display:flex;gap:5px;align-items:center;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .month-buttons button,
+#app .dashboard-v5 .dashboard-primary-calendar .month-buttons input,
+#app .dashboard-v5 .dashboard-primary-calendar .cal-mode-switch button,
+#app .dashboard-v5 .dashboard-primary-calendar .cal-week-navigator button{
+ border-radius:7px;background:#fff;border:1px solid #dfe6eb;
+ color:#4d6470;font-size:12px;font-weight:650;
+ min-height:34px;box-shadow:none;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .month-buttons button:hover,
+#app .dashboard-v5 .dashboard-primary-calendar .cal-week-navigator button:hover{
+ border-color:#92cfe0;background:#f0f9fc;color:#00799c;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-mode-switch{
+ display:flex;gap:3px;background:#f2f5f8;
+ border:0;border-radius:8px;padding:3px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-mode-switch button{
+ border:0;border-radius:6px;min-height:30px;padding:5px 12px;
+ color:#677984;background:transparent;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-mode-switch button.selected{
+ background:#fff;color:#007fa5;
+ box-shadow:0 1px 4px rgba(23,57,74,.1);
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-legend{
+ gap:8px 13px;margin:0 0 13px;min-height:25px;
+ padding:0 2px;font-size:11px;color:#82909a;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-legend>span:first-child{
+ font-weight:700;color:#4e626e;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-legend-item{
+ color:#70828c;font-size:11px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-legend-item i{
+ width:9px;height:9px;border-radius:3px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-hint{display:none}
+/* A concise 7-column month calendar replaces the dense range bars. */
+#app .dashboard-v5 .flow-month-calendar{
+ border:1px solid #e3e9ef;border-radius:11px;
+ overflow:hidden;background:#e9eef2;
+}
+#app .dashboard-v5 .flow-month-weekdays,
+#app .dashboard-v5 .flow-month-days{
+ display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+ gap:1px;background:#e9eef2;
+}
+#app .dashboard-v5 .flow-month-weekday{
+ display:flex;align-items:center;justify-content:center;
+ background:#f7f9fb;color:#687c87;
+ min-height:36px;font-size:11px;font-weight:650;
+}
+#app .dashboard-v5 .flow-month-weekday:first-child{color:#bc6e73}
+#app .dashboard-v5 .flow-month-cell{
+ display:flex;flex-direction:column;gap:6px;
+ align-items:stretch;justify-content:flex-start;text-align:left;
+ width:100%;min-width:0;height:91px;padding:9px 8px;
+ border:0!important;border-radius:0;background:#fff;
+ color:#293b45;cursor:pointer;box-shadow:none;
+ transition:background .14s ease;
+}
+#app .dashboard-v5 .flow-month-cell:hover{background:#f3f9fc}
+#app .dashboard-v5 .flow-month-cell.is-outside{background:#fafbfc}
+#app .dashboard-v5 .flow-month-cell.is-outside .flow-month-date strong{
+ color:#aab6bd;font-weight:500;
+}
+#app .dashboard-v5 .flow-month-cell.is-selected{
+ background:#f0f9fd;
+ box-shadow:inset 0 0 0 2px #0089b3;
+}
+#app .dashboard-v5 .flow-month-cell.is-today:not(.is-selected){background:#f8fbfc}
+#app .dashboard-v5 .flow-month-date{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:3px;min-height:20px;
+}
+#app .dashboard-v5 .flow-month-date strong{
+ font-size:12px;font-weight:740;line-height:20px;
+ font-variant-numeric:tabular-nums;
+}
+#app .dashboard-v5 .flow-month-cell.is-today .flow-month-date strong{
+ display:grid;place-items:center;background:#0089b3;color:#fff;
+ width:21px;height:21px;border-radius:6px;
+}
+#app .dashboard-v5 .flow-month-date small{
+ font-size:9px;font-weight:650;color:#0086ad;
+ white-space:nowrap;
+}
+#app .dashboard-v5 .flow-month-event{
+ display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ width:100%;min-width:0;padding:5px 6px;border-radius:5px;
+ background:#ecf7fb;color:#007a9f;font-size:10px;font-weight:700;
+ line-height:1.2;
+}
+#app .dashboard-v5 .flow-month-event.is-active{
+ background:#0089b3;color:#fff;
+}
+#app .dashboard-v5 .flow-month-event.is-completed{
+ background:#f0f3f5;color:#768690;
+}
+#app .dashboard-v5 .flow-month-more{
+ display:block;margin:0 0 0 2px;
+ font-size:10px;font-weight:600;color:#84939b;line-height:1.1;
+}
+/* Week mode keeps the interval bars, in a gently rounded scroll panel. */
+#app .dashboard-v5 .dashboard-primary-calendar .cal-scroll{
+ overflow-x:auto;border:1px solid #e3e9ee;border-radius:10px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-weekdays,
+#app .dashboard-v5 .dashboard-primary-calendar .cal-weeks{min-width:700px}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-range{
+ border-radius:5px;background:#dfeff7;color:#226b8c;
+ border:1px solid #abd6e5;
+ box-shadow:none;font-size:11px;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-range-active{
+ background:#0089b3;color:#fff;border-color:#0089b3;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-range-completed{
+ background:#f0f3f5;color:#7a8891;border-color:#d6e1e6;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .cal-bg-day.cal-today{
+ background:#f2fafe;
+}
+/* The right column is one focus panel plus a short list of upcoming opens. */
+#app .dashboard-v5 .dashboard-primary-aside{
+ display:flex;flex-direction:column;gap:16px;
+ margin:0;padding:0;min-width:0;
+}
+#app .dashboard-v5 .flow-side-main{
+ overflow:hidden;padding:0 18px 17px;
+}
+#app .dashboard-v5 .flow-side-tabs{
+ display:flex;align-items:center;gap:16px;
+ border-bottom:1px solid #e8eef1;
+ padding:0;margin:0 0 14px;
+}
+#app .dashboard-v5 .flow-side-tabs button{
+ display:flex;align-items:center;gap:6px;
+ min-width:0;min-height:48px;
+ background:#fff;border:0;border-bottom:2px solid transparent;
+ border-radius:0;color:#71818a;
+ font-size:13px;font-weight:650;padding:0 2px;white-space:nowrap;
+}
+#app .dashboard-v5 .flow-side-tabs button span{font-size:11px;color:#91a0a8}
+#app .dashboard-v5 .flow-side-tabs button.selected{
+ color:#007fa4;border-bottom-color:#0089b3;font-weight:760;
+}
+#app .dashboard-v5 .flow-side-tabs button.selected span{color:#0089b3}
+#app .dashboard-v5 .flow-side-main .panel{
+ padding:0!important;margin:0!important;
+ background:#fff;border:0!important;border-radius:0;
+ box-shadow:none;
+}
+#app .dashboard-v5 .flow-side-main .panel-title{
+ margin:0 0 8px;
+}
+#app .dashboard-v5 .flow-side-main .panel-title h2{
+ font-size:15px;font-weight:750;
+}
+#app .dashboard-v5 .flow-side-main .ops-panel-summary{
+ font-size:11px;color:#83919a;margin:0 0 11px;
+}
+#app .dashboard-v5 .flow-side-main .ops-task-filters{
+ border-bottom:1px solid #edf1f3;
+ padding:0 0 10px;margin:0 0 1px;gap:5px;
+}
+#app .dashboard-v5 .flow-side-main .ops-task-filters button{
+ padding:6px 9px;border:1px solid transparent;
+ border-radius:6px;color:#6a7c86;background:#fff;
+}
+#app .dashboard-v5 .flow-side-main .ops-task-filters button.selected{
+ background:#ebf7fc;border-color:#cce8f1;color:#007fa5;
+}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-row{
+ grid-template-columns:53px minmax(0,1fr) 64px;
+ min-height:58px;gap:7px;padding:9px 0;
+}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-row:first-child{border-top:0}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-label{
+ font-size:10px;color:#0080a7;font-weight:700;
+}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description strong{font-size:12px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description span{font-size:11px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-action{
+ width:64px;min-height:29px;border-radius:6px;
+ border-color:#dae5ea;font-size:10px;
+}
+#app .dashboard-v5 .dashboard-primary-aside>.panel{
+ padding:17px 18px!important;margin:0!important;
+ border:1px solid #e3e9ee!important;border-radius:13px;
+}
+#app .dashboard-v5 .dashboard-primary-aside>.panel .panel-title{
+ margin:0 0 9px;
+}
+#app .dashboard-v5 .dashboard-primary-aside>.panel .panel-title h2{font-size:15px}
+#app .dashboard-v5 .dashboard-primary-aside>.panel .ops-work-row{
+ min-height:55px;padding:8px 0;
+}
+#app .dashboard-v5 .dashboard-primary-aside>.panel .ops-work-row:nth-child(n+4){display:none}
+#app .dashboard-v5 .flow-date-panel{min-width:0}
+#app .dashboard-v5 .flow-date-header{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:9px;padding:0 0 14px;
+}
+#app .dashboard-v5 .flow-date-header>div{
+ display:flex;flex-direction:column;gap:4px;
+}
+#app .dashboard-v5 .flow-date-header strong{font-size:15px;color:#273840}
+#app .dashboard-v5 .flow-date-header span{font-size:11px;color:#81929a}
+#app .dashboard-v5 .flow-date-add{
+ background:#0089b3;color:#fff;border:1px solid #0089b3;
+ border-radius:7px;padding:7px 10px;
+ font-size:11px;font-weight:700;white-space:nowrap;
+}
+#app .dashboard-v5 .flow-date-add:hover{background:#00749a}
+#app .dashboard-v5 .flow-date-list{border-top:1px solid #e8eef1}
+#app .dashboard-v5 .flow-date-event{
+ display:grid;grid-template-columns:minmax(0,1fr) 51px;
+ gap:10px;align-items:center;padding:11px 0;
+ border-bottom:1px solid #e8eef1;
+}
+#app .dashboard-v5 .flow-date-event-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+#app .dashboard-v5 .flow-date-event-copy strong{
+ font-size:12px;font-weight:750;color:#273840;
+}
+#app .dashboard-v5 .flow-date-event-copy span{
+ font-size:11px;color:#64757e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#app .dashboard-v5 .flow-date-event-copy small{font-size:10px;color:#98a3aa}
+#app .dashboard-v5 .flow-date-event-action{
+ border:1px solid #d9e4e9;border-radius:6px;
+ background:#fff;color:#4e6e7b;padding:7px 9px;
+ font-size:10px;font-weight:700;
+}
+#app .dashboard-v5 .flow-date-empty,
+#app .dashboard-v5 .flow-date-overflow{
+ margin:0;padding:19px 0;font-size:12px;line-height:1.6;color:#83919a;
+}
+/* Secondary sections retain functionality without competing with the main dashboard. */
+#app .dashboard-v5 .ops-major-prep,
+#app .dashboard-v5 .ops-major-activity{
+ margin:0 0 16px;padding:22px;
+}
+#app .dashboard-v5 .ops-major-prep .ops-major-head h2,
+#app .dashboard-v5 .ops-major-activity .ops-major-head h2{font-size:17px}
+#app .dashboard-v5 .ops-major-prep .prep-dashboard-row{min-height:65px}
+@media(max-width:1250px){
+ #app .dashboard-v5 .dashboard-primary-grid{
+  grid-template-columns:minmax(0,1fr) minmax(285px,34%);
+  gap:14px;
+ }
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-major-calendar{padding:18px!important}
+ #app .dashboard-v5 .flow-month-cell{height:82px;padding:7px 5px;gap:5px}
+ #app .dashboard-v5 .flow-month-date small{font-size:9px}
+}
+@media(max-width:1080px){
+ #app .dashboard-v5 .dashboard-primary-grid{grid-template-columns:minmax(0,1fr)}
+ #app .dashboard-v5 .dashboard-primary-aside{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;
+ }
+ #app .dashboard-v5 .flow-month-cell{height:88px}
+}
+@media(max-width:720px){
+ #app .dashboard-v5 .dashboard-intro{gap:8px}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric{
+  min-height:83px;padding:13px 14px!important;
+ }
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric:nth-child(2){border-right:0}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric:nth-child(-n+2){
+  border-bottom:1px solid #edf1f4;
+ }
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .number{font-size:26px}
+ #app .dashboard-v5 .dashboard-primary-aside{display:flex;flex-direction:column;gap:14px}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-major-calendar{padding:16px 12px!important}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-major-head{align-items:flex-start}
+ #app .dashboard-v5 .flow-month-weekday{min-height:30px;font-size:10px}
+ #app .dashboard-v5 .flow-month-cell{height:74px;padding:6px 4px;gap:4px}
+ #app .dashboard-v5 .flow-month-date strong{font-size:11px}
+ #app .dashboard-v5 .flow-month-date small{display:none}
+ #app .dashboard-v5 .flow-month-event{font-size:9px;padding:4px 3px}
+ #app .dashboard-v5 .flow-month-more{font-size:9px}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-legend{gap:7px}
+ #app .dashboard-v5 .ops-major-prep,#app .dashboard-v5 .ops-major-activity{padding:16px}
+}
+@media(max-width:380px){
+ #app .dashboard-v5 .flow-month-cell{height:69px;padding:5px 3px}
+ #app .dashboard-v5 .flow-month-event{font-size:8px}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-major-head h2{font-size:17px}
+}
