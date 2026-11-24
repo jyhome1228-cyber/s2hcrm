@@ -26,7 +26,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], page: "dashboard", search: "", sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -1567,10 +1567,23 @@ function filteredSellerGroups(){
  filteredSellerCache={groups,search,result};
  return result;
 }
+function sellerOperationalGroups(key=state.sellerOperationFilter){
+ const groups=filteredSellerGroups();
+ if(key==="all")return groups;
+ const today=todayLocal(),followUp=new Set(key==="contact"?reminders().map(r=>r.seller.id):[]);
+ return groups.filter(g=>{
+  const histories=g.histories.filter(b=>b.status!=="취소"&&b.startDate&&b.endDate);
+  if(key==="running")return histories.some(b=>b.startDate<=today&&b.endDate>=today);
+  if(key==="upcoming")return histories.some(b=>b.startDate>today);
+  if(key==="contact")return [...g.ids].some(id=>followUp.has(id));
+  if(key==="none")return histories.length===0;
+  return true;
+ });
+}
 function sellerCSV(){
  if(state.demo)return notify("미리보기 데이터는 내보낼 수 없습니다.");
  const lastActivities=sellerLastActivityIndex();
- const rows=filteredSellerGroups().map(g=>{
+ const rows=sellerOperationalGroups().map(g=>{
   const s=g.selected,b=g.recent;
   const count=g.histories.length;
   const lastActivity=[...g.ids].map(id=>lastActivities.get(id)).filter(Boolean).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
@@ -1596,7 +1609,7 @@ function sellerCSV(){
  notify(rows.length+"명의 셀러 목록을 CSV로 내려받았습니다.");
 }
 function sellersPage(){
- const groups=filteredSellerGroups(),pageSize=state.sellerPageSize;
+ const groups=sellerOperationalGroups(),pageSize=state.sellerPageSize;
  const pageCount=Math.max(1,Math.ceil(groups.length/pageSize));
  state.sellerPage=Math.max(1,Math.min(pageCount,state.sellerPage));
  const from=(state.sellerPage-1)*pageSize;
@@ -1610,11 +1623,16 @@ function sellersPage(){
   '<td>'+instagramLink(g.channel||s.instagramUrl||s.instagramId||s.channel)+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
   '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
- const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div><span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>CSV 내보내기</button></div>';
+ const tabOptions=[["all","전체"],["running","진행 중"],["upcoming","오픈 예정"],["contact","연락 필요"],["none","공구 이력 없음"]];
+ const tabs='<div class="ops-seller-filter" role="group" aria-label="셀러 운영 상태">'
+  +tabOptions.map(([key,title])=>'<button type="button" data-seller-filter="'+key+'" aria-pressed="'+(state.sellerOperationFilter===key)+'" class="'+(state.sellerOperationFilter===key?"selected":"")+'">'+title+' <span>'+sellerOperationalGroups(key).length+'</span></button>').join("")
+  +'</div>';
+ const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div>'
+  +'<span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>현재 목록 CSV</button></div>';
  const pagination='<div class="seller-pagination"><span>'+(!groups.length?'검색 결과 없음':(from+1)+'–'+Math.min(from+pageSize,groups.length)+' / '+groups.length+'명')+'</span><div><button type="button" class="secondary" data-seller-page="-1" '+(state.sellerPage===1?'disabled':'')+'>이전</button><span class="seller-page-current">'+state.sellerPage+' / '+pageCount+'</span><button type="button" class="secondary" data-seller-page="1" '+(state.sellerPage>=pageCount?'disabled':'')+'>다음</button></div></div>';
  return wrap("셀러 목록 · "+sellerGroups().length,
   '<p class="panel-description">동일 인스타그램 계정은 하나로 표시하고 과거 이름과 이력은 보존합니다.</p>'+
-  tools+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows)+pagination);
+  tools+tabs+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows)+pagination);
 }
 
 function schedulePage(){
@@ -1851,6 +1869,9 @@ function render(){
  $("#page-body").querySelectorAll("[data-expand-week]").forEach(el=>el.addEventListener("click",()=>{const key=el.dataset.expandWeek;state.expandedCalendarWeeks[key]=!state.expandedCalendarWeeks[key];render();}));
  $("#page-body").querySelectorAll("[data-quick]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.quick==="seller")sellerModal();if(el.dataset.quick==="buy")openBuyModalSafely();if(el.dataset.quick==="activity")activityModal();}));
  bindSearchInput("#seller-search","search");
+ $("#page-body").querySelectorAll("[data-seller-filter]").forEach(button=>button.addEventListener("click",()=>{
+  state.sellerOperationFilter=button.dataset.sellerFilter;state.sellerPage=1;render();
+ }));
  $("#page-body").querySelectorAll("[data-seller-page]").forEach(btn=>btn.addEventListener("click",()=>{state.sellerPage+=Number(btn.dataset.sellerPage);render();}));
  const exportSellers=$("#page-body [data-export-sellers]");
  if(exportSellers)exportSellers.addEventListener("click",sellerCSV);
