@@ -1,7 +1,15 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#0089b3"/><meta name="description" content="S2H 셀러 및 공구 운영 관리 시스템"/><title>S2H | Seller Operations</title><link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=s2h-original-logo-2"/><link rel="stylesheet" href="./styles.css?v=20261124-section-restore-6"/><link rel="stylesheet" href="./dashboard-v4.css?v=20261124-section-restore-6"/></head>
+<html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#0089b3"/><meta name="description" content="S2H 셀러 및 공구 운영 관리 시스템"/><title>S2H | Seller Operations</title><link rel="icon" type="image/svg+xml" href="./assets/favicon.svg?v=s2h-original-logo-2"/><link rel="stylesheet" href="./styles.css?v=20261124-maintenance-calendarfix-7"/><link rel="stylesheet" href="./dashboard-v4.css?v=20261124-maintenance-calendarfix-7"/></head>
 <body><div id="root">
-<section id="login" class="login">
+<section id="maintenance" class="maintenance-screen" role="dialog" aria-modal="true" aria-labelledby="maintenance-title">
+  <div class="maintenance-content">
+    <img class="maintenance-logo" src="./assets/s2h-mark.svg" alt="S2H CORPORATION"/>
+    <h1 id="maintenance-title">서비스 업데이트 중입니다.</h1>
+    <p>보다 안정적인 서비스를 위해 S2H CRM을 점검하고 있습니다.<br/>점검 중에는 일반 사용자 이용이 제한됩니다.</p>
+    <button id="maintenance-admin-login" type="button">관리자 로그인</button>
+  </div>
+</section>
+<section id="login" class="login hidden">
   <div class="login-box">
     <img class="login-center-logo" src="./assets/s2h-mark.svg" alt="S2H CORPORATION"/>
     <h1 class="login-screen-reader-title">S2H 로그인</h1>
@@ -31,4 +39,4 @@
   <div id="seller-detail-modal-body" class="seller-detail-dialog-body"></div>
  </div>
 </div>
-<div id="toast" class="toast hidden" role="status"></div><div id="app-loading" class="app-loading hidden" role="status" aria-live="polite" aria-busy="false"><div class="loading-inner"><span class="loading-spinner" aria-hidden="true"></span><strong>S2H</strong><span data-loading-message>데이터를 불러오는 중입니다</span></div></div></div><script type="module" src="./app.js?v=20261124-section-restore-6"></script></body></html>
+<div id="toast" class="toast hidden" role="status"></div><div id="app-loading" class="app-loading hidden" role="status" aria-live="polite" aria-busy="false"><div class="loading-inner"><span class="loading-spinner" aria-hidden="true"></span><strong>S2H</strong><span data-loading-message>데이터를 불러오는 중입니다</span></div></div></div><script type="module" src="./app.js?v=20261124-maintenance-calendarfix-7"></script></body></html>
