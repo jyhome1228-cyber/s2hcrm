@@ -18,6 +18,10 @@ export function restoreBackupValue(value,key=""){
  if(value===null||value===undefined)return value??null;
  if(Array.isArray(value))return value.map(item=>restoreBackupValue(item));
  if(typeof value==="object"){
+  // Older S2H ZIP files represented nested Firestore timestamps as {seconds,nanoseconds}.
+  if(["createdAt","updatedAt","at"].includes(key)&&
+     Number.isFinite(value.seconds)&&Number.isFinite(value.nanoseconds))
+   return Timestamp.fromMillis(value.seconds*1000+Math.floor(value.nanoseconds/1e6));
   if(typeof value.__s2hTimestamp==="string"){
    const date=new Date(value.__s2hTimestamp);
    if(!Number.isFinite(date.getTime()))throw new Error("잘못된 백업 날짜입니다.");
@@ -48,18 +52,19 @@ async function loadZipEntry(zip,path){
 
 async function inspectZip(zip){
  const hasBackup=Boolean(zip.file("backup-manifest.json"));
- if(hasBackup){
-  const manifest=await loadZipEntry(zip,"backup-manifest.json");
-  if(manifest?.format!=="s2h-crm-backup"||manifest.schemaVersion!==2)
+ const legacyBackup=!hasBackup&&Boolean(zip.file("activities.json"))&&!Boolean(zip.file("manifest.json"));
+ if(hasBackup||legacyBackup){
+  const manifest=hasBackup?await loadZipEntry(zip,"backup-manifest.json"):null;
+  if(hasBackup&&(manifest?.format!=="s2h-crm-backup"||manifest.schemaVersion!==2))
    throw new Error("지원하지 않는 S2H 백업 형식입니다.");
   const collections={};
   for(const key of COLLECTIONS){
    collections[key]=await loadZipEntry(zip,key+".json");
    uniqueIds(collections[key],"id");
-   if(collections[key].length!==manifest.counts?.[key])
+   if(hasBackup&&collections[key].length!==manifest.counts?.[key])
     throw new Error(key+" 백업 건수가 manifest와 다릅니다.");
   }
-  return {mode:"backup",data:collections,label:"CRM 전체 백업",summary:Object.fromEntries(COLLECTIONS.map(key=>[key,collections[key].length]))};
+  return {mode:"backup",data:collections,label:legacyBackup?"이전 형식 CRM 백업":"CRM 전체 백업",summary:Object.fromEntries(COLLECTIONS.map(key=>[key,collections[key].length]))};
  }
  // The older initial Excel import ZIP is distinct and only appropriate for an empty database.
  const manifest=await loadZipEntry(zip,"manifest.json");
