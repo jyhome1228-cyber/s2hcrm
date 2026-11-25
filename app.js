@@ -2210,8 +2210,22 @@ function bindSearchInput(selector,stateKey){
  });
  input.addEventListener("blur",()=>{if(!composing&&input.isConnected){clearTimeout(searchRenderTimer);sync();schedule();}});
 }
+// Date-based reminders and opening priorities refresh when the app stays open overnight.
+let lastRenderedLocalDate=todayLocal();
+function refreshForNewWorkday(){
+ if(!state.user)return;
+ const next=todayLocal();
+ if(next===lastRenderedLocalDate)return;
+ workAlertsCache=null;reminderCache=null;lastRenderedLocalDate=next;
+ render();
+}
+setInterval(refreshForNewWorkday,60000);
+document.addEventListener("visibilitychange",()=>{
+ if(document.visibilityState==="visible")refreshForNewWorkday();
+});
 function render(){
  if(!state.user)return;
+ lastRenderedLocalDate=todayLocal();
  if(state.page==="productInsights"){state.page="products";state.productView="insights";}
  const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],productInsights:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  const [title,kicker,caption,view]=views[state.page];
