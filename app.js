@@ -1,7 +1,7 @@
 import { firebaseConfig, firebaseConfigured } from "./firebase-config.js";
 import { productCanonicalName, productDisplayAliases, sellerIdentity, instagramIdentity } from "./normalization.js?v=20261117-auto-family-3";
-import { mountSeedImporter } from "./import-seed-ui.js";
-import { mountBackupExport } from "./backup-export.js";
+import { mountSeedImporter } from "./import-seed-ui.js?v=20261125-phase1-1";
+import { mountBackupExport } from "./backup-export.js?v=20261125-phase1-1";
 import { PREP_STEPS,prepProgress,prepAlerts,prepDueLabel } from "./preflight-utils.js?v=20261124-p3-1";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
@@ -113,7 +113,7 @@ function start() {
       if(importNav)importNav.classList.toggle("hidden",state.staff.role!=="admin");
       $("#whoami").textContent=state.staff.name || user.email;
       $("#login").classList.add("hidden");$("#app").classList.remove("hidden");
-      // Active staff names for assignment. Access is already granted to active staff by Firestore rules.
+      // Manager roster for assignment. The live Firebase rules must allow this query for the current account.
       const staffUnsub=onSnapshot(collection(db,"users"),snapshot=>{
         delete state.dataErrors.users;
         state.staffUsers=snapshot.docs.map(d=>({uid:d.id,...d.data()}))
