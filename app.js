@@ -27,7 +27,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null, expandedMonthDates:{} };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -2229,14 +2229,6 @@ function render(){
  }));
  $("#page-body").querySelectorAll("[data-week-move]").forEach(el=>el.addEventListener("click",()=>weekNavigation(Number(el.dataset.weekMove))));
 
- $("#page-body").querySelectorAll("[data-month-expand]").forEach(button=>button.addEventListener("click",()=>{
-  const date=button.dataset.monthExpand;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
-  state.expandedMonthDates[date]=!state.expandedMonthDates[date];
-  state.calendarSelectedDate=date;
-  if(state.page==="dashboard")state.dashboardPanelMode="date";
-  render();
- }));
  $("#page-body").querySelectorAll("[data-calendar-date]").forEach(el=>el.addEventListener("click",()=>{
   const date=el.dataset.calendarDate;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
