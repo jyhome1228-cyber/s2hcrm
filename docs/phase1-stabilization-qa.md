@@ -23,11 +23,11 @@
 
 ## 데이터 복원 관련 중요 제한
 
-- \`backup-export.js\`에서 생성한 새 ZIP에는 \`backup-manifest.json\`과 원본 컬렉션 JSON, CSV가 포함됨.
+- `backup-export.js`에서 생성한 새 ZIP에는 `backup-manifest.json`과 원본 컬렉션 JSON, CSV가 포함됨.
 - 구버전 전체 백업 ZIP(activities.json 포함)도 검사 가능. 과거 JSON 날짜도 변환 지원.
-- \`import-seed-ui.js\`는 **데이터가 하나라도 있는 컬렉션에서는 복원을 실행하지 않음**.
+- `import-seed-ui.js`는 **데이터가 하나라도 있는 컬렉션에서는 복원을 실행하지 않음**.
 - 대량 복원은 여러 Firestore 트랜잭션으로 진행하며 네트워크 중단 시 일부 문서만 복원될 수 있음. 자동 재시도 금지.
-- \`activities\`의 작성자/날짜가 과거 기록인 경우 **관리자 전용 점검 규칙에서만 이력 재생성 허용**. 운영 재개 시 \`firestore.operational.rules\` 등 엄격한 감사 규칙으로 복귀 필요.
+- `activities`의 작성자/날짜가 과거 기록인 경우 **관리자 전용 점검 규칙에서만 이력 재생성 허용**. 운영 재개 시 `firestore.operational.rules` 등 엄격한 감사 규칙으로 복귀 필요.
 - **Firebase Console의 서버 규칙은 GitHub Pages 커밋만으로 바뀌지 않음.** 별도 게시 및 실제 계정 테스트가 필요.
 
 ## 코드 검증 범위
