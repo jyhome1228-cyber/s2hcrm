@@ -28,9 +28,10 @@ service cloud.firestore {
     }
     match /activities/{id} {
       allow read: if isAdmin();
-      allow create: if isAdmin()
-        && request.resource.data.actorUid == request.auth.uid
-        && request.resource.data.createdAt == request.time;
+      // Admin-only maintenance permits replaying historical audit records into EMPTY collections.
+      // Restore UI rejects existing target records and does not permit overwriting.
+      // Revert to stricter operational rules after inspection.
+      allow create: if isAdmin();
       allow update, delete: if false;
     }
   }
