@@ -125,7 +125,7 @@ function start() {
         // Do not exclude historical documents missing createdAt. Sort client-side where needed.
         const ref=collection(db,kind);
         const off=onSnapshot(ref,snapshot=>{
-          const records=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+          const records=snapshot.docs.map(d=>({...d.data(),id:d.id}));
           if(kind==="activities")records.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
           if(kind==="sellers"){state.sellers=records;restoreSellerLink();}
           if(kind==="groupbuys")state.buys=records;
