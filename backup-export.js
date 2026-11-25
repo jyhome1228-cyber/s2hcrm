@@ -11,6 +11,15 @@ const normalize=(value)=>{
  if(typeof value==="object")return JSON.stringify(value);
  return value;
 };
+// Recursive serialization preserves timestamp types for an eventual empty-DB restore.
+export function exportBackupValue(value){
+ if(value===null||value===undefined)return value??null;
+ if(typeof value?.toDate==="function")return {__s2hTimestamp:value.toDate().toISOString()};
+ if(value instanceof Date)return {__s2hTimestamp:value.toISOString()};
+ if(Array.isArray(value))return value.map(exportBackupValue);
+ if(typeof value==="object")return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,exportBackupValue(v)]));
+ return value;
+}
 const fileDownload=(blob,name)=>{
  const url=URL.createObjectURL(blob);
  const anchor=document.createElement("a");
@@ -65,9 +74,10 @@ export function mountBackupExport(db){
      const csv=[keys.map(csvCell).join(","),...rows.map(row=>row.map(csvCell).join(","))].join("\r\n");
      zip.file(name+".csv","\uFEFF"+csv);
      // JSON allows preserving object fields, aliases and IDs exactly for later migration.
-     zip.file(key+".json",JSON.stringify(records[key].map(r=>Object.fromEntries(Object.entries(r).map(([k,v])=>[k,typeof v?.toDate==="function"?v.toDate().toISOString():v]))),null,2));
+     zip.file(key+".json",JSON.stringify(records[key].map(exportBackupValue),null,2));
     }
-    zip.file("README.txt","S2H CRM private backup\nCreated: "+date+"\nCollections: sellers, products, groupbuys, activities\nAll records are private. Do not upload to a public GitHub repository.\nThese files are exports, not a one-click restore package.\n");
+    zip.file("backup-manifest.json",JSON.stringify({format:"s2h-crm-backup",schemaVersion:2,createdAt:new Date().toISOString(),counts:Object.fromEntries(TABLES.map(([key])=>[key,records[key].length]))},null,2));
+    zip.file("README.txt","S2H CRM private backup\nCreated: "+date+"\nCollections: sellers, products, groupbuys, activities\nRestore is available only when all target Firestore collections are empty.\nAll records are private. Never upload this ZIP to a public repository.\n");
     const blob=await zip.generateAsync({type:"blob"});
     fileDownload(blob,"S2H_CRM_전체백업_"+date+".zip");
    }else{
