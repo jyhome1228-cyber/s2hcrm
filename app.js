@@ -2156,8 +2156,22 @@ function activityPage(){
   +toolbar+table(["일시","셀러","활동 유형","기록 내용","담당자"],rows)+pagination);
 }
 function importerPage(){
- if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 초기 데이터 이전을 실행할 수 있습니다.</p>");
- return wrap("전체 데이터 백업",'<div class="backup-export-panel"><h3>전체 데이터 다운로드</h3><p>현재 Firebase에 저장된 셀러, 상품, 공구 이력, 활동 기록을 내려받습니다. 파일은 공개 GitHub에 저장되지 않습니다.</p><div class="import-buttons"><button type="button" class="primary" id="backup-xlsx">엑셀 전체 다운로드</button><button type="button" class="secondary" id="backup-csv">CSV · JSON ZIP 다운로드</button></div><p id="backup-export-status" role="status">관리자 전용입니다. 다운로드한 파일은 비공개로 보관하세요.</p></div><div class="backup-import-separator"><h3>초기 데이터 복원</h3><p>이 기능은 처음 이전할 때만 사용하세요. 운영 중 재업로드하면 데이터를 덮어쓸 수 있습니다.</p></div><p class="panel-description">로컬 ZIP 파일은 브라우저에서만 읽으며 GitHub에 업로드하지 않습니다. Firebase로 직접 저장됩니다. <strong>최초 데이터 이전용</strong>으로만 사용하세요.</p><div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 셀러·상품·공구 관계 검사</div><div>3. Firebase 업로드 후 건수 검수</div></div><label class="import-label">S2H CRM 초기 데이터 ZIP<input type="file" id="seed-zip" accept=".zip,application/zip"/></label><div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button><button class="primary" id="seed-run" type="button" disabled>Firebase로 이전</button></div><progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status">비공개 ZIP 파일을 선택해주세요.</p><p class="panel-note">관리자 전용 화면입니다. 같은 ID 재업로드 시 문서가 갱신될 수 있으므로, 운영 중인 데이터를 수정한 후에는 초기 ZIP을 재업로드하지 마세요.</p>');
+ if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 백업과 데이터 복원을 사용할 수 있습니다.</p>");
+ return wrap("백업 및 안전 복원",
+  '<div class="backup-export-panel"><h3>전체 데이터 백업</h3>'
+  +'<p>현재 Firebase의 셀러·상품·공구·활동 기록을 내려받습니다. 복구 목적이라면 <strong>CSV · JSON ZIP</strong> 파일을 보관하세요. Excel은 검토용입니다.</p>'
+  +'<div class="import-buttons"><button type="button" class="primary" id="backup-xlsx">전체 엑셀 다운로드</button>'
+  +'<button type="button" class="secondary" id="backup-csv">복원용 JSON · CSV ZIP</button></div>'
+  +'<p id="backup-export-status" role="status">백업 파일은 민감한 내부 운영 데이터이므로 비공개로 보관하세요.</p></div>'
+  +'<div class="backup-import-separator"><h3>비어 있는 데이터베이스에 복원</h3>'
+  +'<p>CRM 전체 백업 ZIP 또는 검증된 최초 이전 ZIP을 검사할 수 있습니다. <strong>기존 데이터가 있는 경우에는 복원을 허용하지 않습니다.</strong></p></div>'
+  +'<p class="panel-description">복원 과정은 기존 문서를 덮어쓰지 않으며, 중간에 오류가 발생하면 일부 문서만 생성됐을 수 있습니다. 운영 중인 데이터베이스에는 ZIP을 재업로드하지 마세요.</p>'
+  +'<div class="import-guide"><div>1. 비공개 ZIP 파일 선택</div><div>2. 데이터 구조·건수·중복 ID 검사</div><div>3. 빈 컬렉션 확인 후 신규 문서 복원</div></div>'
+  +'<label class="import-label">백업 또는 초기 이전 ZIP 선택<input type="file" id="seed-zip" accept=".zip,application/zip"/></label>'
+  +'<div class="import-buttons"><button class="secondary" id="seed-check" type="button">데이터 검사</button>'
+  +'<button class="primary" id="seed-run" type="button" disabled>빈 DB에 복원</button></div>'
+  +'<progress id="seed-progress" max="100" value="0"></progress><p id="seed-status" class="import-status" role="status">검사할 ZIP 파일을 선택해주세요.</p>'
+  +'<p class="panel-note">복원 전 Firestore 접근 권한과 백업 파일의 출처를 확인하세요. 대량 복원 실패 후에는 자동 재시도하지 않습니다.</p>');
 }
 // Preserve Korean IME composition. Replacing a focused input on every keystroke
 // interrupts syllable assembly and causes decomposed Hangul (ㅅ ㅔ ㄹ ...).
