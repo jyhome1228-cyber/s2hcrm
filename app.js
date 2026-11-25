@@ -537,31 +537,39 @@ const CONTACT_ACTIVITY_TYPES=new Set(["리마인드 완료","카카오톡","전�
 function isSellerContactActivity(activity){
  return CONTACT_ACTIVITY_TYPES.has(String(activity?.type||"").trim());
 }
+let reminderCache=null;
 function reminders(){
  const today=todayLocal();
- // Never discard overdue tasks just because they have been pending for over 30 days,
- // or because the year changed. Only an actual contact activity can clear a follow-up.
- const activitiesBySeller=new Map();
+ if(reminderCache&&reminderCache.sellers===state.sellers&&reminderCache.buys===state.buys&&
+  reminderCache.activities===state.activities&&reminderCache.today===today)return reminderCache.result;
+ const contactBySeller=new Map();
  for(const activity of state.activities){
   if(!activity.sellerId||!isSellerContactActivity(activity))continue;
-  const recent=activitiesBySeller.get(activity.sellerId);
-  if(!recent||(activity.createdAt?.seconds||0)>(recent.createdAt?.seconds||0))
-   activitiesBySeller.set(activity.sellerId,activity);
+  const prev=contactBySeller.get(activity.sellerId);
+  if(!prev||(activity.createdAt?.seconds||0)>(prev.createdAt?.seconds||0))
+   contactBySeller.set(activity.sellerId,activity);
  }
- return state.sellers.map(s=>{
-  const b=latestBuy(s.id),contact=activitiesBySeller.get(s.id);
-  const nextDate=String(contact?.nextFollowUpAt||s.nextFollowUpAt||s.nextContactDate||"").trim();
-  const hasValidNextDate=/^\d{4}-\d{2}-\d{2}$/.test(nextDate);
+ const dueList=sellerGroups().map(group=>{
+  const seller=group.selected;
+  const buy=group.histories.filter(b=>b.status!=="취소"&&b.endDate&&b.endDate<=today)
+   .sort((a,b)=>b.endDate.localeCompare(a.endDate))[0];
+  const contact=[...group.ids].map(id=>contactBySeller.get(id)).filter(Boolean)
+   .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
+  const nextDate=String(contact?.nextFollowUpAt||
+   group.members.map(member=>member.nextFollowUpAt||member.nextContactDate).find(Boolean)||"").trim();
+  const manual=/^\d{4}-\d{2}-\d{2}$/.test(nextDate);
   const activityDate=contact?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"})||
    (contact?.createdAt?.seconds?new Date(contact.createdAt.seconds*1000).toISOString().slice(0,10):"");
-  // A completed contact without a new follow-up closes the most recent completed buy.
-  // A later completed buy creates a new follow-up rather than remaining closed forever.
-  const completedAfterBuy=Boolean(activityDate&&b&&activityDate>=b.endDate);
-  if(!hasValidNextDate&&(!b||completedAfterBuy))return null;
-  const due=hasValidNextDate?nextDate:datePlus(b.endDate,Math.max(1,Number(s.cycleDays)||30));
+  const completedAfterBuy=Boolean(activityDate&&buy&&activityDate>=buy.endDate);
+  if(!manual&&(!buy||completedAfterBuy))return null;
+  const cycle=group.members.map(member=>Number(member.cycleDays)).find(n=>Number.isFinite(n)&&n>0)||30;
+  const due=manual?nextDate:datePlus(buy.endDate,cycle);
   if(due>today)return null;
-  return {seller:s,buy:b||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
- }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue||String(a.seller.name||"").localeCompare(String(b.seller.name||""),"ko-KR"));
+  return {seller,buy:buy||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
+ }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue||
+  String(a.seller.name||"").localeCompare(String(b.seller.name||""),"ko-KR"));
+ reminderCache={sellers:state.sellers,buys:state.buys,activities:state.activities,today,result:dueList};
+ return dueList;
 }
 // In-app work alerts are actionable summaries, not push notifications or unread messages.
 let workAlertsCache=null;
