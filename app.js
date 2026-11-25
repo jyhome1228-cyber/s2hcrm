@@ -27,7 +27,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null, expandedMonthDates:{} };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null, expandedMonthDates:{} };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -107,6 +107,7 @@ function start() {
       $("#maintenance")?.classList.add("hidden");
       state.user=user;state.staff=userDoc.data();
       const pendingInitial=new Set(["sellers","groupbuys","products","activities"]);
+      let initialLoaded=false;
       showLoading("S2H 데이터를 불러오는 중입니다");
       const importNav=document.querySelector("[data-page=import]");
       if(importNav)importNav.classList.toggle("hidden",state.staff.role!=="admin");
@@ -114,30 +115,42 @@ function start() {
       $("#login").classList.add("hidden");$("#app").classList.remove("hidden");
       // Active staff names for assignment. Access is already granted to active staff by Firestore rules.
       const staffUnsub=onSnapshot(collection(db,"users"),snapshot=>{
+        delete state.dataErrors.users;
         state.staffUsers=snapshot.docs.map(d=>({uid:d.id,...d.data()}))
           .filter(person=>person.active===true).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR"));
         if(state.page==="dashboard"||state.page==="schedule")render();
-      },err=>{console.warn("담당자 목록을 불러오지 못했습니다:",err?.code||err);});
+      },err=>{state.dataErrors.users=err?.code||"조회 실패";console.warn("담당자 목록을 불러오지 못했습니다:",err?.code||err);render();});
       state.unsubs.push(staffUnsub);
       ["sellers","groupbuys","products","activities"].forEach(kind=>{
-        const ref=kind==="products"?collection(db,kind):query(collection(db,kind),orderBy("createdAt","desc"));
+        // Do not exclude historical documents missing createdAt. Sort client-side where needed.
+        const ref=collection(db,kind);
         const off=onSnapshot(ref,snapshot=>{
           const records=snapshot.docs.map(d=>({id:d.id,...d.data()}));
+          if(kind==="activities")records.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
           if(kind==="sellers"){state.sellers=records;restoreSellerLink();}
           if(kind==="groupbuys")state.buys=records;
           if(kind==="products")state.products=records;
           if(kind==="activities")state.activities=records;
-          pendingInitial.delete(kind);
-          if(pendingInitial.size===0)hideLoading();
+          delete state.dataErrors[kind];
+          if(!initialLoaded){
+           pendingInitial.delete(kind);
+           if(pendingInitial.size===0){initialLoaded=true;hideLoading();render();}
+          }else render();
+        },err=>{
+          state.dataErrors[kind]=err?.code||"조회 실패";
+          if(!initialLoaded){
+           pendingInitial.delete(kind);
+           if(pendingInitial.size===0){initialLoaded=true;hideLoading();}
+          }
           render();
-        },err=>{pendingInitial.delete(kind);if(pendingInitial.size===0)hideLoading();notify("데이터 조회 실패: "+err.message);});
+        });
         state.unsubs.push(off);
       });
       render();
     } catch(err){$("#login-error").textContent=err.message;await signOut(auth);}
   });
 }
-function clearListeners(){closeWorkAlerts();state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];}
+function clearListeners(){closeWorkAlerts();state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];state.dataErrors={};reminderCache=null;workAlertsCache=null;}
 $("#login-form").addEventListener("submit",async e=>{
   e.preventDefault();$("#login-error").textContent="";
   try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}
@@ -2194,7 +2207,15 @@ function render(){
  $("#add-button").textContent=state.page==="dashboard"||state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
  $("#add-button").onclick=state.page==="dashboard"||state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
  document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
- $("#page-body").innerHTML=view();
+ const failedSources=Object.entries(state.dataErrors||{});
+ const errorBanner=failedSources.length?
+  '<div class="crm-load-error" role="alert"><div><strong>일부 데이터를 불러오지 못했습니다.</strong>'
+  +'<p>'+failedSources.map(([key])=>({users:"담당자",sellers:"셀러",products:"상품",groupbuys:"공구 일정",activities:"활동 기록"}[key]||key)).join(" · ")
+  +' 정보를 확인할 수 없습니다. 네트워크와 접근 권한을 점검해주세요.</p></div>'
+  +'<button type="button" id="data-retry-button" class="secondary">다시 시도</button></div>':"";
+ $("#page-body").innerHTML=errorBanner+view();
+ const retry=$("#data-retry-button");
+ if(retry)retry.addEventListener("click",()=>{retry.disabled=true;retry.textContent="새로 연결하는 중";window.location.reload();});
  updateWorkAlerts();
  if(currentSellerPopupId&&!$("#seller-detail-modal").classList.contains("hidden")){
   const group=matchingSellerGroup(currentSellerPopupId);
