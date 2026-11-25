@@ -1,101 +1,161 @@
-import {collection,doc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import {collection,doc,getDocs,query,limit,writeBatch,runTransaction,serverTimestamp,Timestamp} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
-/**
- * Private one-click seed uploader.
- * Local ZIP is processed in browser memory and uploaded directly to authorized Firestore.
- * The ZIP is NEVER published to GitHub Pages.
- */
-export function mountSeedImporter(db) {
-  const fileInput=document.getElementById("seed-zip");
-  const checkButton=document.getElementById("seed-check");
-  const runButton=document.getElementById("seed-run");
-  const result=document.getElementById("seed-status");
-  const progress=document.getElementById("seed-progress");
-  if(!fileInput||!checkButton||!runButton||!result)return;
-  let validated=null;
-  const info=(msg,isError=false)=>{
-    result.textContent=msg;
-    result.classList.toggle("import-error",isError);
-  };
-  fileInput.addEventListener("change",()=>{
-    validated=null;runButton.disabled=true;progress.value=0;
-    info("선택한 파일은 아직 검증 전입니다. '데이터 검사'를 눌러주세요.");
-  });
-  checkButton.addEventListener("click",async()=>{
-    if(!fileInput.files?.[0]){info("비공개 S2H 데이터 ZIP을 선택하세요.",true);return;}
-    checkButton.disabled=true;runButton.disabled=true;
-    try{
-      info("압축 파일과 내부 ID 연결을 확인하고 있습니다.");
-      const JSZip=(await import("https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm")).default;
-      const zip=await JSZip.loadAsync(fileInput.files[0]);
-      const read=async name=>{
-        const entry=zip.file(name);
-        if(!entry)throw new Error("ZIP에 "+name+" 파일이 없습니다.");
-        return JSON.parse(await entry.async("string"));
-      };
-      const [sellers,products,groupbuys,manifest]=await Promise.all([
-        read("sellers.json"),read("products.json"),read("groupbuys.json"),read("manifest.json")
-      ]);
-      if(!Array.isArray(sellers)||!Array.isArray(products)||!Array.isArray(groupbuys))throw new Error("데이터 배열 구조가 잘못됐습니다.");
-      const summary=manifest?.summary||{};
-      if(sellers.length!==summary.sellerProfiles||products.length!==summary.productLabelProfiles||groupbuys.length!==summary.sourceRowsWithSellerAndProduct)throw new Error("데이터 수가 원본 집계와 일치하지 않습니다.");
-      const checkIds=(rows,key)=>{
-        const ids=rows.map(r=>r[key]);
-        if(ids.some(v=>typeof v!=="string"||!v)||new Set(ids).size!==ids.length)throw new Error("중복되거나 누락된 "+key+"가 있습니다.");
-        return new Set(ids);
-      };
-      const sellerIds=checkIds(sellers,"sellerId"),productIds=checkIds(products,"productId");
-      checkIds(groupbuys,"groupbuyId");
-      if(groupbuys.some(r=>!sellerIds.has(r.sellerId)||!productIds.has(r.productId)))throw new Error("셀러·상품 연결 관계가 누락됐습니다.");
-      const rowIds=new Set(groupbuys.map(r=>r.sourceSheet+"#"+r.sourceRow));
-      if(rowIds.size!==groupbuys.length)throw new Error("원본 시트/행 중복이 있습니다.");
-      if(sellers.length!==871||products.length!==338||groupbuys.length!==3614)throw new Error("이번에 검증한 S2H 초기 파일과 수량이 다릅니다.");
-      validated={sellers,products,groupbuys};
-      const flagged=groupbuys.filter(r=>r.issues?.length).length;
-      info("검증 완료 · 셀러 "+sellers.length+"개 · 상품 "+products.length+"개 · 공구 "+groupbuys.length+"건 · 검토 필요 "+flagged+"건. 업로드를 실행할 수 있습니다.");
-      runButton.disabled=false;
-    }catch(err){validated=null;info("검증 실패: "+err.message,true);}
-    finally{checkButton.disabled=false;}
-  });
-  runButton.addEventListener("click",async()=>{
-    if(!validated)return;
-    if(!window.confirm("S2H Firebase(s2hcrm-2026)에 셀러 871개·상품 338개·공구 3,614건을 업로드할까요? 동일 ID는 갱신됩니다."))return;
-    runButton.disabled=true;checkButton.disabled=true;fileInput.disabled=true;
-    let completed=0;
-    const total=validated.sellers.length+validated.products.length+validated.groupbuys.length;
-    const writeRows=[
-      ["sellers",validated.sellers,"sellerId"],
-      ["products",validated.products,"productId"],
-      ["groupbuys",validated.groupbuys,"groupbuyId"]
-    ];
-    const normalize=(type,row)=>{
-      if(type==="sellers")return {
-        ...row,channel:row.instagramId?"@"+row.instagramId:"",contact:"",
-        note:row.notes||"",cycleDays:30,source:"excel-2026-11-11",
-        createdAt:serverTimestamp(),updatedAt:serverTimestamp()
-      };
-      if(type==="products")return {...row,source:"excel-2026-11-11",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
-      return {...row,product:row.productName,memo:row.note||"",
-        status:row.startDate&&row.endDate?"기록":"확인 필요",
-        source:"excel-2026-11-11",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
-    };
-    try{
-      for(const [type,rows,idKey] of writeRows){
-        for(let i=0;i<rows.length;i+=180){
-          const batch=writeBatch(db);
-          for(const row of rows.slice(i,i+180)){
-            batch.set(doc(db,type,row[idKey]),normalize(type,row),{merge:true});
-          }
-          await batch.commit();
-          completed+=Math.min(180,rows.length-i);
-          progress.value=Math.round(completed/total*100);
-          info(type+" 업로드 중 · "+completed.toLocaleString("ko-KR")+"/"+total.toLocaleString("ko-KR")+"건 ("+progress.value+"%)");
-        }
-      }
-      info("업로드 완료 · 총 "+total.toLocaleString("ko-KR")+"개 문서. 페이지를 새로고침하고 셀러·상품·월별 공구 일정을 확인하세요. 검토 필요 110건은 원본 표시를 유지했습니다.");
-    }catch(err){
-      info("업로드 중 중단: "+err.message+" · "+completed+"개 기록까지 처리됐을 수 있습니다. 원인을 해결한 뒤 같은 ZIP으로 다시 실행할 수 있습니다.",true);
-      runButton.disabled=false;
-    }finally{checkButton.disabled=false;fileInput.disabled=false;}
-  });
+// S2H CRM restore guard: never overwrite existing production records.
+// Supports historic source ZIPs and S2H CRM v2 backups generated by backup-export.js.
+const COLLECTIONS=["sellers","products","groupbuys","activities"];
+const LEGACY_COLLECTIONS=["sellers","products","groupbuys"];
+const BATCH_SIZE=150;
+
+function uniqueIds(rows,key){
+ if(!Array.isArray(rows))throw new Error(key+" 파일은 배열이어야 합니다.");
+ const ids=rows.map(row=>row?.[key]);
+ if(ids.some(id=>typeof id!=="string"||!id.trim())||new Set(ids).size!==ids.length)
+  throw new Error("중복되거나 누락된 "+key+"가 있습니다.");
+ return new Set(ids);
+}
+
+export function restoreBackupValue(value,key=""){
+ if(value===null||value===undefined)return value??null;
+ if(Array.isArray(value))return value.map(item=>restoreBackupValue(item));
+ if(typeof value==="object"){
+  if(typeof value.__s2hTimestamp==="string"){
+   const date=new Date(value.__s2hTimestamp);
+   if(!Number.isFinite(date.getTime()))throw new Error("잘못된 백업 날짜입니다.");
+   return Timestamp.fromDate(date);
+  }
+  return Object.fromEntries(Object.entries(value).map(([name,item])=>[name,restoreBackupValue(item,name)]));
+ }
+ // Compatibility with older JSON backup exports that encoded top-level timestamps as strings.
+ if(typeof value==="string"&&["createdAt","updatedAt","at"].includes(key)&&/^\d{4}-\d{2}-\d{2}T/.test(value)){
+  const date=new Date(value);
+  return Number.isFinite(date.getTime())?Timestamp.fromDate(date):value;
+ }
+ return value;
+}
+
+async function ensureEmptyCollections(db,keys){
+ for(const name of keys){
+  const result=await getDocs(query(collection(db,name),limit(1)));
+  if(!result.empty)throw new Error(name+" 컬렉션에 기존 데이터가 있습니다. 운영 데이터 덮어쓰기를 방지하기 위해 복원을 중단했습니다.");
+ }
+}
+
+async function loadZipEntry(zip,path){
+ const file=zip.file(path);
+ if(!file)throw new Error("ZIP에 "+path+" 파일이 없습니다.");
+ return JSON.parse(await file.async("string"));
+}
+
+async function inspectZip(zip){
+ const hasBackup=Boolean(zip.file("backup-manifest.json"));
+ if(hasBackup){
+  const manifest=await loadZipEntry(zip,"backup-manifest.json");
+  if(manifest?.format!=="s2h-crm-backup"||manifest.schemaVersion!==2)
+   throw new Error("지원하지 않는 S2H 백업 형식입니다.");
+  const collections={};
+  for(const key of COLLECTIONS){
+   collections[key]=await loadZipEntry(zip,key+".json");
+   uniqueIds(collections[key],"id");
+   if(collections[key].length!==manifest.counts?.[key])
+    throw new Error(key+" 백업 건수가 manifest와 다릅니다.");
+  }
+  return {mode:"backup",data:collections,label:"CRM 전체 백업",summary:Object.fromEntries(COLLECTIONS.map(key=>[key,collections[key].length]))};
+ }
+ // The older initial Excel import ZIP is distinct and only appropriate for an empty database.
+ const manifest=await loadZipEntry(zip,"manifest.json");
+ const [sellers,products,groupbuys]=await Promise.all(LEGACY_COLLECTIONS.map(name=>loadZipEntry(zip,name+".json")));
+ const n=manifest?.summary||{};
+ if(sellers.length!==n.sellerProfiles||products.length!==n.productLabelProfiles||groupbuys.length!==n.sourceRowsWithSellerAndProduct)
+  throw new Error("초기 데이터 ZIP의 원본 집계가 일치하지 않습니다.");
+ const sellerIds=uniqueIds(sellers,"sellerId"),productIds=uniqueIds(products,"productId");
+ uniqueIds(groupbuys,"groupbuyId");
+ if(groupbuys.some(b=>!sellerIds.has(b.sellerId)||!productIds.has(b.productId)))
+  throw new Error("공구-셀러-상품 ID 연결 정보가 누락됐습니다.");
+ if(new Set(groupbuys.map(b=>b.sourceSheet+"#"+b.sourceRow)).size!==groupbuys.length)
+  throw new Error("초기 원본 시트/행이 중복됐습니다.");
+ if(sellers.length!==871||products.length!==338||groupbuys.length!==3614)
+  throw new Error("검증된 S2H 초기 ZIP 건수와 다릅니다.");
+ return {mode:"seed",data:{sellers,products,groupbuys},label:"초기 이전 ZIP",summary:{sellers:sellers.length,products:products.length,groupbuys:groupbuys.length}};
+}
+
+function normalizedDoc(mode,type,row){
+ if(mode==="backup"){
+  const {id,...record}=row;
+  return restoreBackupValue(record);
+ }
+ if(type==="sellers")return {
+  ...row,channel:row.instagramId?"@"+row.instagramId:"",
+  contact:"",note:row.notes||"",cycleDays:30,
+  source:"excel-2026-11-11",createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+ };
+ if(type==="products")return {...row,source:"excel-2026-11-11",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+ return {...row,product:row.productName,memo:row.note||"",
+  status:row.startDate&&row.endDate?"기록":"확인 필요",
+  source:"excel-2026-11-11",createdAt:serverTimestamp(),updatedAt:serverTimestamp()};
+}
+
+export function mountSeedImporter(db){
+ const input=document.getElementById("seed-zip");
+ const check=document.getElementById("seed-check");
+ const run=document.getElementById("seed-run");
+ const feedback=document.getElementById("seed-status");
+ const progress=document.getElementById("seed-progress");
+ if(!input||!check||!run||!feedback||!progress)return;
+ let inspected=null;
+ const info=(message,error=false)=>{feedback.textContent=message;feedback.classList.toggle("import-error",error)};
+ input.addEventListener("change",()=>{
+  inspected=null;run.disabled=true;progress.value=0;
+  info("파일을 선택했습니다. 데이터 검사 후 빈 데이터베이스에 복원할 수 있습니다.");
+ });
+ check.addEventListener("click",async()=>{
+  const file=input.files?.[0];
+  if(!file)return info("먼저 S2H ZIP 파일을 선택해주세요.",true);
+  check.disabled=true;run.disabled=true;
+  try{
+   info("ZIP 형식, 건수, 중복 ID를 검사하고 있습니다.");
+   const JSZip=(await import("https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm")).default;
+   const zip=await JSZip.loadAsync(file);
+   inspected=await inspectZip(zip);
+   const count=Object.values(inspected.summary).reduce((sum,n)=>sum+n,0);
+   info(inspected.label+" 검증 완료 · "+count.toLocaleString("ko-KR")+"건. 복원은 빈 Firestore 컬렉션에서만 실행할 수 있습니다.");
+   run.disabled=false;
+  }catch(err){inspected=null;info("검증 실패: "+(err?.message||err),true);}
+  finally{check.disabled=false}
+ });
+ run.addEventListener("click",async()=>{
+  if(!inspected)return info("먼저 데이터 검사를 완료해주세요.",true);
+  const mode=inspected.mode,keys=mode==="backup"?COLLECTIONS:LEGACY_COLLECTIONS;
+  const count=keys.reduce((n,key)=>n+inspected.data[key].length,0);
+  if(!window.confirm(inspected.label+" "+count.toLocaleString("ko-KR")+"건을 복원할까요?\n\n기존 데이터가 하나라도 있으면 중단됩니다. 대량 데이터 작업은 중간에 멈추면 부분 복원될 수 있습니다."))return;
+  run.disabled=true;check.disabled=true;input.disabled=true;
+  let created=0;
+  try{
+   info("기존 데이터가 없는지 확인하고 있습니다.");
+   await ensureEmptyCollections(db,COLLECTIONS);
+   for(const key of keys){
+    const rows=inspected.data[key],idKey=mode==="backup"?"id":({sellers:"sellerId",products:"productId",groupbuys:"groupbuyId"})[key];
+    for(let i=0;i<rows.length;i+=BATCH_SIZE){
+     const batch=rows.slice(i,i+BATCH_SIZE);
+     // Transaction preconditions protect against a concurrent record appearing at an ID.
+     await runTransaction(db,async tx=>{
+      const refs=batch.map(row=>doc(db,key,row[idKey]));
+      const snapshots=await Promise.all(refs.map(ref=>tx.get(ref)));
+      if(snapshots.some(snapshot=>snapshot.exists()))throw new Error(key+" 문서가 이미 존재해 덮어쓰기를 중지했습니다.");
+      for(let n=0;n<batch.length;n++)tx.set(refs[n],normalizedDoc(mode,key,batch[n]));
+     },{maxAttempts:3});
+     created+=batch.length;
+     progress.value=count?Math.round(created/count*100):100;
+     info("복원 중 · "+created.toLocaleString("ko-KR")+" / "+count.toLocaleString("ko-KR")+"건 ("+progress.value+"%)");
+    }
+   }
+   inspected=null;
+   info("복원 완료 · "+created.toLocaleString("ko-KR")+"건. 사이트를 새로고침해 데이터와 담당자·공구 관계를 확인하세요.");
+  }catch(err){
+   info("복원 중단: "+(err?.message||err)+". 이번 실행에서 "+created+"건이 생성됐을 수 있습니다. 운영 데이터가 있는 상태에서 초기 ZIP을 재업로드하지 마세요.",true);
+  }finally{
+   check.disabled=false;input.disabled=false;
+   // Recheck the input from scratch; no automatic retry or overwrite path.
+   run.disabled=true;
+  }
+ });
 }
