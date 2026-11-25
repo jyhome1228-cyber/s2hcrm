@@ -1669,24 +1669,32 @@ async function copySellerKakaoInfo(id){
  }
 }
 let currentSellerPopupId=null;
+let sellerPopupReturnFocus=null;
 function closeSellerPopup(clearHash=true){
  const modal=$("#seller-detail-modal");
  if(modal)modal.classList.add("hidden");
  currentSellerPopupId=null;
  document.body.classList.remove("seller-popup-open");
  if(clearHash)clearSellerLink();
+ const origin=sellerPopupReturnFocus;
+ sellerPopupReturnFocus=null;
+ if(clearHash&&origin?.isConnected)requestAnimationFrame(()=>origin.focus({preventScroll:true}));
 }
 function openSellerPopup(id){
  const group=matchingSellerGroup(id);
  if(!group)return notify("셀러 정보를 찾을 수 없습니다.");
  state.selectedSellerId=group.selected.id;
  currentSellerPopupId=group.selected.id;
+ if($("#seller-detail-modal")?.classList.contains("hidden"))sellerPopupReturnFocus=document.activeElement;
  const modal=$("#seller-detail-modal"),body=$("#seller-detail-modal-body");
  $("#seller-detail-modal-title").textContent=group.selected.name+" · 셀러 정보";
  body.innerHTML=sellerDetailPage();
  modal.classList.remove("hidden");
  document.body.classList.add("seller-popup-open");
  body.scrollTop=0;
+ requestAnimationFrame(()=>{
+  if(!modal.classList.contains("hidden"))$("#seller-detail-modal-close")?.focus({preventScroll:true});
+ });
  // All actions work in place without navigating away from the seller list.
  body.querySelectorAll("[data-seller-share]").forEach(btn=>btn.addEventListener("click",()=>copySellerKakaoInfo(btn.dataset.sellerShare)));
  body.querySelectorAll("[data-seller-excel]").forEach(btn=>btn.addEventListener("click",()=>exportSellerTrades(btn.dataset.sellerExcel)));
