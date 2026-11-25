@@ -1,0 +1,30 @@
+/* S2H CRM Phase 1: reliability and recovery indicators only.
+   Keep existing layout; do not reintroduce rounded-card conflicts. */
+#app .crm-load-error{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:17px;flex-wrap:wrap;
+ margin:0 0 22px;padding:15px 18px;
+ border:1px solid #b5d7e4;border-left:3px solid #0089b3;border-radius:6px;
+ background:#f0f9fc;color:#234150;
+}
+#app .crm-load-error strong{display:block;font-size:14px;font-weight:750;line-height:1.45}
+#app .crm-load-error p{font-size:12px;line-height:1.65;color:#526e7b;margin:5px 0 0;word-break:keep-all}
+#app .crm-load-error>div{flex:1 1 230px}
+#app .crm-load-error button{
+ background:#fff;color:#007fa5;border:1px solid #9dcada;
+ min-height:36px;height:36px;padding:7px 13px;
+ border-radius:5px;white-space:nowrap;font-size:12px;font-weight:700;
+}
+#app .crm-load-error button:hover{background:#e9f6fa}
+#app .crm-load-error button:disabled{cursor:wait;opacity:.7}
+/* Distinguish today's actual opening from other timeline bars without flashing. */
+#app .cal-week-row.cal-week-connected>.cal-range{
+ transition:background-color .12s ease,filter .12s ease;
+}
+@media(max-width:720px){
+ #app .crm-load-error{padding:12px 13px;gap:9px}
+ #app .crm-load-error button{width:auto}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .cal-week-row.cal-week-connected>.cal-range{transition:none}
+}
