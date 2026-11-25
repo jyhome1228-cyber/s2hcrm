@@ -48,7 +48,7 @@ async function fetchSnapshot(onStatus){
  for(const [key] of TABLES){
   onStatus(key+" 데이터를 읽고 있습니다.");
   const result=await getDocs(collection(window.__s2hBackupDb,key));
-  snapshots[key]=result.docs.map(d=>({id:d.id,...d.data()}));
+  snapshots[key]=result.docs.map(d=>({...d.data(),id:d.id})); // Document path ID is authoritative.
  }
  return snapshots;
 }
