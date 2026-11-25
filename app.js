@@ -533,22 +533,35 @@ function latestBuy(sellerId){
 function latestActivity(sellerId){
  return state.activities.filter(a=>a.sellerId===sellerId).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
 }
+const CONTACT_ACTIVITY_TYPES=new Set(["리마인드 완료","카카오톡","전화","DM","미팅","이메일"]);
+function isSellerContactActivity(activity){
+ return CONTACT_ACTIVITY_TYPES.has(String(activity?.type||"").trim());
+}
 function reminders(){
- const today=todayLocal(), yearStart=today.slice(0,4)+"-01-01";
+ const today=todayLocal();
+ // Never discard overdue tasks just because they have been pending for over 30 days,
+ // or because the year changed. Only an actual contact activity can clear a follow-up.
+ const activitiesBySeller=new Map();
+ for(const activity of state.activities){
+  if(!activity.sellerId||!isSellerContactActivity(activity))continue;
+  const recent=activitiesBySeller.get(activity.sellerId);
+  if(!recent||(activity.createdAt?.seconds||0)>(recent.createdAt?.seconds||0))
+   activitiesBySeller.set(activity.sellerId,activity);
+ }
  return state.sellers.map(s=>{
-  const b=latestBuy(s.id),a=latestActivity(s.id);
-  // A completed reminder remains closed unless a new follow-up date was deliberately set.
-  if(a?.type==="리마인드 완료"&&!a.nextFollowUpAt)return null;
-  const manual=a?.type==="리마인드 완료"?a.nextFollowUpAt:(a?.nextFollowUpAt||s.nextFollowUpAt);
-  const activityDate=a?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"});
-  const completedAfterBuy=activityDate&&b&&activityDate>b.endDate;
-  if(!manual&&(!b||b.endDate<yearStart))return null;
-  if(!manual&&completedAfterBuy)return null;
-  const due=manual||(b?datePlus(b.endDate,s.cycleDays||30):null);
-  if(!due||due>today)return null;
-  if(!manual&&daysBetween(due,today)>30)return null;
+  const b=latestBuy(s.id),contact=activitiesBySeller.get(s.id);
+  const nextDate=String(contact?.nextFollowUpAt||s.nextFollowUpAt||s.nextContactDate||"").trim();
+  const hasValidNextDate=/^\d{4}-\d{2}-\d{2}$/.test(nextDate);
+  const activityDate=contact?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"})||
+   (contact?.createdAt?.seconds?new Date(contact.createdAt.seconds*1000).toISOString().slice(0,10):"");
+  // A completed contact without a new follow-up closes the most recent completed buy.
+  // A later completed buy creates a new follow-up rather than remaining closed forever.
+  const completedAfterBuy=Boolean(activityDate&&b&&activityDate>=b.endDate);
+  if(!hasValidNextDate&&(!b||completedAfterBuy))return null;
+  const due=hasValidNextDate?nextDate:datePlus(b.endDate,Math.max(1,Number(s.cycleDays)||30));
+  if(due>today)return null;
   return {seller:s,buy:b||{product:"-",endDate:"-"},due,overdue:daysBetween(due,today)};
- }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue);
+ }).filter(Boolean).sort((a,b)=>b.overdue-a.overdue||String(a.seller.name||"").localeCompare(String(b.seller.name||""),"ko-KR"));
 }
 // In-app work alerts are actionable summaries, not push notifications or unread messages.
 let workAlertsCache=null;
@@ -1530,8 +1543,11 @@ function sellerGroups(){
   const selected=members[0],ids=new Set(members.map(x=>x.id));
   const recent=[...group.histories].sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""))[0]||null;
   const names=[...new Set(members.map(m=>m.name).filter(Boolean))];
-  const channel=selected.instagramUrl||selected.instagramId||selected.channel||"";
-  return {...group,selected,ids,names,recent,channel};
+  const sortedByUpdated=[...members].sort((x,y)=>(y.updatedAt?.seconds||0)-(x.updatedAt?.seconds||0));
+  const valueFrom=(key)=>sortedByUpdated.map(member=>String(member[key]||"").trim()).find(Boolean)||"";
+  const contact=valueFrom("contact");
+  const channel=valueFrom("instagramUrl")||valueFrom("instagramId")||valueFrom("channel");
+  return {...group,selected,ids,names,recent,contact,channel};
  });
  sellerGroupCache={sellers:state.sellers,buys:state.buys,groups:result};
  return result;
@@ -1903,7 +1919,7 @@ function sellerCSV(){
   const count=g.histories.length;
   const lastActivity=[...g.ids].map(id=>lastActivities.get(id)).filter(Boolean).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
   return [s.name,g.names.join(" / "),g.channel,
-    s.followerCountLatestRecorded??"",s.contact||"",
+    s.followerCountLatestRecorded??"",g.contact||"",
     count,b?.product||b?.productName||"",b?.endDate||"",
     lastActivity?dt(lastActivity.createdAt):"",
     [...g.ids].join(" / ")];
@@ -1935,7 +1951,7 @@ function sellersPage(){
   const activities=g.members.map(x=>lastActivities.get(x.id)).filter(Boolean);
   const a=activities.sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
   return '<tr><td><button type="button" class="seller-name-link" data-act="view-seller" data-id="'+h(s.id)+'" aria-label="'+h(s.name)+' 셀러 상세 보기">'+h(s.name)+'</button>'+(g.names.length>1?'<small class="seller-alias">다른 기록명: '+h(g.names.filter(n=>n!==s.name).join(", "))+'</small>':"")+'</td>'+
-  '<td>'+instagramLink(g.channel||s.instagramUrl||s.instagramId||s.channel)+'</td><td>'+h(s.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
+  '<td>'+instagramLink(g.channel||s.instagramUrl||s.instagramId||s.channel)+'</td><td>'+h(g.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
   '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
  });
  const tabOptions=[["all","전체"],["running","진행 중"],["upcoming","오픈 예정"],["contact","연락 필요"],["none","공구 이력 없음"]];
