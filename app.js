@@ -184,6 +184,28 @@ togglePassword.addEventListener("click",()=>{
  :'<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="3"/></svg>';
 });
 
+// Keyboard access for dialogs: focus remains inside the active modal until closed.
+document.addEventListener("keydown",event=>{
+ const normal=$("#modal"),seller=$("#seller-detail-modal");
+ const active=normal&&!normal.classList.contains("hidden")?normal:
+  seller&&!seller.classList.contains("hidden")?seller:null;
+ if(!active)return;
+ if(event.key==="Escape"){
+  if(active===normal){
+   if(modalSaving)return;
+   if(!window.confirm("입력 중인 내용은 저장되지 않습니다. 닫으시겠습니까?"))return;
+   closeModal();
+  }else closeSellerPopup();
+  event.preventDefault();return;
+ }
+ if(event.key!=="Tab")return;
+ const focusable=[...active.querySelectorAll('button:not([disabled]),a[href],input:not([type="hidden"]):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+   .filter(el=>el.getClientRects().length>0&&el.getAttribute("aria-hidden")!=="true");
+ if(!focusable.length){event.preventDefault();active.focus();return;}
+ const first=focusable[0],last=focusable[focusable.length-1];
+ if(event.shiftKey&&(document.activeElement===first||!active.contains(document.activeElement))){event.preventDefault();last.focus();}
+ else if(!event.shiftKey&&(document.activeElement===last||!active.contains(document.activeElement))){event.preventDefault();first.focus();}
+});
 $("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
 $("#seller-detail-modal-close").addEventListener("click",()=>closeSellerPopup());
 $("#seller-detail-modal").addEventListener("click",event=>{if(event.target===$("#seller-detail-modal"))closeSellerPopup();});
@@ -213,8 +235,10 @@ $("#modal-form").addEventListener("submit",async e=>{
   notify(message);
  }finally{modalSaving=false;btn.disabled=false;btn.textContent=originalText;}
 });
+let lastModalFocus=null;
 function openModal(title,fields,save){
  if(modalSaving)return;
+ lastModalFocus=document.activeElement;
  $("#modal").classList.remove("buy-editor-modal","prep-modal");
  $("#modal-title").textContent=title;
  $("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div><div id="modal-save-feedback" class="modal-save-feedback" role="alert"></div>';
@@ -223,11 +247,20 @@ function openModal(title,fields,save){
  state.modalSave=save;$("#modal").classList.remove("hidden");
  document.body.classList.add("s2h-modal-open");
  $("#modal-fields").scrollTop=0;
+ requestAnimationFrame(()=>{
+  const dialog=$("#modal");
+  if(dialog?.classList.contains("hidden"))return;
+  const first=dialog.querySelector("#modal-fields input:not([type=hidden]):not([disabled]),#modal-fields select:not([disabled]),#modal-fields textarea:not([disabled]),#close-modal");
+  first?.focus({preventScroll:true});
+ });
 }
 function closeModal(){
  if(modalSaving)return;
  $("#modal").classList.add("hidden");$("#modal").classList.remove("buy-editor-modal","prep-modal");document.body.classList.remove("s2h-modal-open");
  state.modalSave=null;$("#modal-form").reset();
+ const target=lastModalFocus;
+ lastModalFocus=null;
+ if(target?.isConnected)requestAnimationFrame(()=>target.focus({preventScroll:true}));
 }
 function preflightModal(buyId){
  if(state.demo)return notify("미리보기에서는 준비 상태를 저장할 수 없습니다.");
