@@ -665,7 +665,12 @@ function monthPicker(){
  return '<div class="month-controls"><div class="month-buttons"><button data-move="-1" aria-label="이전 달">‹</button><input id="selected-month" type="month" value="'+h(shownMonth())+'" min="2010-01" max="2035-12"/><button data-move="1" aria-label="다음 달">›</button><button data-move="0">이번 달</button></div></div>';
 }
 function scheduleStatus(b){
- if(b.status==="취소")return "취소";
+ // The manual lifecycle state is authoritative. Imported "기록" entries use dates.
+ const stored=String(b.status||"").trim();
+ if(stored==="취소")return "취소";
+ if(stored==="완료")return "완료";
+ if(stored==="예정")return "예정";
+ if(stored==="진행중"||stored==="진행 중")return "진행 중";
  const today=todayLocal();
  return b.startDate>today?"예정":b.endDate<today?"완료":"진행 중";
 }
@@ -822,7 +827,12 @@ function monthGrid(list,options={}){
   })).sort((a,b)=>a.from.localeCompare(b.from)||daysBetween(b.from,b.to)-daysBetween(a.from,a.to)||String(a.sellerName).localeCompare(String(b.sellerName),"ko-KR"));
   const laneEnds=[];
   // Compress unused global lanes each week, preserving relative order without hiding lone carry-over events.
-  const occupiedGlobalLanes=options.connected?[...new Set(events.map(e=>connectedLanes.get(e.id)))].sort((a,b)=>a-b):[];
+  const occupiedGlobalLanes=options.connected?[...new Set(events.map(e=>connectedLanes.get(e.id)))].sort((laneA,laneB)=>{
+   // Pin today's openings above other weekly bars, even when the first three lanes are full.
+   const a=events.find(e=>connectedLanes.get(e.id)===laneA),b=events.find(e=>connectedLanes.get(e.id)===laneB);
+   const rank=e=>e.startDate===todayLocal()?0:(e.startDate>=weekStart&&e.startDate<=weekEnd?1:2);
+   return rank(a)-rank(b)||laneA-laneB;
+  }):[];
   const localLaneByGlobal=new Map(occupiedGlobalLanes.map((id,index)=>[id,index]));
   for(const e of events){
    let lane=options.connected?localLaneByGlobal.get(connectedLanes.get(e.id)):laneEnds.findIndex(last=>last<e.from);
@@ -842,7 +852,7 @@ function monthGrid(list,options={}){
    const startCol=daysBetween(weekStart,e.from)+1,span=daysBetween(e.from,e.to)+1;
    const startOfEvent=e.from===e.startDate,endOfEvent=e.to===e.endDate;
    const tip=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인")+" ("+e.startDate+" ~ "+e.endDate+")";
-   const textLabel=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인");
+   const textLabel=(e.startDate===todayLocal()?"오늘 오픈 · ":"")+(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인");
    const progress=scheduleStatus(e);
    const progressClass=progress==="진행 중"?"cal-range-active":progress==="예정"?"cal-range-upcoming":"cal-range-completed";
    return '<button type="button" class="cal-range '+progressClass+' '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'">'+h(textLabel)+'</button>';
