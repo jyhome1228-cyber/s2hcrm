@@ -3314,3 +3314,25 @@
  #modal .modal-head,#modal.buy-editor-modal .modal-head,#modal.prep-modal .modal-head{min-height:48px;padding-block:9px}
  #modal .modal-actions,#modal.buy-editor-modal .modal-actions,#modal.prep-modal .modal-actions{min-height:0;padding-block:8px}
 }
+
+/* Phase 12 — final QA: containment and readable focus without altering brand. */
+#app .topbar{flex-wrap:nowrap}
+#app .topbar .work-alert-wrap{flex-shrink:0}
+#app .topbar #global-seller-search{flex-shrink:0}
+#app .topbar #breadcrumb-page{min-width:0}
+#app .table-wrap:focus-visible{outline-offset:-2px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description{overflow-wrap:anywhere}
+#modal .modal-head h2,#seller-detail-modal .seller-detail-dialog-head h2{overflow-wrap:anywhere}
+#modal .modal-fields .combo-options{overscroll-behavior:contain}
+#modal .modal-fields .combo-option:focus-visible{outline-offset:-2px}
+#modal .modal-fields .modal-save-feedback{overflow-wrap:anywhere}
+@media(max-width:760px){
+ #app .topbar{grid-template-columns:minmax(0,1fr) minmax(0,auto)}
+ #app .top-right{max-width:100%}
+ #app .topbar .work-alert-popover{max-width:calc(100vw - 16px)}
+}
+@media(max-width:340px){
+ #app .top-right>.avatar{display:none}
+ #app .topbar{padding-inline:8px}
+ #app .top-right{gap:4px}
+}
