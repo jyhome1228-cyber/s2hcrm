@@ -563,14 +563,14 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
 function activityModal(sellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
  if(!state.sellers.length){notify("셀러를 먼저 등록해주세요.");return;}
- const choices=state.sellers.map(s=>[s.id,s.name]);
+ const choices=state.sellers.map(s=>[s.id,s.name]).sort((a,b)=>a[1].localeCompare(b[1],"ko-KR",{numeric:true}));
  openModal("연락·영업 활동 기록",
- select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["기타","기타"]],"카카오톡")+f("contactOwner","담당자 이름","text",state.staff?.name||"",true)+f("nextFollowUpAt","다음 연락 예정일","date")+textarea("memo","활동 내용 (필수)"),
+ select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["이메일","이메일"],["기타","기타"]],"카카오톡")+f("contactOwner","담당자 이름","text",state.staff?.name||"",true)+f("nextFollowUpAt","다음 연락 예정일","date")+textarea("memo","활동 내용 (필수)"),
  async data=>{
  const seller=state.sellers.find(s=>s.id===data.sellerId);
  if(!seller||!data.memo.trim())throw new Error("셀러와 활동 내용을 입력해주세요.");
  if(!data.contactOwner?.trim())throw new Error("담당자 이름을 입력해주세요.");
- await addDoc(collection(db,"activities"),{sellerId:seller.id,sellerName:seller.name,type:data.type,contactOwner:data.contactOwner.trim(),memo:data.memo.trim(),nextFollowUpAt:data.nextFollowUpAt||null,actorUid:state.user.uid,actorName:state.staff.name||state.user.email,createdAt:serverTimestamp()});
+ await addDoc(collection(db,"activities"),{sellerId:seller.id,sellerName:seller.name,type:data.type,contactOwner:data.contactOwner.trim(),memo:data.memo.trim(),nextFollowUpAt:data.nextFollowUpAt||null,actorUid:state.user.uid,actorName:state.staff?.name||state.user.email,createdAt:serverTimestamp()});
  });
 }
 function latestBuy(sellerId){
@@ -601,11 +601,12 @@ function reminders(){
    .sort((a,b)=>b.endDate.localeCompare(a.endDate))[0];
   const contact=[...group.ids].map(id=>contactBySeller.get(id)).filter(Boolean)
    .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
-  const nextDate=String(contact?.nextFollowUpAt||
-   group.members.map(member=>member.nextFollowUpAt||member.nextContactDate).find(Boolean)||"").trim();
-  const manual=/^\d{4}-\d{2}-\d{2}$/.test(nextDate);
   const activityDate=contact?.createdAt?.toDate?.()?.toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"})||
-   (contact?.createdAt?.seconds?new Date(contact.createdAt.seconds*1000).toISOString().slice(0,10):"");
+   (contact?.createdAt?.seconds?new Date(contact.createdAt.seconds*1000).toLocaleDateString("sv-SE",{timeZone:"Asia/Seoul"}):"");
+  const profileDue=String(group.members.map(member=>member.nextFollowUpAt||member.nextContactDate).find(Boolean)||"").trim();
+  // Completed contact supersedes an already-due profile reminder, but not a later scheduled date.
+  const nextDate=String(contact?.nextFollowUpAt||(!activityDate||profileDue>activityDate?profileDue:"")).trim();
+  const manual=/^\d{4}-\d{2}-\d{2}$/.test(nextDate);
   const completedAfterBuy=Boolean(activityDate&&buy&&activityDate>=buy.endDate);
   if(!manual&&(!buy||completedAfterBuy))return null;
   const cycle=group.members.map(member=>Number(member.cycleDays)).find(n=>Number.isFinite(n)&&n>0)||30;
@@ -1587,15 +1588,17 @@ function sellerProposalModal(sellerId){
  const seller=group.selected;
  const fields='<div class="full proposal-intro"><strong>'+h(seller.name)+'님께 보낼 공구 제안</strong>'+
   '<p>제안 상품과 희망 기간을 선택하면 카카오톡에 보낼 문구가 자동으로 작성됩니다. 복사만으로는 실제 발송되거나 CRM에 저장되지 않습니다.</p></div>'+
+  '<label class="full">상품 검색<input id="proposal-product-search" type="search" placeholder="상품명 검색" autocomplete="off"/></label>'+
   '<label class="full">제안 상품<select id="proposal-product" name="proposalProduct" required>'+
   '<option value="">상품을 선택해주세요</option>'+
   options.map(g=>'<option value="'+h(g.name)+'">'+h(g.name)+'</option>').join("")+'</select></label>'+
   '<label>희망 시작일<input type="date" id="proposal-start" name="proposalStart"/></label>'+
   '<label>희망 종료일<input type="date" id="proposal-end" name="proposalEnd"/></label>'+
   '<label class="full">카카오톡 제안 문구<textarea id="proposal-message" name="proposalMessage" rows="10" placeholder="상품을 선택하면 제안 문구가 생성됩니다. 직접 수정할 수 있습니다." required></textarea></label>'+
-  '<div class="full proposal-actions"><button type="button" class="secondary" id="proposal-copy">카톡 문구 복사</button>'+
+  '<div class="full proposal-actions"><button type="button" class="secondary" id="proposal-copy">카톡 문구 복사</button><button type="button" class="secondary" id="proposal-regenerate">문구 다시 생성</button>'+
   '<span class="proposal-status" id="proposal-status" aria-live="polite">제안 상품을 먼저 선택해주세요.</span></div>'+
-  '<p class="full panel-note">희망 기간은 제안 단계의 일정이며 확정된 공구 일정이 아닙니다. 실제 발송 후에는 제안 기록을 저장할 수 있습니다.</p>';
+  '<label class="full proposal-confirm"><input type="checkbox" name="proposalConfirmed" value="yes" required/><span>셀러에게 실제로 제안 문구를 전달했습니다.</span></label>'+
+  '<p class="full panel-note">희망 기간은 확정된 공구 일정이 아닙니다. 복사만으로 제안 기록이 저장되지 않습니다.</p>';
  openModal("공구 제안하기",fields,async data=>{
   if(state.demo)throw Error("미리보기에서는 기록을 저장할 수 없습니다.");
   const product=String(data.proposalProduct||"").trim();
@@ -1603,6 +1606,8 @@ function sellerProposalModal(sellerId){
   if(!product||!options.some(g=>g.name===product))throw Error("제안 상품을 선택해주세요.");
   if(data.proposalStart&&data.proposalEnd&&data.proposalEnd<data.proposalStart)throw Error("종료일이 시작일보다 빠릅니다.");
   if(!message)throw Error("제안 문구를 입력해주세요.");
+  if(data.proposalConfirmed!=="yes")throw Error("실제 제안 전달 여부를 확인해주세요.");
+  if(draftStale)throw Error("상품 또는 기간 변경 후 문구를 다시 생성하거나 수정해주세요.");
   await addDoc(collection(db,"activities"),{
    sellerId:seller.id,sellerName:seller.name,type:"공구 제안",
    product,proposedStartDate:data.proposalStart||null,proposedEndDate:data.proposalEnd||null,
@@ -1615,16 +1620,34 @@ function sellerProposalModal(sellerId){
  if(submit)submit.textContent="제안 기록 저장";
  const product=$("#proposal-product"),start=$("#proposal-start"),end=$("#proposal-end"),
   message=$("#proposal-message"),copy=$("#proposal-copy"),status=$("#proposal-status");
- const update=()=>{
+ let manualDraft=false,draftStale=false;
+ const confirmField=$("#modal-fields input[name=proposalConfirmed]");
+ const resetConfirm=()=>{if(confirmField)confirmField.checked=false;};
+ const regenerate=()=>{
+  resetConfirm();manualDraft=false;draftStale=false;
   if(!product.value){message.value="";status.textContent="제안 상품을 먼저 선택해주세요.";return;}
   message.value=proposalMessage(seller.name,product.value,start.value,end.value);
   status.textContent="문구가 생성되었습니다. 필요하면 직접 수정하세요.";
  };
+ const update=()=>{
+  resetConfirm();
+  if(manualDraft){draftStale=true;status.textContent="상품 또는 기간이 변경되었습니다. 기존 문구를 보존했습니다. 다시 생성하거나 직접 수정해주세요.";return;}
+  regenerate();
+ };
+ $("#proposal-product-search").addEventListener("input",e=>{
+  const selected=product.value,q=e.target.value.trim().toLocaleLowerCase();
+  const matching=options.filter(g=>g.name===selected||[g.name,...(g.aliases||[])].join(" ").toLocaleLowerCase().includes(q));
+  product.innerHTML='<option value="">상품을 선택해주세요</option>'+matching.map(g=>'<option value="'+h(g.name)+'">'+h(g.name)+'</option>').join("");
+  product.value=selected;
+ });
+ $("#proposal-regenerate").addEventListener("click",regenerate);
+ message.addEventListener("input",()=>{manualDraft=true;draftStale=false;resetConfirm();status.textContent="직접 수정한 문구입니다. 상품명과 기간을 확인해주세요.";});
  product.addEventListener("change",update);
  start.addEventListener("change",update);
  end.addEventListener("change",update);
  copy.addEventListener("click",async()=>{
   if(!product.value)return notify("제안 상품을 선택해주세요.");
+  if(draftStale)return notify("상품 또는 기간 변경 후 문구를 다시 생성하거나 수정해주세요.");
   if(start.value&&end.value&&end.value<start.value)return notify("종료일이 시작일보다 빠릅니다.");
   if(!message.value.trim())return notify("복사할 제안 문구가 없습니다.");
   try{
@@ -2048,10 +2071,12 @@ function schedulePage(){
 
 function reminderTemplates(seller,buy){
  const name=(seller?.name||"셀러").trim();
- const product=(buy?.product||buy?.productName||"이전 상품").trim();
+ const rawProduct=String(buy?.product||buy?.productName||"").trim();
+ const product=rawProduct&&rawProduct!=="-"?rawProduct:"이전 상품";
+ const prior=Boolean(rawProduct&&rawProduct!=="-");
  return [
-  {title:"재공구 제안",message:"안녕하세요, "+name+"님. 지난번 "+product+" 공구 관련해서 연락드립니다. 재진행 일정 검토가 가능하실지 여쭤보고 싶습니다. 편하실 때 의견 부탁드립니다."},
-  {title:"새 상품 제안",message:"안녕하세요, "+name+"님. 이전 공구 진행 이력을 참고해 새로운 상품을 제안드리고 싶어 연락드렸습니다. 관심 있으신 상품군이나 희망하시는 일정이 있다면 알려주세요. 그에 맞춰 자료 준비하겠습니다."},
+  {title:"재공구 제안",message:prior?"안녕하세요, "+name+"님. 지난번 "+product+" 공구 관련해서 연락드립니다. 재진행 일정 검토가 가능하실지 여쭤보고 싶습니다. 편하실 때 의견 부탁드립니다.":"안녕하세요, "+name+"님. S2H입니다. 공동구매 진행을 검토하고 계신지 여쭤보고자 연락드립니다. 편하실 때 의견 부탁드립니다."},
+  {title:"새 상품 제안",message:"안녕하세요, "+name+"님. S2H입니다. "+(prior?"이전 공구 진행 이력을 참고해 ":"")+"새로운 상품을 제안드리고 싶어 연락드렸습니다. 관심 있으신 상품군이나 희망하시는 일정이 있다면 알려주세요. 그에 맞춰 자료 준비하겠습니다."},
   {title:"안부 및 일정 확인",message:"안녕하세요, "+name+"님. 잘 지내셨나요? 다음 공동구매 계획이나 검토 중인 일정이 있으실지 여쭤보려고 연락드렸습니다. 편하실 때 회신 주시면 맞춰서 제안드리겠습니다."}
  ];
 }
@@ -2095,21 +2120,23 @@ function reminderCompleteModal(sellerId){
  if(submit)submit.textContent="연락 완료 저장";
 }
 function reminderPage(){
- const data=reminders();
+ const data=reminders(),today=todayLocal();
+ const dueToday=data.filter(x=>x.due===today).length;
+ const delayed=data.filter(x=>x.overdue>0).length;
  const cards=data.map(x=>{
   const expanded=state.expandedReminderId===x.seller.id;
   const list=reminderTemplates(x.seller,x.buy);
   const templates=expanded?'<div class="reminder-templates">'+list.map((t,index)=>
     '<div class="reminder-template"><div><strong>'+h(t.title)+'</strong><p>'+h(t.message)+'</p></div><button class="mini-button" type="button" data-act="copy-template" data-template="'+index+'" data-id="'+h(x.seller.id)+'">복사</button></div>'
    ).join("")+'</div>':"";
-  return '<div class="reminder-item"><div class="row"><div><strong>'+h(x.seller.name)+'</strong> <span class="status alert">연락 필요</span><p>최근 공구: '+h(x.buy.product||"-")+' · 종료 '+h(x.buy.endDate||"-")+' · 연락 예정 '+h(x.due)+' · '+x.overdue+'일 경과</p></div><div class="actions"><button class="mini-button" type="button" data-act="templates" data-id="'+h(x.seller.id)+'">'+(expanded?"문구 접기":"제안 문구 3종")+'</button><button class="primary" type="button" data-act="complete-reminder" data-id="'+h(x.seller.id)+'">연락 완료</button></div></div>'+templates+'</div>';
+  return '<div class="reminder-item"><div class="row"><div class="reminder-copy"><div class="reminder-name-row"><button type="button" class="seller-name-link" data-act="view-seller" data-id="'+h(x.seller.id)+'">'+h(x.seller.name)+'</button><span class="status reminder-due '+(x.overdue>0?'is-overdue':'is-today')+'">'+(x.overdue>0?'지연 '+x.overdue+'일':'오늘 연락')+'</span></div><p>최근 공구 '+h(x.buy.product||x.buy.productName||"-")+' · 종료 '+h(x.buy.endDate||"-")+'</p><p class="reminder-date">연락 예정일 <strong>'+h(x.due)+'</strong></p></div><div class="actions"><button class="mini-button" type="button" data-act="templates" aria-expanded="'+expanded+'" data-id="'+h(x.seller.id)+'">'+(expanded?"문구 접기":"연락 문구")+'</button><button class="secondary" type="button" data-act="seller-proposal" data-id="'+h(x.seller.id)+'">공구 제안</button><button class="primary" type="button" data-act="complete-reminder" data-id="'+h(x.seller.id)+'">연락 완료</button></div></div>'+templates+'</div>';
  }).join("");
  const completed=state.activities.filter(a=>a.type==="리마인드 완료").slice(0,15);
  const completedRows=completed.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName)+'</strong></td><td>'+h(a.channel||"-")+'</td><td>'+h(a.memo||"-")+'</td><td>'+h(a.actorName||"-")+'</td><td>'+h(a.nextFollowUpAt||"없음")+'</td></tr>');
- return wrap("미처리 알림 · "+data.length,
+ return '<div class="reminder-workspace"><div class="metrics reminder-metrics">'+metric("연락 필요",data.length,"미처리 알림")+metric("오늘 연락",dueToday,"오늘 예정")+metric("연락 지연",delayed,"예정일 경과")+'</div>'+wrap("미처리 알림 · "+data.length,
   '<p class="detail-note">문구를 복사해 카카오톡이나 DM으로 직접 전달한 뒤, 연락 방법과 내용을 기록하면 완료 처리됩니다. 미처리 알림은 계속 표시됩니다.</p>'
   +(cards||'<div class="empty">현재 연락이 필요한 셀러가 없습니다.</div>'))
-  +wrap("최근 완료 기록",'<p class="panel-description">연락 완료로 기록한 셀러와 처리 직원, 다음 연락 예정일을 확인할 수 있습니다.</p>'+table(["처리일시","셀러","연락방법","연락내용","처리직원","다음 연락일"],completedRows));
+  +wrap("최근 완료 기록",'<p class="panel-description">연락 완료로 기록한 셀러와 처리 직원, 다음 연락 예정일을 확인할 수 있습니다.</p>'+table(["처리일시","셀러","연락방법","연락내용","처리직원","다음 연락일"],completedRows))+'</div>';
 }
 function activityPage(){
  const all=state.activities;
@@ -2117,13 +2144,13 @@ function activityPage(){
  const search=state.activitySearch.trim().toLocaleLowerCase();
  const matched=all.filter(a=>{
   if(state.activityType!=="all"&&String(a.type||"")!==state.activityType)return false;
-  return !search||[a.sellerName,a.type,a.memo,a.actorName,a.contactOwner,a.channel].join(" ").toLocaleLowerCase().includes(search);
+  return !search||[a.sellerName,a.type,a.memo,a.actorName,a.contactOwner,a.channel,a.product,a.proposedStartDate,a.proposedEndDate,a.nextFollowUpAt].join(" ").toLocaleLowerCase().includes(search);
  }).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
  const pageSize=35,pageCount=Math.max(1,Math.ceil(matched.length/pageSize));
  state.activityPage=Math.min(pageCount,Math.max(1,state.activityPage));
  const from=(state.activityPage-1)*pageSize;
  const shown=matched.slice(from,from+pageSize);
- const rows=shown.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName||"-")+'</strong></td><td><span class="status">'+h(a.type||"-")+'</span></td><td class="ops-activity-memo">'+h(a.memo||"-")+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td></tr>');
+ const rows=shown.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td><strong>'+h(a.sellerName||"-")+'</strong></td><td><span class="status">'+h(a.type||"-")+'</span></td><td class="ops-activity-memo">'+(a.product?'<strong class="activity-product">'+h(a.product)+'</strong>':'')+(a.proposedStartDate||a.proposedEndDate?'<small class="activity-date">희망 기간 '+h(a.proposedStartDate||"협의")+' ~ '+h(a.proposedEndDate||"협의")+'</small>':'')+'<div>'+h(a.memo||"-")+'</div></td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.nextFollowUpAt||"-")+'</td></tr>');
  const toolbar='<div class="ops-activity-toolbar">'
   +'<input id="activity-search" type="search" aria-label="활동 기록 검색" placeholder="셀러명, 담당자 또는 활동 내용 검색" value="'+h(state.activitySearch)+'"/>'
   +'<label>유형<select id="activity-type" aria-label="활동 유형 필터">'
@@ -2135,9 +2162,9 @@ function activityPage(){
   +'<div><button type="button" class="secondary" data-activity-page="-1" '+(state.activityPage===1?"disabled":"")+'>이전</button>'
   +'<strong>'+state.activityPage+' / '+pageCount+'</strong>'
   +'<button type="button" class="secondary" data-activity-page="1" '+(state.activityPage===pageCount?"disabled":"")+'>다음</button></div></div>';
- return wrap("활동 기록 · "+matched.length+"건",
+ return '<div class="activity-workspace">'+wrap("활동 기록 · "+matched.length+"건",
   '<p class="panel-description">누가 어떤 셀러에게 연락하거나 업무를 처리했는지 확인할 수 있습니다.</p>'
-  +toolbar+table(["일시","셀러","활동 유형","기록 내용","담당자"],rows)+pagination);
+  +toolbar+table(["일시","셀러","활동 유형","기록 내용","담당자","다음 연락일"],rows)+pagination)+'</div>';
 }
 function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 백업과 데이터 복원을 사용할 수 있습니다.</p>");
@@ -2332,6 +2359,7 @@ function render(){
  if(action==="toggle-product-group"){const group=productMasterGroups().find(g=>g.name===el.dataset.canonical);if(group)productGroupToggle(group.name,!group.active);}
  if(action==="edit-buy"){const buy=state.buys.find(x=>x.id===id);if(buy)openBuyModalSafely(buy);else notify("수정할 공구 기록을 찾지 못했습니다. 목록을 새로 확인해주세요.");}
  if(action==="contact")activityModal(id);
+ if(action==="seller-proposal")sellerProposalModal(id);
  if(action==="templates"){state.expandedReminderId=state.expandedReminderId===id?null:id;render();}
  if(action==="complete-reminder")reminderCompleteModal(id);
  if(action==="copy-template"){
