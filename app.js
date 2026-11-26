@@ -564,7 +564,8 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
   input.addEventListener("compositionstart",()=>{composing=true;});
   input.addEventListener("compositionend",()=>{composing=false;clearFn();show();});
   input.addEventListener("input",()=>{if(!composing){clearFn();show();}});
-  input.addEventListener("focus",show);
+  // Programmatic focus on modal opening must not reveal suggestions.
+  input.addEventListener("click",()=>{if(dropdown.classList.contains("hidden"))show();});
   input.addEventListener("keydown",event=>{
    if(composing||event.isComposing)return;
    if(event.key==="Escape"&&!dropdown.classList.contains("hidden")){event.preventDefault();event.stopPropagation();close();return;}
@@ -576,7 +577,7 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
     event.preventDefault();if(currentItems.length)choose(activeIndex<0?0:activeIndex);
    }
   });
-  input.addEventListener("blur",()=>setTimeout(()=>{if(!dropdown.contains(document.activeElement))close();},150));
+  input.addEventListener("blur",()=>setTimeout(()=>{if(document.activeElement!==input&&!dropdown.contains(document.activeElement))close();},150));
   dropdown.addEventListener("focusout",()=>setTimeout(()=>{if(document.activeElement!==input&&!dropdown.contains(document.activeElement))close();},0));
  };
  setupCombo(sellerInput,$m("seller-suggestions"),
