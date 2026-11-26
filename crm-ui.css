@@ -3146,3 +3146,35 @@
  #app .reminder-workspace .metric .number{font-size:24px}
  #app .reminder-workspace .metric .label,#app .reminder-workspace .metric .sub{font-size:11px}
 }
+
+/* Phase 10 — shared interaction details, no new data model. */
+#toast.toast{
+ z-index:240;bottom:24px;right:24px;max-width:min(420px,calc(100vw - 32px));width:max-content;
+ background:var(--s2h-ui-ink);color:#fff;border:1px solid transparent;
+ padding:13px 16px;border-radius:var(--s2h-ui-radius);font:500 13px/1.6 var(--s2h-ui-font);
+ box-shadow:0 8px 24px rgba(25,47,60,.15);overflow-wrap:anywhere;pointer-events:none
+}
+#app-loading.app-loading{background:rgba(255,255,255,.82);backdrop-filter:blur(2px)}
+#app-loading .loading-inner{gap:12px;color:var(--s2h-ui-ink);padding:24px 30px;border:1px solid var(--s2h-ui-line);border-radius:12px;background:#fff;min-width:210px}
+#app-loading .loading-inner strong{font-size:18px;letter-spacing:-.02em;color:var(--s2h-ui-brand-dark)}
+#app-loading .loading-inner [data-loading-message]{font-size:13px;color:var(--s2h-ui-muted);text-align:center}
+#app-loading .loading-spinner{width:30px;height:30px;border-width:2px;border-color:var(--s2h-ui-brand-soft);border-top-color:var(--s2h-ui-brand);animation:s2h-spin .85s linear infinite}
+#modal .modal-fields input:disabled,#modal .modal-fields select:disabled,#modal .modal-fields textarea:disabled{background:var(--s2h-ui-surface-soft);color:var(--s2h-ui-muted);cursor:not-allowed}
+#modal .modal-fields input::placeholder,#modal .modal-fields textarea::placeholder{color:var(--s2h-ui-muted)}
+#modal .modal-fields input[type=checkbox],#modal .modal-fields input[type=radio]{width:16px;height:16px;min-height:0;padding:0;accent-color:var(--s2h-ui-brand)}
+#modal .modal-actions button:disabled,#modal #close-modal:disabled{cursor:wait;opacity:.55}
+#modal .modal-save-feedback:not(:empty){margin:16px 0 0;padding:12px 14px;border:1px solid #E7D8D8;border-radius:8px;background:#FAF3F3;color:#963D35;line-height:1.6}
+#modal .combo-wrap .combo-options{max-height:240px;overscroll-behavior:contain;scrollbar-width:thin;border:1px solid var(--s2h-ui-control-line);border-radius:8px;padding:5px;background:#fff;box-shadow:0 10px 25px rgba(25,49,58,.12)}
+#modal .combo-wrap .combo-option,#modal .combo-wrap .combo-create{min-height:36px;line-height:1.5;font-size:13px;padding:8px 10px;border-radius:6px;white-space:normal;overflow-wrap:anywhere}
+#modal .combo-wrap .combo-option.is-highlighted,#modal .combo-wrap .combo-option:hover{background:var(--s2h-ui-brand-soft);color:var(--s2h-ui-brand-dark)}
+#modal .combo-wrap .combo-create{color:var(--s2h-ui-brand-dark);border-top:1px solid var(--s2h-ui-line);font-weight:700}
+#modal .combo-wrap .combo-empty{color:var(--s2h-ui-muted);font-size:12px}
+#app .crm-load-error{border-radius:8px;background:var(--s2h-ui-brand-soft);color:var(--s2h-ui-ink)}
+#app .crm-load-error p{color:var(--s2h-ui-muted)}
+#app .table-wrap td.empty{padding:34px 14px;text-align:center;color:var(--s2h-ui-muted)}
+@media(max-width:760px){
+ #toast.toast{right:12px;bottom:12px;max-width:calc(100vw - 24px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #app-loading .loading-spinner{animation:none;border-right-color:var(--s2h-ui-brand)}
+}
