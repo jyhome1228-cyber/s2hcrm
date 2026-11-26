@@ -3049,3 +3049,51 @@
  #app .ops-schedule-page .ops-schedule-view button{padding:6px 8px}
  #modal.buy-editor-modal .buy-editor-fields{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Phase 8 — product insights, real record counts only. */
+#app .insight-workspace{min-width:0;display:flex;flex-direction:column;gap:20px}
+#app .insight-workspace .insight-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0;border:1px solid var(--s2h-ui-line);border-radius:var(--s2h-ui-card-radius);overflow:hidden;background:#fff}
+#app .insight-workspace .insight-metrics .metric{min-width:0;margin:0;padding:18px 20px;border:0;border-right:1px solid var(--s2h-ui-line);border-radius:0;box-shadow:none}
+#app .insight-workspace .insight-metrics .metric:last-child{border-right:0}
+#app .insight-workspace .metric .label{font-size:13px;color:var(--s2h-ui-muted);font-weight:650}
+#app .insight-workspace .metric .number{font-size:32px;line-height:1.15;margin:10px 0 6px;font-weight:720;font-variant-numeric:tabular-nums;color:var(--s2h-ui-ink)}
+#app .insight-workspace .metric:first-child .number{color:var(--s2h-ui-brand-dark)}
+#app .insight-workspace .metric .sub{font-size:12px;color:var(--s2h-ui-muted);line-height:1.5}
+#app .insight-workspace>.panel{padding:24px;margin:0;border-radius:var(--s2h-ui-card-radius);box-shadow:none}
+#app .insight-workspace .panel-title{margin:0 0 12px}
+#app .insight-workspace .panel-description{margin:0 0 16px;color:var(--s2h-ui-muted)}
+#app .insight-chart-scroll{overflow-x:auto;max-width:100%;scrollbar-width:thin}
+#app .insight-chart{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;min-width:600px;padding:4px 2px 2px}
+#app .insight-chart-column{display:flex;flex-direction:column;gap:8px;align-items:center;min-width:0}
+#app .insight-chart-column>strong{font-size:13px;color:var(--s2h-ui-ink);font-variant-numeric:tabular-nums}
+#app .insight-chart-track{display:flex;align-items:flex-end;justify-content:center;height:128px;width:100%;border-bottom:1px solid var(--s2h-ui-line);background:repeating-linear-gradient(to top,transparent 0,transparent calc(25% - 1px),var(--s2h-ui-line) calc(25% - 1px),var(--s2h-ui-line) 25%)}
+#app .insight-chart-track i{display:block;width:clamp(15px,55%,36px);background:#A6D5E4;border-radius:4px 4px 0 0}
+#app .insight-chart-column.is-current .insight-chart-track i{background:var(--s2h-ui-brand)}
+#app .insight-chart-column>span{font-size:11px;color:var(--s2h-ui-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+#app .insight-chart-column.is-current>span{font-weight:700;color:var(--s2h-ui-brand-dark)}
+#app .insight-no-data{font-size:12px;color:var(--s2h-ui-muted);text-align:center;margin:12px 0 0}
+#app .insight-ranking-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+#app .insight-ranking-toolbar input{flex:1 1 200px;max-width:420px;min-height:40px;padding:9px 12px}
+#app .insight-ranking-toolbar label{display:flex;align-items:center;gap:8px;color:var(--s2h-ui-muted);font-size:12px;margin-left:auto}
+#app .insight-ranking-toolbar select{min-height:36px;padding:7px 10px}
+#app .insight-result-count{font-size:12px;color:var(--s2h-ui-muted);margin-bottom:10px}
+#app .insight-workspace .table-wrap table{min-width:650px}
+#app .insight-workspace .insight-rank{width:48px;color:var(--s2h-ui-muted);font-variant-numeric:tabular-nums}
+#app .insight-workspace .insight-product-link{font-size:13px;font-weight:700;color:var(--s2h-ui-ink);text-align:left;overflow-wrap:anywhere}
+#app .insight-workspace .insight-product-link:hover{color:var(--s2h-ui-brand-dark)}
+#app .insight-workspace .insight-alias-count{display:block;color:var(--s2h-ui-muted);font-size:11px;margin-top:4px}
+#app .insight-volume{display:flex;align-items:center;gap:8px;white-space:nowrap}
+#app .insight-volume-track{display:block;width:64px;height:5px;border-radius:3px;background:var(--s2h-ui-brand-soft);overflow:hidden}
+#app .insight-volume-track i{display:block;height:100%;background:var(--s2h-ui-brand);border-radius:3px}
+#app .insight-pagination{border:0;padding:0;margin-top:14px}
+#app .insight-workspace>.panel-note{margin:0;color:var(--s2h-ui-muted);line-height:1.7}
+@media(max-width:760px){
+ #app .insight-workspace{gap:14px}
+ #app .insight-workspace .insight-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .insight-workspace .insight-metrics .metric{padding:14px}
+ #app .insight-workspace .insight-metrics .metric:nth-child(2){border-right:0}
+ #app .insight-workspace .insight-metrics .metric:nth-child(-n+2){border-bottom:1px solid var(--s2h-ui-line)}
+ #app .insight-workspace .metric .number{font-size:27px}
+ #app .insight-workspace>.panel{padding:14px}
+ #app .insight-ranking-toolbar label{margin-left:0}
+}
