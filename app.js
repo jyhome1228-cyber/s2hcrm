@@ -8,23 +8,27 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const $ = (selector) => document.querySelector(selector);
-let screenBusyCount=0;
-let modalSaving=false;
+let screenBusyCount=0,loadingTimer=null,toastTimer=null;
+let modalSaving=false,modalDirty=false,buyModalPending=false,navigationPending=false;
 function showLoading(label="데이터를 불러오는 중입니다"){
  const layer=document.getElementById("app-loading");
  if(!layer)return;
  screenBusyCount++;layer.querySelector("[data-loading-message]").textContent=label;
- layer.classList.remove("hidden");layer.setAttribute("aria-busy","true");
+ if(screenBusyCount===1){clearTimeout(loadingTimer);loadingTimer=setTimeout(()=>{
+  if(screenBusyCount>0){layer.classList.remove("hidden");layer.setAttribute("aria-busy","true");}
+ },120);}
 }
 function hideLoading(){
  const layer=document.getElementById("app-loading");
  if(!layer)return;
  screenBusyCount=Math.max(0,screenBusyCount-1);
- if(!screenBusyCount){layer.classList.add("hidden");layer.setAttribute("aria-busy","false");}
+ if(!screenBusyCount){clearTimeout(loadingTimer);loadingTimer=null;layer.classList.add("hidden");layer.setAttribute("aria-busy","false");}
 }
 function navigateTo(page){
+ if(navigationPending||buyModalPending||modalSaving)return;
+ navigationPending=true;
  showLoading("화면을 준비하고 있습니다");
- setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
+ setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{navigationPending=false;hideLoading();}},15);
 }
 
 const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, insightSearch:"", insightSort:"count", insightPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
@@ -49,14 +53,21 @@ function instagramLink(rawValue){
  return '<a class="instagram-profile-link" href="https://www.instagram.com/'+encodeURIComponent(handle)+'/" target="_blank" rel="noopener noreferrer" title="인스타그램 프로필 새 탭에서 열기">@'+h(handle)+'</a>';
 }
 function openBuyModalSafely(item=null,presetSellerId=null,presetDate=null){
+ if(buyModalPending||modalSaving||navigationPending)return;
+ buyModalPending=true;
  showLoading(item?"공구 수정창을 준비하고 있습니다":"공구 등록창을 준비하고 있습니다");
  setTimeout(()=>{
   try{buyModal(item,presetSellerId,presetDate);}catch(error){console.error("공구 등록창 오류:",error);notify("공구 등록창을 열지 못했습니다: "+(error?.message||"알 수 없는 오류"));}
-  finally{hideLoading();}
+  finally{buyModalPending=false;hideLoading();}
  },25);
 }
 const dt = (ts) => ts?.toDate?.()?.toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}) || "-";
-const notify = (msg) => { $("#toast").textContent=msg;$("#toast").classList.remove("hidden");setTimeout(()=>$("#toast").classList.add("hidden"),2800); };
+const notify = (msg) => {
+ const toast=$("#toast");if(!toast)return;
+ clearTimeout(toastTimer);toast.textContent=String(msg??"");
+ toast.classList.remove("hidden");
+ toastTimer=setTimeout(()=>toast.classList.add("hidden"),4200);
+};
 const f = (name,label,type="text",val="",required=false,full=false) => '<label class="'+(full?'full':'')+'">'+h(label)+'<input name="'+h(name)+'" type="'+type+'" value="'+h(val)+'" '+(required?'required':'')+' /></label>';
 const textarea = (name,label,val="") => '<label class="full">'+h(label)+'<textarea name="'+h(name)+'">'+h(val)+'</textarea></label>';
 const select = (name,label,options,val="") => '<label>'+h(label)+'<select name="'+h(name)+'">'+options.map(([v,t])=>'<option value="'+h(v)+'" '+(v===val?'selected':'')+'>'+h(t)+'</option>').join("")+'</select></label>';
@@ -189,12 +200,10 @@ document.addEventListener("keydown",event=>{
  const normal=$("#modal"),seller=$("#seller-detail-modal");
  const active=normal&&!normal.classList.contains("hidden")?normal:
   seller&&!seller.classList.contains("hidden")?seller:null;
- if(!active)return;
+ if(!active||event.defaultPrevented||event.isComposing)return;
  if(event.key==="Escape"){
   if(active===normal){
-   if(modalSaving)return;
-   if(!window.confirm("입력 중인 내용은 저장되지 않습니다. 닫으시겠습니까?"))return;
-   closeModal();
+   requestCloseModal();
   }else closeSellerPopup();
   event.preventDefault();return;
  }
@@ -206,7 +215,15 @@ document.addEventListener("keydown",event=>{
  if(event.shiftKey&&(document.activeElement===first||!active.contains(document.activeElement))){event.preventDefault();last.focus();}
  else if(!event.shiftKey&&(document.activeElement===last||!active.contains(document.activeElement))){event.preventDefault();first.focus();}
 });
-$("#close-modal").onclick=closeModal;$("#cancel-modal").onclick=closeModal;
+function requestCloseModal(){
+ if(modalSaving)return;
+ const submit=$("#modal-form button[type=submit]");
+ if(modalDirty&&submit&&!submit.classList.contains("hidden")&&!window.confirm("입력 중인 내용은 저장되지 않습니다. 닫으시겠습니까?"))return;
+ closeModal();
+}
+$("#close-modal").onclick=requestCloseModal;$("#cancel-modal").onclick=requestCloseModal;
+$("#modal-form").addEventListener("input",()=>{modalDirty=true;});
+$("#modal-form").addEventListener("change",()=>{modalDirty=true;});
 $("#seller-detail-modal-close").addEventListener("click",()=>closeSellerPopup());
 $("#seller-detail-modal").addEventListener("click",event=>{if(event.target===$("#seller-detail-modal"))closeSellerPopup();});
 
@@ -220,8 +237,10 @@ $("#modal-form").addEventListener("submit",async e=>{
  e.preventDefault();
  if(modalSaving||typeof state.modalSave!=="function")return;
  const btn=e.target.querySelector("[type=submit]"),form=e.target;
+ if(!btn||btn.disabled||btn.classList.contains("hidden"))return;
  const data=Object.fromEntries(new FormData(form).entries());
- modalSaving=true;btn.disabled=true;
+ modalSaving=true;btn.disabled=true;form.setAttribute("aria-busy","true");
+ $("#close-modal").disabled=true;$("#cancel-modal").disabled=true;
  const originalText=btn.textContent;
  btn.textContent="저장 중...";
  const feedback=$("#modal-save-feedback");
@@ -231,14 +250,15 @@ $("#modal-form").addEventListener("submit",async e=>{
   modalSaving=false;closeModal();notify("저장되었습니다.");
  }catch(err){
   const message="저장 실패: "+(err?.message||"다시 시도해주세요.");
-  if(feedback)feedback.textContent=message;
+  if(feedback){feedback.textContent=message;feedback.scrollIntoView({block:"nearest"});}
   notify(message);
- }finally{modalSaving=false;btn.disabled=false;btn.textContent=originalText;}
+ }finally{modalSaving=false;btn.disabled=false;btn.textContent=originalText;form.removeAttribute("aria-busy");$("#close-modal").disabled=false;$("#cancel-modal").disabled=false;}
 });
 let lastModalFocus=null;
 function openModal(title,fields,save){
  if(modalSaving)return;
- lastModalFocus=document.activeElement;
+ modalDirty=false;
+ if($("#modal").classList.contains("hidden"))lastModalFocus=document.activeElement;
  $("#modal").classList.remove("buy-editor-modal","prep-modal");
  $("#modal-title").textContent=title;
  $("#modal-fields").innerHTML='<div class="modal-fields">'+fields+'</div><div id="modal-save-feedback" class="modal-save-feedback" role="alert"></div>';
@@ -250,14 +270,14 @@ function openModal(title,fields,save){
  requestAnimationFrame(()=>{
   const dialog=$("#modal");
   if(dialog?.classList.contains("hidden"))return;
-  const first=dialog.querySelector("#modal-fields input:not([type=hidden]):not([disabled]),#modal-fields select:not([disabled]),#modal-fields textarea:not([disabled]),#close-modal");
+  const first=[...dialog.querySelectorAll("#modal-fields input:not([type=hidden]):not([disabled]),#modal-fields select:not([disabled]),#modal-fields textarea:not([disabled])")].find(el=>el.getClientRects().length>0)||$("#close-modal");
   first?.focus({preventScroll:true});
  });
 }
 function closeModal(){
  if(modalSaving)return;
  $("#modal").classList.add("hidden");$("#modal").classList.remove("buy-editor-modal","prep-modal");document.body.classList.remove("s2h-modal-open");
- state.modalSave=null;$("#modal-form").reset();
+ state.modalSave=null;modalDirty=false;$("#modal-form").reset();
  const target=lastModalFocus;
  lastModalFocus=null;
  if(target?.isConnected)requestAnimationFrame(()=>target.focus({preventScroll:true}));
@@ -493,24 +513,52 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
   $m("product-suggestions").classList.add("hidden");productInput.setAttribute("aria-expanded","false");
  };
  const setupCombo=(input,dropdown,listFn,selectFn,onCreate,clearFn)=>{
-  let currentItems=[];
+  let currentItems=[],activeIndex=-1,composing=false;
+  input.setAttribute("role","combobox");
+  input.setAttribute("aria-controls",dropdown.id);
+  input.setAttribute("aria-haspopup","listbox");
+  const close=()=>{dropdown.classList.add("hidden");input.setAttribute("aria-expanded","false");input.removeAttribute("aria-activedescendant");activeIndex=-1;};
+  const highlight=(index)=>{
+   if(!currentItems.length)return;
+   activeIndex=Math.max(0,Math.min(currentItems.length-1,index));
+   const buttons=[...dropdown.querySelectorAll("[data-combo-index]")];
+   buttons.forEach((el,i)=>{el.classList.toggle("is-highlighted",i===activeIndex);el.setAttribute("aria-selected",String(i===activeIndex));});
+   const selected=buttons[activeIndex];
+   if(selected){input.setAttribute("aria-activedescendant",selected.id);selected.scrollIntoView({block:"nearest"});}
+  };
+  const choose=(index)=>{if(!currentItems[index])return;selectFn(currentItems[index].id);modalDirty=true;close();};
   const show=()=>{
+   if(composing)return;
    const word=input.value.trim().toLocaleLowerCase();
    currentItems=listFn().filter(x=>x.name.toLocaleLowerCase().includes(word)||x.search?.toLocaleLowerCase().includes(word)).slice(0,30);
-   const matches=currentItems.map((x,i)=>'<button type="button" class="combo-option" role="option" data-combo-index="'+i+'">'+h(x.name)+'</button>').join("");
+   activeIndex=-1;input.removeAttribute("aria-activedescendant");
+   const matches=currentItems.map((x,i)=>'<button type="button" class="combo-option" role="option" aria-selected="false" tabindex="-1" id="'+dropdown.id+'-option-'+i+'" data-combo-index="'+i+'">'+h(x.name)+'</button>').join("");
    const heading=currentItems.length?matches:'<p class="combo-empty">검색 결과가 없습니다.</p>';
    dropdown.innerHTML=heading+'<button type="button" class="combo-create" data-combo-create>+ 새 '+(input===sellerInput?"셀러":"상품")+' 등록</button>';
    dropdown.classList.remove("hidden");input.setAttribute("aria-expanded","true");
-   dropdown.querySelectorAll("[data-combo-index]").forEach(el=>el.addEventListener("click",()=>selectFn(currentItems[Number(el.dataset.comboIndex)].id)));
-   dropdown.querySelector("[data-combo-create]").onclick=()=>{dropdown.classList.add("hidden");onCreate(input.value.trim());};
+   dropdown.querySelectorAll("[data-combo-index]").forEach(el=>{
+    el.addEventListener("mousedown",e=>e.preventDefault());
+    el.addEventListener("click",()=>choose(Number(el.dataset.comboIndex)));
+   });
+   dropdown.querySelector("[data-combo-create]").onclick=()=>{close();onCreate(input.value.trim());};
   };
-  input.addEventListener("input",()=>{clearFn();show();});
+  input.addEventListener("compositionstart",()=>{composing=true;});
+  input.addEventListener("compositionend",()=>{composing=false;clearFn();show();});
+  input.addEventListener("input",()=>{if(!composing){clearFn();show();}});
   input.addEventListener("focus",show);
   input.addEventListener("keydown",event=>{
-   if(event.key==="Escape"){dropdown.classList.add("hidden");return;}
-   if(event.key==="Enter"&&currentItems.length&& !dropdown.classList.contains("hidden")){event.preventDefault();selectFn(currentItems[0].id);}
+   if(composing||event.isComposing)return;
+   if(event.key==="Escape"&&!dropdown.classList.contains("hidden")){event.preventDefault();event.stopPropagation();close();return;}
+   if(event.key==="ArrowDown"||event.key==="ArrowUp"){
+    event.preventDefault();if(dropdown.classList.contains("hidden"))show();
+    highlight(activeIndex<0?(event.key==="ArrowDown"?0:currentItems.length-1):activeIndex+(event.key==="ArrowDown"?1:-1));return;
+   }
+   if(event.key==="Enter"&&!dropdown.classList.contains("hidden")){
+    event.preventDefault();if(currentItems.length)choose(activeIndex<0?0:activeIndex);
+   }
   });
-  input.addEventListener("blur",()=>setTimeout(()=>{dropdown.classList.add("hidden");input.setAttribute("aria-expanded","false");},160));
+  input.addEventListener("blur",()=>setTimeout(()=>{if(!dropdown.contains(document.activeElement))close();},150));
+  dropdown.addEventListener("focusout",()=>setTimeout(()=>{if(document.activeElement!==input&&!dropdown.contains(document.activeElement))close();},0));
  };
  setupCombo(sellerInput,$m("seller-suggestions"),
   ()=>sellerSearchChoices,
@@ -526,6 +574,7 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
  $m("cancel-new-product").onclick=()=>$m("create-product").classList.add("hidden");
  $m("save-new-seller").onclick=async()=>{
   const button=$m("save-new-seller"),name=$m("new-seller-name").value.trim();
+  if(button.disabled)return;
   if(!name)return notify("셀러명을 입력해주세요.");
   const handle=$m("new-seller-handle").value.trim();
   const dup=[...sellerMap.values()].find(x=>x.name===name||handle&&(x.instagramId===handle.replace(/^@/,"")||x.channel===handle));
@@ -545,6 +594,7 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
  };
  $m("save-new-product").onclick=async()=>{
   const button=$m("save-new-product"),name=$m("new-product-name").value.trim();
+  if(button.disabled)return;
   if(!name)return notify("상품명을 입력해주세요.");
   const archived=state.products.find(p=>p.active===false&&productCanonicalName(productLabel(p),state.products)===productCanonicalName(name,state.products));
   if(archived){notify("보관 중인 상품입니다. 상품 관리에서 먼저 복원해주세요.");return;}
