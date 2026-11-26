@@ -971,7 +971,7 @@ function dashboard(){
   +metric("오늘 오픈",opening.length,"오늘 시작하는 공구")
   +metric("진행 중",running.length,"현재 판매 중인 공구")
   +metric("7일 내 오픈",comingWeek.length,"오늘 포함, 일주일")
-  +metric("연락 필요",rem.length,"후속 연락 확인 대상")
+  +metric("연락 필요",rem.length,"오늘 예정 및 미처리 연락")
   +'</div>';
  const itemRow=item=>'<div class="ops-work-row">'
   +'<div class="ops-work-label">'+h(item.category)+'</div>'
@@ -989,7 +989,7 @@ function dashboard(){
    .map(([key,label,count])=>'<button type="button" data-dashboard-task="'+key+'" aria-pressed="'+(state.dashboardTaskFilter===key)+'" class="'+(state.dashboardTaskFilter===key?"selected":"")+'">'+label+' <span>'+count+'</span></button>').join("")
   +'</div>';
  const taskPanel=wrap("오늘 처리할 업무",
-  '<p class="ops-panel-summary">오늘 오픈 '+opening.length+'건 · 연락 확인 '+rem.length+'건</p>'
+  '<p class="ops-panel-summary">오늘 오픈 '+opening.length+'건 · 미처리 연락 '+rem.length+'건</p>'
   +taskFilters+'<div class="ops-work-list">'
   +(activeTasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">해당 조건의 업무가 없습니다.</div>')+'</div>'
   +(activeTasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
@@ -1068,10 +1068,7 @@ function dashboard(){
   +'<button type="button" class="panel-link" data-nav="activity">전체 기록 보기</button></div>'
   +'<div class="ops-activity-list">'+(recent||'<div class="dash-empty">기록된 활동이 없습니다.</div>')+'</div></section>';
  return (state.demo?'<div class="demo-alert">미리보기 데이터이며 실제 업무 정보가 아닙니다.</div>':"")
-  +'<div class="dashboard-v4 dashboard-v5"><div class="dashboard-intro">'
-  +'<div><strong>'+h(calendarDateLabel(today))+'</strong><span>오늘 처리할 공구와 연락 업무를 확인하세요.</span></div>'
-  +'<div class="dashboard-intro-actions"><button type="button" data-quick="seller">셀러 등록</button><button type="button" data-quick="activity">연락 기록</button></div>'
-  +'</div><section class="dashboard-overview" aria-label="오늘의 주요 지표">'
+  +'<div class="dashboard-v4 dashboard-v5"><section class="dashboard-overview" aria-label="오늘의 주요 지표">'
   +kpis+'</section>'
   +'<div class="dashboard-primary-grid">'
   +'<div class="dashboard-primary-calendar">'+calendar+'</div>'
@@ -2326,6 +2323,13 @@ function render(){
  if(!Object.prototype.hasOwnProperty.call(views,state.page))state.page="dashboard";
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
+ const isDashboard=state.page==="dashboard";
+ const dashboardDate=$("#dashboard-heading-date"),dashboardActions=$("#dashboard-heading-actions");
+ dashboardDate.classList.toggle("hidden",!isDashboard);
+ dashboardActions.classList.toggle("hidden",!isDashboard);
+ dashboardDate.textContent=isDashboard?calendarDateLabel(todayLocal()):"";
+ $("#dashboard-quick-seller").onclick=()=>sellerModal();
+ $("#dashboard-quick-activity").onclick=()=>activityModal();
  const crumb=$("#breadcrumb-page");if(crumb)crumb.textContent=title;
  $("#today").textContent=todayLocal();
  $("#add-button").textContent=state.page==="dashboard"||state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
