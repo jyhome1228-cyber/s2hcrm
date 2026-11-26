@@ -597,3 +597,54 @@
  #app .dashboard-v5 .dashboard-primary-calendar .ops-major-calendar{padding:14px!important}
  #app .dashboard-v5 .dashboard-secondary-grid>section{padding:16px}
 }
+
+/* Phase 4 — continuous calendar rows, readable event labels, local scrolling. */
+#app #page-body .cal-scroll[data-calendar-key]{
+ width:100%;max-width:100%;min-width:0;overflow-x:auto;
+ border:1px solid var(--s2h-ui-line);border-radius:var(--s2h-ui-radius);background:#fff;
+ scrollbar-width:thin;overscroll-behavior-inline:contain;box-shadow:none;
+}
+#app #page-body .cal-scroll[data-calendar-key] :is(.cal-weekdays,.cal-weeks){width:100%;min-width:560px}
+#app #page-body .ops-schedule-main .cal-scroll[data-calendar-key] :is(.cal-weekdays,.cal-weeks){min-width:680px}
+#app #page-body .cal-scroll[data-calendar-key] .cal-week{
+ background:var(--s2h-ui-surface-soft);color:var(--s2h-ui-muted);
+ font-size:12px;font-weight:650;padding:10px 4px;
+}
+#app #page-body .cal-week-row.cal-week-connected{
+ grid-template-rows:36px repeat(var(--cal-visible-rows),36px) var(--cal-footer,28px)!important;
+ border-bottom:1px solid var(--s2h-ui-line);
+}
+#app #page-body .cal-week-row.cal-week-connected:last-child{border-bottom:0}
+#app #page-body .cal-week-connected>.cal-bg-day.cal-day-add{
+ padding:0 6px!important;border-right:1px solid var(--s2h-ui-line);
+}
+#app #page-body .cal-week-connected>.cal-bg-day.cal-day-add:nth-child(7){border-right:0}
+#app #page-body .cal-week-connected>.cal-bg-day.cal-day-add.cal-selected{
+ background:var(--s2h-ui-brand-soft);box-shadow:inset 0 0 0 1px var(--s2h-ui-brand);
+}
+#app #page-body .cal-week-connected>.cal-bg-day .cal-date-head b{font-size:12px;color:var(--s2h-ui-ink)}
+#app #page-body .cal-week-connected>.cal-bg-day .cal-date-head small{font-size:10px;color:var(--s2h-ui-muted)}
+#app #page-body .cal-week-connected>.cal-bg-day.cal-today .cal-date-head b{
+ background:var(--s2h-ui-brand-dark);color:#fff;border-radius:6px;
+}
+#app #page-body .cal-week-connected>.cal-range{
+ height:32px!important;min-height:32px!important;
+ padding:2px 7px;font-size:11px!important;line-height:1.2;overflow:hidden;
+}
+#app #page-body .cal-range-copy{display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;width:100%;text-align:left}
+#app #page-body .cal-range-copy :is(strong,span){display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app #page-body .cal-range-copy strong{font-size:11px;font-weight:700;line-height:1.15}
+#app #page-body .cal-range-copy>span{font-size:10px;font-weight:550;line-height:1.15}
+#app #page-body .cal-week-connected>.cal-range-active{background:var(--s2h-ui-brand-dark);color:#fff}
+#app #page-body .cal-week-connected>.cal-range-upcoming{background:var(--s2h-ui-brand-soft);color:var(--s2h-ui-brand-dark)}
+#app #page-body .cal-week-connected>.cal-range-completed{background:#EDF1F4;color:#526572}
+#app #page-body .cal-week-connected>.cal-range-canceled{background:#F5F1F1;color:#805454;text-decoration:line-through}
+#app #page-body .cal-week-connected>.cal-range-start{margin-left:3px!important;border-top-left-radius:5px!important;border-bottom-left-radius:5px!important}
+#app #page-body .cal-week-connected>.cal-range-end{margin-right:3px!important;border-top-right-radius:5px!important;border-bottom-right-radius:5px!important}
+#app #page-body .cal-week-connected>.cal-expand{color:var(--s2h-ui-brand-dark);font-size:12px;min-height:24px}
+#app #page-body .cal-scroll[data-calendar-key]:focus-visible{outline:2px solid var(--s2h-ui-brand);outline-offset:2px}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-hint{display:inline;color:var(--s2h-ui-muted);white-space:normal}
+@media(max-width:760px){
+ #app #page-body .cal-scroll[data-calendar-key] :is(.cal-weekdays,.cal-weeks){min-width:560px}
+ #app #page-body .ops-schedule-main .cal-scroll[data-calendar-key] :is(.cal-weekdays,.cal-weeks){min-width:560px}
+}
