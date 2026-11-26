@@ -839,3 +839,52 @@
  #app .insight-workspace>.panel{padding:14px}
  #app .insight-ranking-toolbar label{margin-left:0}
 }
+
+/* Phase 9 — follow-up work, activity history and proposal composer. */
+#app .reminder-workspace,#app .activity-workspace{min-width:0}
+#app .reminder-workspace .reminder-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0 0 20px;border:1px solid var(--s2h-ui-line);border-radius:10px;overflow:hidden}
+#app .reminder-workspace .reminder-metrics .metric{border:0;border-right:1px solid var(--s2h-ui-line);border-radius:0;margin:0;padding:18px 20px;box-shadow:none}
+#app .reminder-workspace .reminder-metrics .metric:last-child{border-right:0}
+#app .reminder-workspace .metric .label{font-size:13px;color:var(--s2h-ui-muted)}
+#app .reminder-workspace .metric .number{font-size:29px;line-height:1.2;margin:8px 0 6px;color:var(--s2h-ui-ink)}
+#app .reminder-workspace .metric .sub{font-size:12px;color:var(--s2h-ui-muted)}
+#app .reminder-workspace>.panel,#app .activity-workspace>.panel{padding:24px;box-shadow:none}
+#app .reminder-workspace .detail-note{font-size:13px;color:var(--s2h-ui-muted);margin:0 0 16px}
+#app .reminder-workspace .reminder-item{padding:16px 0}
+#app .reminder-workspace .reminder-item .row{align-items:center;gap:16px}
+#app .reminder-workspace .reminder-copy{flex:1;min-width:0}
+#app .reminder-workspace .reminder-name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#app .reminder-workspace .seller-name-link{font-size:15px;color:var(--s2h-ui-ink);font-weight:700;overflow-wrap:anywhere}
+#app .reminder-workspace .seller-name-link:hover{color:var(--s2h-ui-brand-dark)}
+#app .reminder-workspace .reminder-due.is-today{color:var(--s2h-ui-brand-dark);background:var(--s2h-ui-brand-soft);border-color:#C8E7F0}
+#app .reminder-workspace .reminder-due.is-overdue{color:#805454;background:#F5F1F1;border-color:#E7D8D8}
+#app .reminder-workspace .reminder-copy p{font-size:12px;margin:6px 0 0;overflow-wrap:anywhere;color:var(--s2h-ui-muted)}
+#app .reminder-workspace .reminder-date strong{color:var(--s2h-ui-ink)}
+#app .reminder-workspace .reminder-item .actions{flex:0 0 auto;gap:6px;align-items:center}
+#app .reminder-workspace .reminder-item .actions button{min-height:36px;padding:7px 10px;font-size:12px}
+#app .reminder-workspace .reminder-templates{background:var(--s2h-ui-surface-soft);border-color:var(--s2h-ui-line);border-radius:8px;padding:14px}
+#app .reminder-workspace .reminder-template strong{font-size:13px;color:var(--s2h-ui-ink)}
+#app .reminder-workspace .reminder-template p{font-size:12px;color:var(--s2h-ui-muted)}
+#app .reminder-workspace .table-wrap table{min-width:680px}
+#app .activity-workspace .table-wrap table{min-width:740px}
+#app .activity-workspace .ops-activity-memo{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+#app .activity-workspace .activity-product{display:block;color:var(--s2h-ui-ink);font-size:13px;margin-bottom:4px}
+#app .activity-workspace .activity-date{display:block;color:var(--s2h-ui-muted);font-size:11px;margin-bottom:7px}
+#app .activity-workspace .ops-activity-toolbar{margin-bottom:12px}
+#modal .proposal-intro,#modal .reminder-complete-intro{background:var(--s2h-ui-brand-soft);border:1px solid #C8E7F0;color:var(--s2h-ui-ink);border-radius:8px;padding:14px}
+#modal .proposal-actions{gap:8px}
+#modal .proposal-actions button{min-height:36px;padding:8px 12px;color:var(--s2h-ui-brand-dark);border-color:#C8E7F0}
+#modal .proposal-status{flex:1 1 180px;line-height:1.6}
+#modal .proposal-confirm,#modal .reminder-ack{display:flex;align-items:flex-start;gap:8px;line-height:1.6;color:var(--s2h-ui-ink);font-size:12px;margin:8px 0}
+#modal .proposal-confirm input[type="checkbox"],#modal .reminder-ack input[type="checkbox"]{width:17px;height:17px;min-height:0;flex:0 0 17px;margin:2px 0 0;padding:0;accent-color:var(--s2h-ui-brand)}
+#modal .reminder-complete-intro span{font-size:12px;color:var(--s2h-ui-muted)}
+@media(max-width:900px){
+ #app .reminder-workspace .reminder-item .row{flex-direction:column;align-items:stretch}
+ #app .reminder-workspace .reminder-item .actions{justify-content:flex-start;flex-wrap:wrap}
+}
+@media(max-width:760px){
+ #app .reminder-workspace>.panel,#app .activity-workspace>.panel{padding:14px}
+ #app .reminder-workspace .reminder-metrics .metric{padding:12px}
+ #app .reminder-workspace .metric .number{font-size:24px}
+ #app .reminder-workspace .metric .label,#app .reminder-workspace .metric .sub{font-size:11px}
+}
