@@ -1078,3 +1078,75 @@
  #app .topbar{padding-inline:8px}
  #app .top-right{gap:4px}
 }
+
+/* UX refinement 1 — compact dialogs, progressive disclosure, original S2H identity. */
+#modal.modal,#seller-detail-modal.seller-detail-modal{background:rgba(23,34,42,.38);backdrop-filter:none}
+#modal .modal-panel,#seller-detail-modal .seller-detail-dialog{border-radius:10px;box-shadow:0 16px 48px rgba(20,35,45,.16)}
+#modal .modal-head,#modal.buy-editor-modal .modal-head,#modal.prep-modal .modal-head{
+ min-height:54px;padding:13px 22px;border-bottom:1px solid #E5E8EB;
+}
+#modal .modal-head h2,#modal.buy-editor-modal .modal-head h2,#modal.prep-modal .modal-head h2{
+ font-size:19px;font-weight:680;color:#20272D;letter-spacing:-.035em;
+}
+#modal #close-modal{width:30px;height:30px;color:#65717A}
+#modal .modal-actions,#modal.buy-editor-modal .modal-actions,#modal.prep-modal .modal-actions{
+ min-height:0;padding:11px 22px;gap:8px;border-top:1px solid #E5E8EB;box-shadow:none;
+}
+#modal .modal-actions button,#modal.buy-editor-modal .modal-actions button,#modal.prep-modal .modal-actions button{
+ min-height:36px;min-width:78px;padding:7px 14px;font-size:13px;font-weight:650;border-radius:6px;
+}
+#modal .modal-actions .primary,#modal.prep-modal .modal-actions .primary{background:var(--s2h-ui-brand-dark);border-color:var(--s2h-ui-brand-dark);color:#fff}
+#modal :is(.modal-fields,.compact-form-grid,.buy-editor-fields) label{color:#39434A;font-size:12px;font-weight:550;line-height:1.45}
+#modal .modal-fields :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=button]):not([type=submit]),select,textarea){
+ border:1px solid #DCE2E6;border-radius:6px;background:#fff;color:#242C32;
+ font-weight:400;box-shadow:none;margin-top:5px;padding:8px 10px;
+}
+#modal .modal-fields :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=button]):not([type=submit]),select){
+ min-height:38px;height:38px;font-size:13px
+}
+#modal .modal-fields textarea{min-height:66px;font-size:13px}
+#modal .modal-fields :is(input,select,textarea):focus{border-color:var(--s2h-ui-brand);outline:1px solid var(--s2h-ui-focus);outline-offset:1px}
+#modal .modal-fields :is(input,textarea)::placeholder{color:#75818A}
+#modal :is(.compact-form-grid,.buy-editor-fields)>label,#modal :is(.compact-form-grid,.buy-editor-fields)>.combo-wrap{margin:0;min-width:0}
+#modal.seller-editor-modal .modal-panel,#modal.buy-editor-modal .modal-panel{width:min(660px,100%);max-height:calc(100dvh - 40px)}
+#modal.seller-editor-modal #modal-fields,#modal.buy-editor-modal #modal-fields{padding:16px 22px 18px}
+#modal.seller-editor-modal .modal-fields,#modal.buy-editor-modal .modal-fields{display:flex;flex-direction:column;gap:0;min-width:0}
+#modal .compact-form-section,#modal.buy-editor-modal .buy-editor-section{padding:0 0 16px;margin:0;border:0;min-width:0}
+#modal .compact-form-heading,#modal.buy-editor-modal .buy-editor-section-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 10px;margin:0 0 12px}
+#modal .compact-form-heading h3,#modal.buy-editor-modal .buy-editor-section-title h3{font-size:14px;line-height:1.4;font-weight:680;color:#242C32;margin:0}
+#modal .compact-form-heading small,#modal.buy-editor-modal .buy-editor-section-title p{font-size:12px;color:#68747C;margin:0}
+#modal.buy-editor-modal .buy-editor-section-title .buy-editor-prep-open{margin-left:auto;width:auto;min-height:30px;min-width:0;padding:5px 9px;font-size:11px}
+#modal .compact-form-grid,#modal.buy-editor-modal .buy-editor-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 14px;min-width:0}
+#modal .compact-form-grid>.full,#modal.buy-editor-modal .buy-editor-fields>.full{grid-column:1/-1}
+#modal.buy-editor-modal .buy-editor-fields>.combo-wrap>input[type=text]{height:38px;min-height:38px;margin-top:5px!important;border-radius:6px}
+#modal .required-mark{color:var(--s2h-ui-brand-dark);font-weight:650}
+#modal.seller-editor-modal .compact-form-extra,#modal.buy-editor-modal .compact-form-extra{margin:0;padding:0;border:0;border-top:1px solid #E5E8EB}
+#modal.seller-editor-modal .compact-form-extra:last-child,#modal.buy-editor-modal .compact-form-extra:last-child{border-bottom:1px solid #E5E8EB}
+#modal.seller-editor-modal .compact-form-extra summary,#modal.buy-editor-modal .compact-form-extra summary{
+ display:flex;align-items:center;gap:8px;min-height:44px;padding:10px 0;cursor:pointer;
+ list-style:none;font-size:13px;font-weight:650;color:#242C32;flex-wrap:wrap;
+}
+#modal .compact-form-extra summary::-webkit-details-marker{display:none}
+#modal .compact-form-extra summary small{font-weight:400;font-size:11px;color:#68747C;margin-left:auto}
+#modal.seller-editor-modal .compact-form-extra summary:after,#modal.buy-editor-modal .compact-form-extra summary:after{
+ content:"";display:block;width:7px;height:7px;border-right:1.5px solid #65717A;border-bottom:1.5px solid #65717A;
+ transform:rotate(45deg);margin:0 4px 3px 4px;flex:0 0 7px;
+}
+#modal.seller-editor-modal .compact-form-extra[open] summary:after,#modal.buy-editor-modal .compact-form-extra[open] summary:after{transform:rotate(225deg);margin-top:5px}
+#modal .compact-form-extra summary:focus-visible{outline:2px solid var(--s2h-ui-brand);outline-offset:1px;border-radius:4px}
+#modal .compact-form-extra summary:hover{color:var(--s2h-ui-brand-dark)}
+#modal .compact-form-extra>.compact-form-grid,#modal.buy-editor-modal .compact-form-extra>.buy-editor-fields{padding:0 0 16px}
+#modal.buy-editor-modal .seller-linked-data{background:var(--s2h-ui-brand-soft);border-left:0;padding:7px 9px;color:#53636C}
+#modal .combo-wrap .combo-options{max-height:220px;border-radius:6px}
+#modal .combo-wrap .combo-option,#modal .combo-wrap .combo-create{min-height:34px;padding:7px 10px}
+@media(max-width:760px){
+ #modal .modal-head,#modal.buy-editor-modal .modal-head,#modal.prep-modal .modal-head{min-height:48px;padding:10px 14px}
+ #modal .modal-actions,#modal.buy-editor-modal .modal-actions,#modal.prep-modal .modal-actions{padding:9px 14px max(9px,env(safe-area-inset-bottom))}
+ #modal .modal-actions button,#modal.buy-editor-modal .modal-actions button,#modal.prep-modal .modal-actions button{min-height:42px}
+ #modal.seller-editor-modal .modal-panel,#modal.buy-editor-modal .modal-panel{width:100%;max-height:calc(100dvh - 16px)}
+ #modal.seller-editor-modal #modal-fields,#modal.buy-editor-modal #modal-fields{padding:14px}
+ #modal .compact-form-grid,#modal.buy-editor-modal .buy-editor-fields{grid-template-columns:minmax(0,1fr);gap:10px}
+ #modal .modal-fields :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=button]):not([type=submit]),select,textarea){font-size:16px;min-height:42px}
+ #modal.buy-editor-modal .buy-editor-fields>.combo-wrap>input[type=text]{height:42px;min-height:42px;font-size:16px}
+ #modal .compact-form-extra summary small{font-size:10px}
+}
