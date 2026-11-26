@@ -1150,3 +1150,89 @@
  #modal.buy-editor-modal .buy-editor-fields>.combo-wrap>input[type=text]{height:42px;min-height:42px;font-size:16px}
  #modal .compact-form-extra summary small{font-size:10px}
 }
+
+/* UX refinement 2 — fluid workspace and compact dashboard hierarchy. */
+#app.app{--s2h-layout-gutter:clamp(24px,2vw,40px)}
+#app .content,#app .content:has(.dashboard-v5){width:100%;max-width:none;margin:0;padding:26px var(--s2h-layout-gutter) 60px}
+#app .topbar{padding-inline:var(--s2h-layout-gutter)}
+#app .heading{margin:0 0 22px;min-height:42px;gap:16px;align-items:center}
+#app .heading h1{font-size:24px;line-height:1.3;font-weight:700;color:#20272D;letter-spacing:-.035em}
+#app .page-heading-copy{flex:1 1 150px;min-width:0}
+#app .dashboard-heading-date{margin:6px 0 0;font-size:13px;line-height:1.5;font-weight:500;color:#606C75}
+#app .page-heading-actions,#app .dashboard-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;min-width:0}
+#app .page-heading-actions{flex:0 1 auto}
+#app .page-heading-actions button{min-height:38px;height:auto;font-size:13px;padding:8px 13px;border-radius:6px;white-space:nowrap}
+#app .page-heading-actions .secondary{border-color:#DCE2E6;color:#39434A;font-weight:550}
+#app .page-heading-actions .primary{font-weight:650}
+#app .sidebar .nav-link span{font-size:14px;font-weight:500}
+#app .sidebar .nav-link.active span{font-weight:650}
+#app .sidebar .nav-section{font-size:12px;color:#65717A}
+#app .topbar-home,#app #breadcrumb-page{font-size:13px}
+#app .dashboard-v5{--flow-ink:#20272D;--flow-muted:#606C75;color:var(--flow-ink)}
+#app .dashboard-v5 .dashboard-overview{margin:0 0 20px}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard{
+ border:1px solid #DFE5E9;border-radius:9px;margin:0;box-shadow:none;
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric{
+ min-height:102px;padding:17px 20px!important;border-right:1px solid #E5E8EB;
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric:last-child{border-right:0}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .label{font-size:13px;font-weight:550;color:#46515A}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .number{
+ font-size:32px;line-height:1.15;font-weight:700;color:#20272D;letter-spacing:-.035em;margin:8px 0 5px
+}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric:first-child .number{color:var(--s2h-ui-brand-dark)}
+#app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .sub{font-size:12px;line-height:1.5;color:#606C75}
+#app .dashboard-v5 .dashboard-primary-grid{margin:0 0 20px;gap:16px;align-items:start}
+#app .dashboard-v5 :is(.dashboard-primary-calendar,.flow-side-main,.dashboard-primary-aside>.panel,.ops-major-prep,.ops-major-activity){
+ border-color:#DFE5E9!important;border-radius:9px;box-shadow:none;
+}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-calendar{padding:18px!important}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-head h2,#app .dashboard-v5 .ops-major-head h2{font-size:18px;font-weight:670;color:#20272D}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-major-head p,#app .dashboard-v5 .ops-major-head p{font-size:13px;color:#606C75}
+#app .dashboard-v5 .panel-link{font-size:12px;font-weight:600}
+#app .dashboard-v5 .flow-side-main{padding:0 16px 14px}
+#app .dashboard-v5 .flow-side-tabs button{font-size:14px;font-weight:550}
+#app .dashboard-v5 .flow-side-tabs button.selected{font-weight:650}
+#app .dashboard-v5 .dashboard-primary-aside .panel-title h2{font-size:16px;font-weight:650;color:#20272D}
+#app .dashboard-v5 .flow-side-main .ops-panel-summary{font-size:12px;color:#606C75}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description strong{font-size:14px;font-weight:650;color:#20272D}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description span{font-size:13px;color:#39434A}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description small{font-size:12px;color:#606C75}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-action{font-size:12px;font-weight:550;min-height:34px;border-radius:6px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-label{font-size:12px;font-weight:600}
+#app .dashboard-v5 .dashboard-secondary-grid{gap:16px}
+#app .dashboard-v5 .dashboard-secondary-grid>section{padding:18px}
+@media(min-width:1201px){
+ #app .dashboard-v5 .dashboard-primary-grid{grid-template-columns:minmax(0,1fr) clamp(300px,27%,420px)}
+ #app .dashboard-v5 .dashboard-primary-aside{display:flex;flex-direction:column}
+}
+@media(min-width:761px) and (max-width:1200px){
+ #app.app{--s2h-layout-gutter:24px}
+ #app .dashboard-v5 .dashboard-primary-grid{grid-template-columns:minmax(0,1fr)}
+ #app .dashboard-v5 .dashboard-primary-aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+ #app.app{--s2h-layout-gutter:14px}
+ #app .content,#app .content:has(.dashboard-v5){padding:20px var(--s2h-layout-gutter) 44px}
+ #app .topbar{padding-inline:12px}
+ #app .heading{gap:12px;margin-bottom:16px;align-items:flex-start;flex-wrap:wrap}
+ #app .heading h1{font-size:22px}
+ #app .page-heading-copy{flex:1 1 120px}
+ #app .page-heading-actions{gap:6px;justify-content:flex-start}
+ #app .page-heading-actions button{min-height:40px;font-size:12px;padding-inline:10px}
+ #app .dashboard-heading-actions{gap:6px;justify-content:flex-start}
+ #app .sidebar .nav-link span{font-size:12px}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric{min-height:88px;padding:12px!important}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric:nth-child(2){border-right:0}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .number{font-size:28px}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-major-calendar{padding:14px!important}
+ #app .dashboard-v5 .dashboard-primary-aside{display:flex;flex-direction:column}
+ #app .dashboard-v5 .dashboard-secondary-grid>section{padding:14px}
+}
+@media(max-width:400px){
+ #app.app{--s2h-layout-gutter:12px}
+ #app .page-heading-copy{flex-basis:100%}
+ #app .page-heading-actions{width:100%}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .sub{font-size:11px}
+}
