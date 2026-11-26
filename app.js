@@ -89,7 +89,7 @@ function showAdminLogin(){
 }
 $("#maintenance-admin-login")?.addEventListener("click",showAdminLogin);
 
-let db,auth;
+let db,auth,authGeneration=0,loginPending=false;
 function start() {
   if (!firebaseConfigured) {
     if(MAINTENANCE_MODE)showMaintenance();
@@ -101,10 +101,12 @@ function start() {
   const app=initializeApp(firebaseConfig);
   auth=getAuth(app);db=getFirestore(app);
   onAuthStateChanged(auth, async user => {
+    const generation=++authGeneration;
     clearListeners();
     if (!user){state.user=null;state.staff=null;if(MAINTENANCE_MODE)showMaintenance();else{$("#login").classList.remove("hidden");$("#app").classList.add("hidden");}return;}
     try {
       const userDoc=await getDoc(doc(db,"users",user.uid));
+      if(generation!==authGeneration||auth.currentUser?.uid!==user.uid)return;
       if (!userDoc.exists() || userDoc.data().active!==true) {
         $("#login-error").textContent="사용 권한이 없습니다. 관리자에게 Firebase users 권한 등록을 요청하세요.";
         await signOut(auth);return;
@@ -126,16 +128,18 @@ function start() {
       $("#login").classList.add("hidden");$("#app").classList.remove("hidden");
       // Manager roster for assignment. The live Firebase rules must allow this query for the current account.
       const staffUnsub=onSnapshot(collection(db,"users"),snapshot=>{
+        if(generation!==authGeneration)return;
         delete state.dataErrors.users;
         state.staffUsers=snapshot.docs.map(d=>({uid:d.id,...d.data()}))
           .filter(person=>person.active===true).sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),"ko-KR"));
         if(state.page==="dashboard"||state.page==="schedule")render();
-      },err=>{state.dataErrors.users=err?.code||"조회 실패";console.warn("담당자 목록을 불러오지 못했습니다:",err?.code||err);render();});
+      },err=>{if(generation!==authGeneration)return;state.dataErrors.users=err?.code||"조회 실패";console.warn("담당자 목록을 불러오지 못했습니다:",err?.code||err);render();});
       state.unsubs.push(staffUnsub);
       ["sellers","groupbuys","products","activities"].forEach(kind=>{
         // Do not exclude historical documents missing createdAt. Sort client-side where needed.
         const ref=collection(db,kind);
         const off=onSnapshot(ref,snapshot=>{
+          if(generation!==authGeneration)return;
           const records=snapshot.docs.map(d=>({...d.data(),id:d.id}));
           if(kind==="activities")records.sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
           if(kind==="sellers"){state.sellers=records;restoreSellerLink();}
@@ -148,6 +152,7 @@ function start() {
            if(pendingInitial.size===0){initialLoaded=true;hideLoading();render();}
           }else render();
         },err=>{
+          if(generation!==authGeneration)return;
           state.dataErrors[kind]=err?.code||"조회 실패";
           if(!initialLoaded){
            pendingInitial.delete(kind);
@@ -158,12 +163,26 @@ function start() {
         state.unsubs.push(off);
       });
       render();
-    } catch(err){$("#login-error").textContent=err.message;await signOut(auth);}
+    } catch(err){if(generation!==authGeneration)return;$("#login-error").textContent=err.message;await signOut(auth);}
   });
 }
-function clearListeners(){closeWorkAlerts();state.unsubs.forEach(fn=>fn());state.unsubs=[];state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];state.dataErrors={};reminderCache=null;workAlertsCache=null;}
+function clearListeners(){
+ closeWorkAlerts();state.unsubs.forEach(fn=>fn());state.unsubs=[];
+ state.user=null;state.staff=null;state.demo=false;state.page="dashboard";state.selectedSellerId=null;
+ state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];state.dataErrors={};
+ reminderCache=null;workAlertsCache=null;workAlertEffectShown=false;
+ clearTimeout(loadingTimer);loadingTimer=null;screenBusyCount=0;hideLoading();
+ clearTimeout(toastTimer);$("#toast")?.classList.add("hidden");
+ $("#modal")?.classList.add("hidden");$("#seller-detail-modal")?.classList.add("hidden");
+ $("#modal-fields").innerHTML="";$("#seller-detail-modal-body").innerHTML="";
+ state.modalSave=null;modalDirty=false;currentSellerPopupId=null;sellerPopupReturnFocus=null;lastModalFocus=null;
+ document.body.classList.remove("s2h-modal-open","seller-popup-open");
+}
 $("#login-form").addEventListener("submit",async e=>{
-  e.preventDefault();$("#login-error").textContent="";
+  e.preventDefault();if(loginPending||!auth)return;
+  const button=$("#login-form button[type=submit]"),label=button.textContent;
+  loginPending=true;button.disabled=true;button.textContent="로그인 중...";
+  $("#login-error").textContent="";
   try{await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);}
   catch(err){
     const messages={
@@ -179,7 +198,7 @@ $("#login-form").addEventListener("submit",async e=>{
     };
     $("#login-error").textContent=(messages[err.code]||"로그인 오류가 발생했습니다.")+" ("+(err.code||"unknown")+")";
     console.error("S2H sign-in error code:",err.code);
-  }
+  }finally{loginPending=false;button.disabled=false;button.textContent=label;}
 });
 $("#logout").onclick=()=>{if(state.demo){location.reload();return;}signOut(auth);};
 $("#preview-button").onclick=()=>{if(MAINTENANCE_MODE)return showMaintenance();enterPreview();};
@@ -613,7 +632,8 @@ function buyModal(item=null,presetSellerId=null,presetDate=null){
 function activityModal(sellerId=null){
  if(state.demo){notify("미리보기에서는 저장할 수 없습니다. Firebase 연결 후 이용해주세요.");return;}
  if(!state.sellers.length){notify("셀러를 먼저 등록해주세요.");return;}
- const choices=state.sellers.map(s=>[s.id,s.name]).sort((a,b)=>a[1].localeCompare(b[1],"ko-KR",{numeric:true}));
+ if(sellerId&&!state.sellers.some(s=>s.id===sellerId))return notify("연락할 셀러를 찾지 못했습니다.");
+ const choices=state.sellers.map(s=>[s.id,String(s.name||"셀러 미확인")]).sort((a,b)=>a[1].localeCompare(b[1],"ko-KR",{numeric:true}));
  openModal("연락·영업 활동 기록",
  select("sellerId","셀러",choices,sellerId||choices[0][0])+select("type","활동 유형",[["카카오톡","카카오톡"],["전화","전화"],["DM","DM"],["미팅","미팅"],["이메일","이메일"],["기타","기타"]],"카카오톡")+f("contactOwner","담당자 이름","text",state.staff?.name||"",true)+f("nextFollowUpAt","다음 연락 예정일","date")+textarea("memo","활동 내용 (필수)"),
  async data=>{
@@ -755,11 +775,12 @@ function wrap(title,body,right=""){return '<div class="panel"><div class="panel-
 function table(headers,rows){return '<div class="table-wrap" tabindex="0" role="region" aria-label="데이터 목록, 필요한 경우 좌우 스크롤"><table><thead><tr>'+headers.map(v=>'<th scope="col">'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">등록된 데이터가 없습니다.</td></tr>')+'</tbody></table></div>';}
 
 
-function shownMonth(){return state.selectedMonth||todayLocal().slice(0,7);}
+function validCalendarMonth(value){return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(value||""))&&value>="2010-01"&&value<="2035-12";}
+function shownMonth(){return validCalendarMonth(state.selectedMonth)?state.selectedMonth:todayLocal().slice(0,7);}
 function changeMonth(amount){const [y,m]=shownMonth().split("-").map(Number);const next=new Date(Date.UTC(y,m-1+amount,1)).toISOString().slice(0,7);if(next<"2010-01"||next>"2035-12")return;state.selectedMonth=next;state.calendarSelectedDate=null;state.weekStart=null;render();}
 function weekStartFor(date){return datePlus(date,-new Date(date+"T00:00:00Z").getUTCDay());}
 function activeWeekStart(){const month=shownMonth(),today=todayLocal();return state.weekStart||weekStartFor(month===today.slice(0,7)?today:month+"-01");}
-function weekNavigation(delta){state.weekStart=datePlus(activeWeekStart(),7*delta);state.selectedMonth=datePlus(state.weekStart,3).slice(0,7);state.calendarSelectedDate=null;render();}
+function weekNavigation(delta){const next=datePlus(activeWeekStart(),7*delta),month=datePlus(next,3).slice(0,7);if(!validCalendarMonth(month))return;state.weekStart=next;state.selectedMonth=month;state.calendarSelectedDate=null;render();}
 function calendarModeControls(){
  const weekly=state.calendarMode==="week",start=activeWeekStart();
  return '<div class="cal-display-controls"><div class="cal-mode-switch"><button type="button" data-calendar-mode="month" class="'+(!weekly?"selected":"")+'">월간</button><button type="button" data-calendar-mode="week" class="'+(weekly?"selected":"")+'">주간</button></div>'
@@ -806,7 +827,7 @@ function monthGrid(list,options={}){
  const monthEnd=datePlus(new Date(Date.UTC(y,m,0)).toISOString().slice(0,10),0);
  const firstWeekStart=options.weekOnly?activeWeekStart():datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
  const lastWeekEnd=options.weekOnly?datePlus(firstWeekStart,6):datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
- const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&(options.showCanceled||b.status!=="취소"));
+ const allowed=list.filter(b=>b.id&&/^\d{4}-\d{2}-\d{2}$/.test(b.startDate||"")&&/^\d{4}-\d{2}-\d{2}$/.test(b.endDate||"")&&b.startDate<=b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&(options.showCanceled||b.status!=="취소"));
  const maxVisible=options.connected?(options.weekOnly?7:4):(options.compact?3:(options.weekOnly?7:5));
  const today=todayLocal();
  const fallback=options.weekOnly?(today>=firstWeekStart&&today<=lastWeekEnd?today:firstWeekStart):(today.slice(0,7)===shownMonth()?today:monthStart);
@@ -2290,13 +2311,14 @@ function render(){
  lastRenderedLocalDate=todayLocal();
  if(state.page==="productInsights"){state.page="products";state.productView="insights";}
  const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],productInsights:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
+ if(!Object.prototype.hasOwnProperty.call(views,state.page))state.page="dashboard";
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  const crumb=$("#breadcrumb-page");if(crumb)crumb.textContent=title;
  $("#today").textContent=todayLocal();
  $("#add-button").textContent=state.page==="dashboard"||state.page==="schedule"?"+ 공구 등록":state.page==="activity"||state.page==="reminders"?"+ 활동 기록":state.page==="import"?"대시보드":state.page==="sellerDetail"?"셀러 목록":state.page==="products"?"+ 상품 등록":state.page==="productInsights"?"상품 관리":state.page==="opportunities"||state.page==="proposals"?"셀러 보기":"+ 셀러 등록";
  $("#add-button").onclick=state.page==="dashboard"||state.page==="schedule"?()=>openBuyModalSafely():state.page==="activity"||state.page==="reminders"?()=>activityModal():state.page==="products"?()=>productModal():state.page==="productInsights"?()=>{state.page="products";render();}:state.page==="import"?()=>{state.page="dashboard";render();}:state.page==="sellerDetail"||state.page==="opportunities"||state.page==="proposals"?()=>{state.page="sellers";render();}:()=>sellerModal();
- document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===state.page));
+ document.querySelectorAll("[data-page]").forEach(el=>{const active=el.dataset.page===state.page;el.classList.toggle("active",active);if(active)el.setAttribute("aria-current","page");else el.removeAttribute("aria-current");});
  const failedSources=Object.entries(state.dataErrors||{});
  const errorBanner=failedSources.length?
   '<div class="crm-load-error" role="alert"><div><strong>일부 데이터를 불러오지 못했습니다.</strong>'
@@ -2320,7 +2342,7 @@ function render(){
  $("#page-body").querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",()=>{clearSellerLink();state.page=el.dataset.nav;render();}));
 
  $("#page-body").querySelectorAll("[data-move]").forEach(el=>el.addEventListener("click",()=>{if(el.dataset.move==="0"){state.selectedMonth=todayLocal().slice(0,7);state.calendarSelectedDate=null;state.weekStart=null;render();}else{state.weekStart=null;changeMonth(Number(el.dataset.move));}}));
- const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{state.selectedMonth=e.target.value;state.calendarSelectedDate=null;state.weekStart=null;render();});
+ const monthInput=$("#selected-month");if(monthInput)monthInput.addEventListener("change",e=>{if(!validCalendarMonth(e.target.value)){e.target.value=shownMonth();return;}state.selectedMonth=e.target.value;state.calendarSelectedDate=null;state.weekStart=null;render();});
  bindSearchInput("#month-search","monthSearch");
  bindSearchInput("#product-search","productSearch");
  bindSearchInput("#activity-search","activitySearch");
@@ -2402,8 +2424,8 @@ function render(){
  $("#page-body").querySelectorAll("[data-act]").forEach(el=>el.addEventListener("click",()=>{
  const action=el.dataset.act,id=el.dataset.id;
  if(action==="view-seller")openSellerPopup(id);
- if(action==="edit-seller")sellerModal(state.sellers.find(x=>x.id===id));
- if(action==="edit-product")productModal(state.products.find(x=>x.id===id));
+ if(action==="edit-seller"){const item=state.sellers.find(x=>x.id===id);if(item)sellerModal(item);else notify("수정할 셀러를 찾지 못했습니다.");}
+ if(action==="edit-product"){const item=state.products.find(x=>x.id===id);if(item)productModal(item);else notify("수정할 상품을 찾지 못했습니다.");}
  if(action==="view-product-family")productFamilyModal(el.dataset.canonical);
  if(action==="toggle-product"){const product=state.products.find(x=>x.id===id);if(product)setProductActive(id,product.active===false);}
  if(action==="toggle-product-group"){const group=productMasterGroups().find(g=>g.name===el.dataset.canonical);if(group)productGroupToggle(group.name,!group.active);}
