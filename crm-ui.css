@@ -2906,3 +2906,89 @@
  #app #page-body .cal-scroll[data-calendar-key] :is(.cal-weekdays,.cal-weeks){min-width:560px}
  #app #page-body .ops-schedule-main .cal-scroll[data-calendar-key] :is(.cal-weekdays,.cal-weeks){min-width:560px}
 }
+
+/* Phase 5 — seller workspace and detail dialog. */
+#app .seller-workspace>.panel,#app .product-workspace>.panel{padding:24px;min-width:0;box-shadow:none}
+#app .seller-workspace .panel-title,#app .product-workspace .panel-title{margin-bottom:8px}
+#app .seller-workspace .panel-description,#app .product-workspace .panel-description{margin:0 0 20px}
+#app .seller-workspace .seller-tools{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+#app .seller-workspace .seller-search{flex:1 1 260px;max-width:540px}
+#app .seller-workspace .seller-results{color:var(--s2h-ui-muted);margin-left:auto}
+#app .seller-workspace .ops-seller-filter{border:0;padding:0;margin:0 0 16px;gap:6px}
+#app .seller-workspace .ops-seller-filter button{min-height:36px;padding:7px 11px}
+#app .seller-workspace .ops-seller-filter button.selected{background:var(--s2h-ui-brand-soft);color:var(--s2h-ui-brand-dark)}
+#app .seller-workspace .table-wrap table{min-width:880px;table-layout:auto}
+#app .seller-workspace .table-wrap td{padding:14px 12px;vertical-align:middle}
+#app .seller-workspace .seller-name-link{font-size:14px;color:var(--s2h-ui-ink);font-weight:700;overflow-wrap:anywhere}
+#app .seller-workspace .seller-name-link:hover{color:var(--s2h-ui-brand-dark)}
+#app .seller-workspace .seller-alias,#app .seller-workspace .seller-trade-cell small{display:block;font-size:11px;color:var(--s2h-ui-muted);margin-top:4px;line-height:1.5}
+#app .seller-workspace .seller-row-actions{display:flex;align-items:center;gap:5px;white-space:nowrap}
+#app .seller-workspace .seller-row-actions button{min-height:32px;padding:6px 9px}
+#app .seller-workspace .seller-pagination{margin-top:12px;border:0;padding:0}
+#seller-detail-modal .seller-detail-dialog{width:min(1100px,100%);border-radius:12px}
+#seller-detail-modal .seller-detail-dialog-head h2{font-size:20px;font-weight:720;margin:0}
+#seller-detail-modal .seller-detail-dialog-head .seller-profile-eyebrow{display:none}
+#seller-detail-modal .seller-detail-dialog-body{background:#fff;padding:20px 24px 28px}
+#seller-detail-modal .detail-nav{position:sticky;top:-20px;z-index:5;background:#fff;margin:0 0 18px;padding:8px 0 12px;border-bottom:1px solid var(--s2h-ui-line)}
+#seller-detail-modal .seller-detail-actions{gap:6px;justify-content:flex-start}
+#seller-detail-modal .seller-detail-actions button{min-height:36px;font-size:12px;border-radius:var(--s2h-ui-radius);padding:8px 12px}
+#seller-detail-modal .seller-detail-actions .primary{background:var(--s2h-ui-brand-dark);border-color:var(--s2h-ui-brand-dark);color:#fff}
+#seller-detail-modal .seller-detail-dialog-body .panel{padding:20px;margin:0 0 16px;border:1px solid var(--s2h-ui-line);border-radius:10px}
+#seller-detail-modal .panel-title{margin-bottom:14px}
+#seller-detail-modal .panel-title h2{font-size:16px;color:var(--s2h-ui-ink);font-weight:720}
+#seller-detail-modal .seller-profile-header{padding:0 0 14px;align-items:center}
+#seller-detail-modal .seller-profile-header h2{font-size:22px;margin:0 0 5px;color:var(--s2h-ui-ink)}
+#seller-detail-modal .seller-profile-stats{grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:0;margin:16px 0;border:1px solid var(--s2h-ui-line);border-radius:8px}
+#seller-detail-modal .seller-profile-stats .seller-profile-item{border:0;border-right:1px solid var(--s2h-ui-line);border-radius:0;background:none;padding:14px 12px;gap:6px}
+#seller-detail-modal .seller-profile-stats .seller-profile-item:last-child{border-right:0}
+#seller-detail-modal .seller-profile-stats .seller-profile-item strong{font-size:18px;font-variant-numeric:tabular-nums}
+#seller-detail-modal .seller-profile-stats .seller-profile-item:last-child strong{font-size:14px}
+#seller-detail-modal .seller-profile-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0;border-top:1px solid var(--s2h-ui-line)}
+#seller-detail-modal .seller-profile-grid .seller-profile-item{border:0;border-bottom:1px solid var(--s2h-ui-line);background:none;border-radius:0;padding:12px 8px;gap:5px}
+#seller-detail-modal .seller-profile-item span,#seller-detail-modal .seller-profile-note span{font-size:12px;color:var(--s2h-ui-muted)}
+#seller-detail-modal .seller-profile-item strong{font-size:13px;color:var(--s2h-ui-ink)}
+#seller-detail-modal .seller-profile-note{border:0;border-bottom:1px solid var(--s2h-ui-line);border-radius:0;padding:12px 0;margin:0}
+#seller-detail-modal .seller-profile-note p{font-size:13px;color:var(--s2h-ui-ink);overflow-wrap:anywhere}
+#seller-detail-modal .table-wrap{border:1px solid var(--s2h-ui-line);border-radius:8px;overflow:auto}
+#seller-detail-modal .table-wrap th{font-size:12px;color:var(--s2h-ui-muted);background:var(--s2h-ui-surface-soft)}
+#seller-detail-modal .table-wrap td{font-size:12px;white-space:normal;min-width:70px;max-width:240px;overflow-wrap:anywhere}
+#seller-detail-modal .seller-event-item{border:0;border-bottom:1px solid var(--s2h-ui-line);border-radius:0;margin:0;padding:14px 0}
+#seller-detail-modal .seller-event-item small{color:var(--s2h-ui-muted);font-size:11px}
+#modal .proposal-intro{background:var(--s2h-ui-brand-soft);border-color:var(--s2h-ui-line);border-radius:8px}
+#modal .proposal-intro p,#modal .proposal-status{font-size:12px;color:var(--s2h-ui-muted)}
+/* Phase 6 — product workspace. Keep the original brand groups, audit and insights. */
+#app .product-workspace{min-width:0}
+#app .product-workspace .product-view-tabs{display:flex;gap:18px;align-items:center;border-bottom:1px solid var(--s2h-ui-line);margin:0 0 20px;padding:0;flex-wrap:wrap}
+#app .product-workspace .product-view-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;min-height:42px;padding:8px 4px;color:var(--s2h-ui-muted);font-weight:650;font-size:13px}
+#app .product-workspace .product-view-tabs button.selected{border-bottom-color:var(--s2h-ui-brand);color:var(--s2h-ui-brand-dark);background:none}
+#app .product-workspace .product-toolbar{gap:12px;margin:0 0 12px}
+#app .product-workspace .product-toolbar #product-search{max-width:540px}
+#app .product-workspace .product-filters button{min-height:36px;font-size:12px;padding:7px 12px}
+#app .product-workspace .product-filters button.selected{color:var(--s2h-ui-brand-dark);background:var(--s2h-ui-brand-soft);border-color:#C8E7F0}
+#app .product-workspace .ops-product-results{margin:0 0 12px;padding:0 0 12px;color:var(--s2h-ui-muted)}
+#app .product-workspace .table-wrap table{min-width:740px}
+#app .product-workspace .product-brand-name{font-size:14px;font-weight:700;color:var(--s2h-ui-ink);overflow-wrap:anywhere}
+#app .product-workspace .product-brand-name:hover{color:var(--s2h-ui-brand-dark)}
+#app .product-workspace .product-alias{color:var(--s2h-ui-muted);font-size:11px;line-height:1.5}
+#app .product-workspace .insight-seller-count,#modal .insight-seller-count{color:var(--s2h-ui-brand-dark);background:var(--s2h-ui-brand-soft);border:1px solid #C8E7F0;border-radius:6px;padding:6px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+#modal .insight-summary{background:#fff;border:1px solid var(--s2h-ui-line);border-radius:8px;padding:16px}
+#modal .insight-summary strong{color:var(--s2h-ui-ink);font-size:18px;overflow-wrap:anywhere}
+#modal .insight-summary p{color:var(--s2h-ui-muted);font-size:12px;overflow-wrap:anywhere}
+#modal .insight-list-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#modal .insight-list-toolbar input{flex:1 1 180px;min-width:0}
+#modal .insight-list-toolbar button{min-height:38px}
+#modal .product-family-detail .table-wrap,#modal .insight-seller-table .table-wrap{overflow:auto;border:1px solid var(--s2h-ui-line);border-radius:8px}
+#modal .product-family-detail .table-wrap table{min-width:560px}
+#modal .insight-seller-table .table-wrap table{min-width:430px}
+@media(max-width:760px){
+ #app .seller-workspace>.panel,#app .product-workspace>.panel{padding:14px}
+ #app .seller-workspace .seller-search{flex-basis:100%;max-width:none}
+ #app .seller-workspace .seller-results{margin-left:0}
+ #seller-detail-modal .seller-detail-dialog-body{padding:14px}
+ #seller-detail-modal .detail-nav{top:-14px}
+ #seller-detail-modal .seller-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #seller-detail-modal .seller-profile-stats .seller-profile-item{border-bottom:1px solid var(--s2h-ui-line)}
+ #seller-detail-modal .seller-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #seller-detail-modal .seller-detail-dialog-body .panel{padding:14px}
+ #app .product-workspace .product-view-tabs{gap:12px}
+}
