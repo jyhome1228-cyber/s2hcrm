@@ -1243,10 +1243,10 @@ function productAuditPage(){
 function productWorkspaceTabs(){
  return '<div class="product-view-tabs" role="group" aria-label="상품 관리 보기">'+
   [["list","상품 목록"],["audit","유사 상품 검토"],["insights","상품 인사이트"]].map(([key,label])=>
-   '<button type="button" data-product-view="'+key+'" class="'+(state.productView===key?"selected":"")+'">'+label+'</button>').join("")+'</div>';
+   '<button type="button" data-product-view="'+key+'" aria-pressed="'+(state.productView===key)+'" class="'+(state.productView===key?"selected":"")+'">'+label+'</button>').join("")+'</div>';
 }
 function productWorkspacePage(){
- return productWorkspaceTabs()+(state.productView==="insights"?productInsightsPage():state.productView==="audit"?productAuditPage():productsPage());
+ return '<div class="product-workspace">'+productWorkspaceTabs()+(state.productView==="insights"?productInsightsPage():state.productView==="audit"?productAuditPage():productsPage())+'</div>';
 }
 // Brand-level list groups multiple distinct products without changing historical records.
 // Apply the same brand-first view to EVERY registered product. Explicit brand data
@@ -1325,10 +1325,10 @@ function brandProductModal(name){
  const rows=brand.products.sort((a,b)=>a.name.localeCompare(b.name,"ko-KR",{numeric:true})).map(group=>{
   const st=productIndex().stats.get(group.name),count=st?.count||0;
   return '<tr><td><strong>'+h(group.name)+'</strong>'+(group.aliases.length?'<small class="product-alias">판매 구성 '+group.aliases.length+'개</small>':"")+'</td>'+
-  '<td>'+(st?.sellers.size||0)+'명</td><td>'+count+'건</td><td>'+
+  '<td><button type="button" class="insight-seller-count" data-family-sellers="'+h(group.name)+'" aria-label="'+h(group.name)+' 진행 셀러 보기">'+(st?.sellers.size||0)+'명</button></td><td>'+count+'건</td><td>'+
   '<button type="button" class="mini-button" data-brand-family="'+h(group.name)+'">구성 보기</button> '+
   '<button type="button" class="mini-button" data-brand-edit="'+h(group.primary.id)+'">수정</button> '+
-  '<button type="button" class="mini-button" data-brand-toggle="'+h(group.name)+'">'+(group.active?'삭제':'복원')+'</button></td></tr>';
+  '<button type="button" class="mini-button" data-brand-toggle="'+h(group.name)+'">'+(group.active?'보관':'복원')+'</button></td></tr>';
  });
  const fields='<div class="full insight-summary"><span>브랜드 / 대표 상품군</span><strong>'+h(brand.name)+'</strong>'+
   '<p>상품 '+brand.products.length+'종 · 진행 셀러 '+brand.sellers.size+'명 · 공구 이력 '+brand.count+'건</p></div>'+
@@ -1339,6 +1339,7 @@ function brandProductModal(name){
  openModal("브랜드 상세",fields,async()=>{});
  const save=$("#modal-form button[type=submit]");if(save)save.classList.add("hidden");
  $("#modal-fields").querySelectorAll("[data-brand-family]").forEach(btn=>btn.addEventListener("click",()=>productFamilyModal(btn.dataset.brandFamily)));
+ $("#modal-fields").querySelectorAll("[data-family-sellers]").forEach(btn=>btn.addEventListener("click",()=>showProductInsightSellers(btn.dataset.familySellers)));
  $("#modal-fields").querySelectorAll("[data-brand-edit]").forEach(btn=>btn.addEventListener("click",()=>{
   const product=state.products.find(p=>p.id===btn.dataset.brandEdit);
   if(product)productModal(product);
@@ -1363,9 +1364,9 @@ function productsPage(){
  });
  const countActive=groups.filter(g=>g.active).length;
  const countArchived=groups.length-countActive;
- const controls='<div class="product-toolbar"><input id="product-search" type="search" placeholder="상품명, 기존 표기, 브랜드 검색" value="'+h(state.productSearch)+'"/>'+
+ const controls='<div class="product-toolbar"><input id="product-search" type="search" aria-label="상품명, 기존 표기, 브랜드 검색" placeholder="상품명, 기존 표기, 브랜드 검색" value="'+h(state.productSearch)+'"/>'+
  '<div class="product-filters">'+[["active","운영 상품 ("+countActive+")"],["archived","휴지통 ("+countArchived+")"],["all","전체 ("+groups.length+")"]]
- .map(([key,label])=>'<button type="button" data-product-status="'+key+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
+ .map(([key,label])=>'<button type="button" data-product-status="'+key+'" aria-pressed="'+(state.productStatus===key)+'" class="'+(state.productStatus===key?"selected":"")+'">'+label+'</button>').join("")+'</div></div>';
  const sortUi='<label class="ops-product-sort">정렬<select id="product-sort" aria-label="브랜드 목록 정렬">'
   +[["name","브랜드 이름순"],["frequency","공구 이력 많은순"],["sellers","진행 셀러 많은순"],["recent","최근 공구순"]]
    .map(([key,label])=>'<option value="'+key+'" '+(state.productSort===key?"selected":"")+'>'+label+'</option>').join("")
@@ -1413,7 +1414,7 @@ function showProductInsightSellers(productName,asBrand=false){
  const data=productInsightSellers(productName,asBrand);
  const brand=asBrand?brandProductGroups().find(g=>g.name===productName):null;
  const aliases=brand?brand.aliases.filter(n=>n!==productName):productDisplayAliases(productName,state.products,state.buys);
- const fields='<div class="full insight-summary"><span>상품명</span><strong>'+h(productName)+'</strong>'+
+ const fields='<div class="full insight-summary"><span>'+(asBrand?'브랜드 / 대표 상품군':'상품명')+'</span><strong>'+h(productName)+'</strong>'+
    '<p>진행 셀러 '+data.list.length+'명 · 공구 이력 '+data.records+'건</p>'+
    (aliases.length?'<p>통합 표기: '+h(aliases.join(" · "))+'</p>':"")+'</div>'+
    '<div class="full insight-list-toolbar"><input id="insight-seller-search" type="search" placeholder="셀러명, 예전 셀러명, 인스타그램 검색" autocomplete="off" aria-label="상품 진행 셀러 검색"/>'+
@@ -1421,7 +1422,7 @@ function showProductInsightSellers(productName,asBrand=false){
    '<button id="insight-seller-export" class="secondary" type="button">CSV 내보내기</button></div>'+
    '<div class="full insight-seller-table" id="insight-seller-results"></div>'+
    '<p class="full panel-note">셀러명을 누르면 해당 셀러의 전체 공구 이력을 볼 수 있습니다. CSV는 현재 검색된 목록 기준입니다.</p>';
- openModal("상품 진행 셀러",fields,async()=>{});
+ openModal(asBrand?"브랜드 전체 진행 셀러":"상품 전체 진행 셀러",fields,async()=>{});
  const form=$("#modal-form"),save=form.querySelector('[type="submit"]');
  if(save)save.classList.add("hidden");
  const input=$("#insight-seller-search"),count=$("#insight-seller-count"),out=$("#insight-seller-results");
@@ -1445,6 +1446,7 @@ function showProductInsightSellers(productName,asBrand=false){
  };
  input.addEventListener("input",draw);
  $("#insight-seller-export").addEventListener("click",()=>{
+  if(state.demo)return notify("미리보기 데이터는 내보낼 수 없습니다.");
   if(!filtered.length){notify("내보낼 셀러가 없습니다.");return;}
   const headings=["상품명","셀러명","기존 셀러명","인스타그램","공구 횟수","최근 시작일","최근 종료일","셀러 ID"];
   const records=filtered.map(x=>[productName,x.name,[...x.names].join(" / "),x.instagram,x.count,x.latestStart,x.last,x.sellerId||""]);
@@ -1818,7 +1820,7 @@ function sellerDetailPage(){
  const completed=buys.filter(b=>b.status!=="취소"&&b.endDate&&b.endDate<todayLocal());
  const active=buys.filter(b=>b.status!=="취소"&&b.startDate<=todayLocal()&&b.endDate>=todayLocal());
  const upcoming=buys.filter(b=>b.status!=="취소"&&b.startDate>todayLocal());
- const latestEnd=buys.filter(b=>b.endDate).reduce((last,b)=>b.endDate>last?b.endDate:last,"");
+ const latestEnd=buys.filter(b=>b.endDate&&b.endDate<todayLocal()&&b.status!=="취소").reduce((last,b)=>b.endDate>last?b.endDate:last,"");
  const recentBuy=buys.filter(b=>b.status!=="취소").sort((a,b)=>(b.endDate||"").localeCompare(a.endDate||""))[0];
  const followerCandidates=[
   ...group.members.map(x=>({value:x.followerCountLatestRecorded,date:x.updatedAt?.seconds||0})),
@@ -1827,7 +1829,7 @@ function sellerDetailPage(){
  followerCandidates.sort((a,b)=>b.date-a.date);
  const follower=followerCandidates.length?Number(followerCandidates[0].value).toLocaleString("ko-KR")+"명":"미등록";
  const instagram=instagramLink(group.channel||seller.instagramUrl||seller.instagramId||seller.channel);
- const contact=group.members.map(x=>x.contact).find(Boolean)||"미등록";
+ const contact=group.contact||"미등록";
  const note=group.members.map(x=>x.note||x.notes).filter(Boolean).join("\n");
  const latestActivity=activities[0];
  const cycle=group.members.map(x=>Number(x.cycleDays)).find(n=>Number.isFinite(n)&&n>0);
@@ -1839,13 +1841,13 @@ function sellerDetailPage(){
   '<p>'+h(b.event)+'</p><small>기존 공구 대장 이벤트 원문 · 계획 조건이며 실제 지급 결과는 별도 확인 필요</small></div>').join("");
  const logs=activities.map(a=>'<tr><td>'+h(dt(a.createdAt))+'</td><td>'+h(a.type||"-")+'</td><td>'+h(a.memo||"-")+'</td><td>'+h(a.contactOwner||a.actorName||"-")+'</td><td>'+h(a.actorName||"-")+'</td></tr>');
  const info=(label,value)=>'<div class="seller-profile-item"><span>'+label+'</span><strong>'+value+'</strong></div>';
- const summary='<div class="seller-profile-header"><div><span class="seller-profile-eyebrow">SELLER PROFILE</span><h2>'+h(seller.name)+'</h2>'+
+ const summary='<div class="seller-profile-header"><div> <h2>'+h(seller.name)+'</h2>'+
   '<div class="seller-profile-channel">'+instagram+'</div>'+
   (group.names.length>1?'<p>기존 기록명: '+h(group.names.filter(n=>n!==seller.name).join(", "))+'</p>':"")+'</div>'+
   '<button type="button" class="secondary" data-act="edit-seller" data-id="'+h(seller.id)+'">정보 수정</button></div>'+
   '<div class="seller-profile-stats">'+
   info("전체 공구",buys.length+'건')+info("완료 공구",completed.length+'건')+
-  info("진행 중 / 예정",active.length+'건 / '+upcoming.length+'건')+
+  info("진행 중",active.length+'건')+info("예정",upcoming.length+'건')+
   info("최근 종료일",h(latestEnd||"-"))+'</div>';
  const details='<div class="seller-profile-grid">'+
   info("인스타그램",instagram)+info("최근 기록된 팔로워",h(follower))+
@@ -1864,9 +1866,9 @@ function sellerDetailPage(){
   '<div class="seller-detail-actions">'+
   '<button type="button" class="secondary" data-seller-share="'+h(seller.id)+'">카톡용 정보 복사</button>'+
   '<button type="button" class="secondary" data-seller-excel="'+h(seller.id)+'">거래 이력 엑셀</button>'+
-  '<button type="button" class="secondary" data-seller-proposal="'+h(seller.id)+'">제안하기</button>'+
+  '<button type="button" class="primary" data-seller-proposal="'+h(seller.id)+'">제안하기</button>'+
   '<button type="button" class="secondary" data-seller-new-buy="'+h(seller.id)+'">공구 등록</button>'+
-  '<button class="primary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div></div>'+
+  '<button class="secondary" data-act="contact" data-id="'+h(seller.id)+'">+ 연락 기록</button></div></div>'+
   wrap("셀러 기본정보",summary+details)+
   wrap("전체 공구 이력 · "+buys.length+"건",'<p class="panel-description">기존 공구 기록을 날짜순으로 조회합니다. 원본 거래 내용은 유지됩니다.</p>'+
    table(["상품","시작일","종료일","회차","결제창","정산","비고","이벤트","수정"],history))+
@@ -1880,7 +1882,7 @@ function filteredSellerGroups(){
  const result=groups.filter(g=>{
   if(!search)return true;
   const s=g.selected;
-  return [g.names.join(" "),g.channel,s.contact||"",...g.members.map(x=>x.instagramId||"")].join(" ").toLocaleLowerCase().includes(search);
+  return [g.names.join(" "),g.channel,g.contact,s.contact||"",...g.members.flatMap(x=>[x.instagramId,x.instagramUrl,x.channel,x.contact])].filter(Boolean).join(" ").toLocaleLowerCase().includes(search);
  }).sort((a,b)=>a.selected.name.localeCompare(b.selected.name,"ko-KR",{numeric:true}));
  filteredSellerCache={groups,search,result};
  return result;
@@ -1938,19 +1940,19 @@ function sellersPage(){
   const activities=g.members.map(x=>lastActivities.get(x.id)).filter(Boolean);
   const a=activities.sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0))[0];
   return '<tr><td><button type="button" class="seller-name-link" data-act="view-seller" data-id="'+h(s.id)+'" aria-label="'+h(s.name)+' 셀러 상세 보기">'+h(s.name)+'</button>'+(g.names.length>1?'<small class="seller-alias">다른 기록명: '+h(g.names.filter(n=>n!==s.name).join(", "))+'</small>':"")+'</td>'+
-  '<td>'+instagramLink(g.channel||s.instagramUrl||s.instagramId||s.channel)+'</td><td>'+h(g.contact||"-")+'</td><td>'+h(b?.product||b?.productName||"-")+'</td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
-  '<td><button class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button> <button class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button> <button class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></td></tr>';
+  '<td>'+instagramLink(g.channel||s.instagramUrl||s.instagramId||s.channel)+'</td><td>'+h(g.contact||"미등록")+'</td><td class="seller-trade-cell"><strong>'+h(b?.product||b?.productName||"-")+'</strong><small>전체 '+g.histories.length+'건</small></td><td>'+h(b?.endDate||"-")+'</td><td>'+h(a?dt(a.createdAt):"-")+'</td>'+
+  '<td><div class="seller-row-actions"><button type="button" class="mini-button" data-act="view-seller" data-id="'+h(s.id)+'">상세</button><button type="button" class="mini-button" data-act="edit-seller" data-id="'+h(s.id)+'">수정</button><button type="button" class="mini-button" data-act="contact" data-id="'+h(s.id)+'">연락 기록</button></div></td></tr>';
  });
  const tabOptions=[["all","전체"],["running","진행 중"],["upcoming","오픈 예정"],["contact","연락 필요"],["none","공구 이력 없음"]];
  const tabs='<div class="ops-seller-filter" role="group" aria-label="셀러 운영 상태">'
   +tabOptions.map(([key,title])=>'<button type="button" data-seller-filter="'+key+'" aria-pressed="'+(state.sellerOperationFilter===key)+'" class="'+(state.sellerOperationFilter===key?"selected":"")+'">'+title+' <span>'+sellerOperationalGroups(key).length+'</span></button>').join("")
   +'</div>';
- const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div>'
+ const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" aria-label="셀러명, 인스타그램, 연락처 검색" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div>'
   +'<span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>현재 목록 CSV</button></div>';
  const pagination='<div class="seller-pagination"><span>'+(!groups.length?'검색 결과 없음':(from+1)+'–'+Math.min(from+pageSize,groups.length)+' / '+groups.length+'명')+'</span><div><button type="button" class="secondary" data-seller-page="-1" '+(state.sellerPage===1?'disabled':'')+'>이전</button><span class="seller-page-current">'+state.sellerPage+' / '+pageCount+'</span><button type="button" class="secondary" data-seller-page="1" '+(state.sellerPage>=pageCount?'disabled':'')+'>다음</button></div></div>';
- return wrap("셀러 목록 · "+sellerGroups().length,
+ return '<div class="seller-workspace">'+wrap("셀러 목록 · "+sellerGroups().length+"명",
   '<p class="panel-description">동일 인스타그램 계정은 하나로 표시하고 과거 이름과 이력은 보존합니다.</p>'+
-  tools+tabs+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows)+pagination);
+  tools+tabs+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows)+pagination)+'</div>';
 }
 
 function schedulePage(){
