@@ -728,6 +728,10 @@ function scheduleStatus(b){
  const today=todayLocal();
  return b.startDate>today?"예정":b.endDate<today?"완료":"진행 중";
 }
+function scheduleStatusChip(status){
+ const key={"진행 중":"active","예정":"upcoming","완료":"completed","취소":"canceled"}[status]||"unknown";
+ return '<span class="status schedule-status is-'+key+'">'+h(status)+'</span>';
+}
 function monthlyRows(list,detail=false){
  return list.map(b=>{
   const status=scheduleStatus(b);
@@ -736,7 +740,7 @@ function monthlyRows(list,detail=false){
   const seller=state.sellers.find(x=>x.id===b.sellerId);
   const ig=b.instagramUrl||seller?.instagramUrl||"";
   const insta=ig.startsWith("https://")?'<a href="'+h(ig)+'" target="_blank" rel="noopener noreferrer">열기</a>':h(ig||"-");
-  return common+'<td>'+h(b.followers??seller?.followerCountLatestRecorded??"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.legacyCategory||"-")+'</td><td>'+insta+'</td><td class="ledger-notes" title="'+h([b.round,b.note||b.memo,b.event].filter(Boolean).join(" · ")) +'">'+h([b.round,b.note||b.memo,b.event].filter(Boolean).join(" · ")||"-")+'</td><td><span class="status '+(status==="진행 중"?"good":"")+'">'+status+'</span></td><td><button data-act="edit-buy" data-id="'+h(b.id)+'" class="mini-button">수정</button></td></tr>';
+  return common+'<td>'+h(b.followers??seller?.followerCountLatestRecorded??"-")+'</td><td>'+h(b.startDate||"-")+'</td><td>'+h(b.endDate||"-")+'</td><td>'+h(b.settlementRequest||"-")+'</td><td>'+h(b.paymentWindow||"-")+'</td><td>'+h(b.legacyCategory||"-")+'</td><td>'+insta+'</td><td>'+h(b.round||"-")+'</td><td class="ledger-notes">'+h(b.note||b.memo||"-")+'</td><td class="ledger-notes">'+h(b.event||"-")+'</td><td>'+scheduleStatusChip(status)+'</td><td><button data-act="edit-buy" data-id="'+h(b.id)+'" class="mini-button">수정</button></td></tr>';
  });
 }
 
@@ -1963,13 +1967,17 @@ function schedulePage(){
  const base=weekScoped
   ?state.buys.filter(b=>b.startDate&&b.endDate&&b.startDate<=weekTo&&b.endDate>=weekFrom)
   :monthlyBuys();
- const searchable=base.filter(b=>[b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLocaleLowerCase().includes(search));
+ const searchMatch=b=>!search||[b.sellerName,b.product,b.productName,b.note,b.memo,b.event,b.round,b.settlementRequest,b.paymentWindow].join(" ").toLocaleLowerCase().includes(search);
+ const searchable=base.filter(searchMatch);
  const matchesStatus=(b,key)=>key==="all"||(
   key==="active"?scheduleStatus(b)==="진행 중":
   key==="upcoming"?scheduleStatus(b)==="예정":
   key==="completed"?scheduleStatus(b)==="완료":scheduleStatus(b)==="취소"
  );
- const filterCount=key=>searchable.filter(b=>matchesStatus(b,key)).length;
+ const counts={all:searchable.length,active:0,upcoming:0,completed:0,canceled:0};
+ const statusToKey={"진행 중":"active","예정":"upcoming","완료":"completed","취소":"canceled"};
+ for(const b of searchable){const key=statusToKey[scheduleStatus(b)];if(key)counts[key]++;}
+ const filterCount=key=>counts[key]||0;
  const list=searchable.filter(b=>matchesStatus(b,state.scheduleStatusFilter));
  const sorted=[...list].sort((a,b)=>state.scheduleSort==="latest"?
   (b.startDate||"").localeCompare(a.startDate||"") :
@@ -1981,17 +1989,17 @@ function schedulePage(){
    .map(([key,label])=>'<button type="button" data-view="'+key+'" class="'+(state.scheduleView===key?"selected":"")+'" aria-pressed="'+(state.scheduleView===key)+'">'+label+'</button>').join("")
   +'</div>';
  const toolbar='<div class="ops-schedule-toolbar"><div class="ops-schedule-toolbar-main">'
-  +'<input id="month-search" type="search" aria-label="셀러 또는 상품 검색" placeholder="셀러명 또는 상품명 검색" value="'+h(state.monthSearch)+'"/>'
-  +tabs+'</div><div class="ops-schedule-filters">'
-  +statusKeys.map(([key,label])=>'<button type="button" data-schedule-status="'+key+'" class="'+(state.scheduleStatusFilter===key?"selected":"")+'" aria-pressed="'+(state.scheduleStatusFilter===key)+'">'+label+' <span>'+filterCount(key)+'</span></button>').join("")
+  +'<input id="month-search" type="search" aria-label="셀러, 상품 및 공구 기록 검색" placeholder="셀러명, 상품명, 비고, 이벤트 검색" value="'+h(state.monthSearch)+'"/>'
+  +tabs+'</div><div class="ops-schedule-filters" role="group" aria-label="공구 진행 상태 필터">'
+  +statusKeys.map(([key,label])=>'<button type="button" data-schedule-status="'+key+'" class="'+(state.scheduleStatusFilter===key?"selected":"")+'" aria-pressed="'+(state.scheduleStatusFilter===key)+'"><span class="ops-status-label">'+label+'</span><strong class="ops-status-number">'+filterCount(key)+'</strong></button>').join("")
   +'</div></div>';
  const viewRows=sorted.map(b=>{
-  const status=scheduleStatus(b);
+  const status=scheduleStatus(b),prep=prepProgress(b,todayLocal());
   return '<tr><td><button type="button" class="seller-cell" data-act="view-seller" data-id="'+h(b.sellerId)+'">'+h(b.sellerName||"미확인")+'</button></td>'
    +'<td><strong>'+h(b.product||b.productName||"상품 미확인")+'</strong></td>'
-   +'<td class="ops-schedule-date">'+h(b.startDate||"-")+' ~ '+h(b.endDate||"-")+'</td>'
-   +'<td><span class="status '+(status==="진행 중"?"good":status==="취소"?"alert":"")+'">'+h(status)+'</span></td>'
-   +'<td><button type="button" class="ops-prep-button" data-prep-open="'+h(b.id)+'" '+(status==="취소"?"disabled":"")+'>'+h(prepProgress(b,todayLocal()).recorded?("확인 "+prepProgress(b,todayLocal()).done+"/"+prepProgress(b,todayLocal()).total):"확인 전")+'</button></td>'
+   +'<td class="ops-schedule-date"><span class="ops-date-start">'+h(b.startDate||"-")+'</span><span class="ops-date-end">~ '+h(b.endDate||"-")+'</span></td>'
+   +'<td>'+scheduleStatusChip(status)+'</td>'
+   +'<td><button type="button" class="ops-prep-button '+(prep.complete?"is-ready":prep.recorded?"is-partial":"is-unrecorded")+'" data-prep-open="'+h(b.id)+'" '+(status==="취소"?"disabled":"")+'>'+h(status==="취소"?"해당 없음":prep.complete?"확인 완료":prep.recorded?("확인 "+prep.done+"/"+prep.total):"확인 전")+'</button></td>'
    +'<td><button class="mini-button" type="button" data-act="edit-buy" data-id="'+h(b.id)+'">상세·수정</button></td></tr>';
  });
  const sorting='<div class="ops-schedule-results"><span>조회 결과 <strong>'+sorted.length+'</strong>건</span>'
@@ -2001,7 +2009,7 @@ function schedulePage(){
    +'</select></label>':"")
   +'</div>';
  const calendarItems=state.buys.filter(b=>b.id&&b.startDate&&b.endDate&&
-  [b.sellerName,b.product,b.productName,b.note,b.memo].join(" ").toLocaleLowerCase().includes(search)&&
+  searchMatch(b)&&
   matchesStatus(b,state.scheduleStatusFilter));
  const content=state.scheduleView==="calendar"?
   calendarModeControls()+
@@ -2010,12 +2018,11 @@ function schedulePage(){
    '기간 막대를 눌러 공구를 수정하고, 날짜를 눌러 공구를 등록할 수 있습니다.')+'</p>'+
   monthGrid(calendarItems,{connected:true,weekOnly:state.calendarMode==="week",showCanceled:state.scheduleStatusFilter==="canceled"||state.scheduleStatusFilter==="all"}) :
   state.scheduleView==="detail"?
-  table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","비고","상태","수정"],monthlyRows(sorted,true)):
+  table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","회차","비고","이벤트","상태","수정"],monthlyRows(sorted,true)):
   table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows);
  return '<div class="ops-schedule-page">'
-  +'<div class="ops-schedule-heading"><div><strong>공구 운영 일정</strong><p>월별 진행 상황을 빠르게 확인하고 필요한 공구를 수정합니다.</p></div>'
-  +'<span>선택 기간 '+base.length+'건</span></div>'
-  +'<div class="ops-schedule-month">'+monthPicker()+'</div>'
+  +'<div class="ops-schedule-heading"><div><strong>'+h(weekScoped?weekFrom+" ~ "+weekTo:shownMonth().replace("-","년 ")+"월")+'</strong><p>선택 기간 전체 공구 '+base.length+'건</p></div>'
+  +'<div class="ops-schedule-month">'+monthPicker()+'</div></div>'
   +toolbar+sorting+'<div class="ops-schedule-main '+(state.scheduleView==="calendar"?"is-calendar":state.scheduleView==="detail"?"is-detail":"")+'">'+content+'</div>'
   +'</div>';
 }
