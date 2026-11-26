@@ -1,4 +1,4 @@
-/* S2H CRM Unified Visual System — design system phase 1, 2026-11-26
+/* S2H CRM Unified Visual System — design system and workspace layout phase 2, 2026-11-26
    Applied only after the authenticated app's existing component styles.
    Prevents UI drift from accumulated legacy styles without altering data flows. */
 :root{
@@ -29,58 +29,85 @@
  --s2h-ui-space-4:16px;
  --s2h-ui-space-5:24px;
  --s2h-ui-space-6:32px;
+ --s2h-layout-max:1440px;
+ --s2h-layout-sidebar:224px;
+ --s2h-layout-header:64px;
+ --s2h-layout-gutter:clamp(24px,2.4vw,40px);
 }
 #app.app{
  color:var(--s2h-ui-ink);
  font-family:var(--s2h-ui-font);
  font-size:var(--s2h-ui-body-size);letter-spacing:-.015em;
 }
-#app .main{background:var(--s2h-ui-bg);min-width:0}
-#app .content{
- width:100%;max-width:none;margin:0;
- padding:30px clamp(22px,2vw,40px) 70px;
+/* Workspace shell: same horizontal grid for every page and header. */
+#app.app{display:flex;align-items:flex-start;min-height:100vh;min-height:100dvh;background:var(--s2h-ui-bg)}
+#app .main,#app .main:has(.dashboard-v5){background:var(--s2h-ui-bg);min-width:0;flex:1 1 0;min-height:100vh;min-height:100dvh}
+#app .content,#app .content:has(.dashboard-v5){
+ width:100%;max-width:var(--s2h-layout-max);margin:0 auto;min-width:0;
+ padding:var(--s2h-ui-space-6) var(--s2h-layout-gutter) 64px;background:transparent;
 }
+#app #page-body{width:100%;min-width:0}
 #app .sidebar{
- background:#fff;border-right:1px solid var(--s2h-ui-line);
+ position:sticky;top:0;align-self:flex-start;flex:0 0 var(--s2h-layout-sidebar);
+ width:var(--s2h-layout-sidebar);min-width:var(--s2h-layout-sidebar);
+ height:100vh;height:100dvh;min-height:0;overflow:hidden;
+ padding:0 14px 16px;background:var(--s2h-ui-surface);border-right:1px solid var(--s2h-ui-line);
+ display:flex;flex-direction:column;
 }
 #app .sidebar .brand-home{
- margin-bottom:18px;padding-bottom:18px;
- border-bottom:1px solid var(--s2h-ui-line);
+ flex:0 0 auto;display:flex;justify-content:center;align-items:flex-start;
+ width:100%;min-height:var(--s2h-layout-header);height:var(--s2h-layout-header);
+ margin:0 0 24px;padding:0 12px;border:0;border-bottom:1px solid var(--s2h-ui-line);
+ background:transparent;border-radius:0;
 }
-#app .sidebar .nav-section{
- font-size:11px;color:#809099;margin:0 10px 6px;
-}
+#app .sidebar .brand-logo img{width:128px;height:34px;object-fit:contain;object-position:left center;filter:none}
+#app .sidebar .brand-sub{display:none}
+#app .sidebar .nav{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:22px;padding:2px 2px 12px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+#app .sidebar .nav-group{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
+#app .sidebar .nav-section{font-size:11px;font-weight:650;color:var(--s2h-ui-muted);margin:0 10px 6px;letter-spacing:0;line-height:1.5}
 #app .sidebar .nav-link{
- min-height:42px;height:42px;border-radius:var(--s2h-ui-radius);
- border-left:2px solid transparent;
- margin:0;color:#50616D;
+ display:flex;align-items:center;gap:11px;width:100%;min-height:40px;height:40px;
+ padding:0 10px;border:1px solid transparent;border-radius:var(--s2h-ui-radius);
+ margin:0;color:#465B68;background:transparent;
 }
 #app .sidebar .nav-link span{font-size:var(--s2h-ui-control-size);line-height:1.35;font-weight:550}
-#app .sidebar .nav-link:hover{border-left:2px solid transparent;background:#F3F9FC;color:#007DA2}
+#app .sidebar .nav-link:hover{border:1px solid transparent;background:var(--s2h-ui-surface-soft);color:var(--s2h-ui-brand-dark)}
 #app .sidebar .nav-link.active{
- border:0;border-left:2px solid var(--s2h-ui-brand);
- border-radius:var(--s2h-ui-radius);background:#EAF7FC;
- color:#007DA2;
+ border:1px solid #C8E7F0;border-radius:var(--s2h-ui-radius);
+ background:var(--s2h-ui-brand-soft);color:var(--s2h-ui-brand-dark);box-shadow:none;
 }
-#app .sidebar .sidebar-bottom{border-top:1px solid var(--s2h-ui-line)}
+#app .sidebar .nav-link.active span{font-weight:700}
+#app .sidebar .nav-link.active .nav-icon{color:var(--s2h-ui-brand-dark)}
+#app .sidebar .sidebar-bottom{flex:0 0 auto;margin-top:12px;padding:14px 10px 2px;border-top:1px solid var(--s2h-ui-line);color:var(--s2h-ui-muted);font-size:10px;letter-spacing:.015em}
 #app .topbar{
- height:62px;min-height:62px;
- background:var(--s2h-ui-surface);
- border-bottom:1px solid var(--s2h-ui-line);
- padding:0 clamp(22px,2vw,40px);
+ position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;
+ height:var(--s2h-layout-header);min-height:var(--s2h-layout-header);
+ background:var(--s2h-ui-surface);border-bottom:1px solid var(--s2h-ui-line);
+ padding:0 max(var(--s2h-layout-gutter),calc((100% - var(--s2h-layout-max))/2 + var(--s2h-layout-gutter)));
  box-shadow:none;
 }
-#app .topbar-home,#app #breadcrumb-page{
- font-size:var(--s2h-ui-caption-size);letter-spacing:-.01em;
+#app .topbar-left{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
+#app .topbar-home,#app #breadcrumb-page{font-size:var(--s2h-ui-caption-size);letter-spacing:0}
+#app .topbar-home{color:var(--s2h-ui-muted);font-weight:550;flex-shrink:0}
+#app .topbar-divider{flex:0 0 1px;height:14px;background:var(--s2h-ui-line)}
+#app #breadcrumb-page{color:var(--s2h-ui-ink);font-weight:700}
+#app .top-right{display:flex;align-items:center;gap:12px;flex:0 1 auto;min-width:0}
+#app :is(#global-seller-search,#work-alert-button){
+ min-height:36px;height:36px;border-radius:var(--s2h-ui-radius);white-space:nowrap;
 }
+#app #global-seller-search{flex:0 0 auto;border-color:var(--s2h-ui-line)}
+#app #whoami{max-width:110px;color:var(--s2h-ui-ink)}
+#app #logout{flex:0 0 auto;min-height:36px;padding:0 4px;color:var(--s2h-ui-muted)}
 #app .heading{
- display:flex;align-items:center;justify-content:space-between;
- gap:16px;margin:0 0 23px;
+ display:flex;align-items:center;justify-content:space-between;gap:var(--s2h-ui-space-4);
+ min-height:40px;margin:0 0 var(--s2h-ui-space-5);
 }
+#app .heading>div{min-width:0}
 #app .heading h1{
- font-size:var(--s2h-ui-title-size);line-height:1.35;
- color:var(--s2h-ui-ink);font-weight:760;letter-spacing:-.045em;
+ font-size:var(--s2h-ui-title-size);line-height:1.35;margin:0;
+ color:var(--s2h-ui-ink);font-weight:740;letter-spacing:-.035em;overflow-wrap:anywhere;
 }
+#app .heading>#add-button{flex:0 0 auto;white-space:nowrap}
 #app :is(button,input,select,textarea){font-family:inherit}
 #app button:not(:disabled):hover{transition:background-color .15s,color .15s,border-color .15s}
 #app button:focus-visible,#app input:focus-visible,#app select:focus-visible,
@@ -366,7 +393,6 @@
 #app .app-loading,#app .toast{font-size:var(--s2h-ui-control-size)}
 
 /* Shared primitives: keep special calendar grids and workflow/status semantics intact. */
-#app .sidebar .brand-logo img{filter:none}
 #app .metric{box-shadow:none}
 #app .panel-link,#app .linklike{color:var(--s2h-ui-brand-dark)}
 #app .hero-summary{
@@ -391,21 +417,45 @@
 #app .status.good{color:var(--s2h-ui-brand-dark)}
 
 @media(max-width:1120px){
- #app .content{padding:28px 25px 60px}
- #app .topbar{padding:0 25px}
+ #app.app{--s2h-layout-sidebar:200px;--s2h-layout-gutter:24px}
+ #app .sidebar{padding-inline:10px}
+ #app .top-right{gap:8px}
+ #app #today{display:none}
+ #app #whoami{max-width:84px}
  #app .heading h1{font-size:23px}
 }
+@media(min-width:761px) and (max-width:960px){
+ #app.app{--s2h-layout-sidebar:184px;--s2h-layout-gutter:20px}
+ #app .topbar-home,#app .topbar-divider{display:none}
+ #app #global-seller-search span,#app .work-alert-label{display:none}
+ #app #global-seller-search{padding:0 10px}
+}
 @media(max-width:760px){
- #app .content{padding:21px 15px 50px}
+ #app.app{display:block;--s2h-layout-gutter:16px}
+ #app .main,#app .main:has(.dashboard-v5){min-height:0}
+ #app .content,#app .content:has(.dashboard-v5){padding:24px var(--s2h-layout-gutter) 48px}
  #app .sidebar{
-  width:100%;min-width:0;height:auto;
-  border-right:0;border-bottom:1px solid var(--s2h-ui-line);
+  position:relative;top:auto;width:100%;min-width:0;height:auto;padding:0 16px 8px;
+  border-right:0;border-bottom:1px solid var(--s2h-ui-line);overflow:visible;
  }
- #app .sidebar .nav{flex-direction:row;gap:6px;overflow-x:auto}
- #app .sidebar .nav-link{min-height:36px;height:36px;white-space:nowrap}
- #app .topbar{height:auto;min-height:49px;padding:7px 15px;gap:8px}
- #app .heading{margin-bottom:17px}
+ #app .sidebar .brand-home{height:52px;min-height:52px;padding:0 2px;margin:0 0 8px;border-bottom:0}
+ #app .sidebar .brand-logo img{width:112px;height:30px}
+ #app .sidebar .nav{flex-direction:row;gap:8px;overflow-x:auto;overflow-y:hidden;padding:3px 2px 5px;flex:0 0 auto}
+ #app .sidebar .nav-group{flex-direction:row;gap:4px}
+ #app .sidebar .nav-section,#app .sidebar .sidebar-bottom{display:none}
+ #app .sidebar .nav-link{width:auto;min-height:36px;height:36px;white-space:nowrap;gap:7px;padding:0 10px}
+ #app .sidebar .nav-link span{font-size:12px}
+ #app .topbar{position:relative;top:auto;height:auto;min-height:54px;padding:8px 16px;gap:8px;flex-wrap:wrap}
+ #app .topbar-left{flex:1 1 70px}
+ #app .topbar-home,#app .topbar-divider{display:none}
+ #app .top-right{gap:8px;flex:0 1 auto;max-width:100%;margin-left:auto}
+ #app #global-seller-search span,#app .work-alert-label,#app #today{display:none}
+ #app #whoami{max-width:66px}
+ #app .work-alert-wrap{position:static}
+ #app .work-alert-popover{top:calc(100% + 6px);right:12px;left:auto;width:min(370px,calc(100vw - 24px))}
+ #app .heading{margin-bottom:20px;min-height:38px}
  #app .heading h1{font-size:22px}
+ #app .heading>#add-button{min-height:36px;padding:7px 10px;font-size:12px}
  #app .panel{padding:16px}
  #app .panel-title{gap:8px}
  #app .panel-title h2{font-size:15px}
