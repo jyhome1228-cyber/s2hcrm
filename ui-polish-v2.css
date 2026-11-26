@@ -734,3 +734,60 @@
  #seller-detail-modal .seller-detail-dialog-body .panel{padding:14px}
  #app .product-workspace .product-view-tabs{gap:12px}
 }
+
+/* Phase 7 — groupbuy operations, existing lifecycle and trade records. */
+#app .ops-schedule-page{width:100%;min-width:0;background:#fff;border:1px solid var(--s2h-ui-line);border-radius:var(--s2h-ui-card-radius);padding:24px;box-shadow:none}
+#app .ops-schedule-page .ops-schedule-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 20px;padding:0 0 18px;border-bottom:1px solid var(--s2h-ui-line)}
+#app .ops-schedule-page .ops-schedule-heading strong{font-size:20px;line-height:1.4;color:var(--s2h-ui-ink);font-weight:720}
+#app .ops-schedule-page .ops-schedule-heading p{font-size:12px;color:var(--s2h-ui-muted);margin:5px 0 0}
+#app .ops-schedule-page .ops-schedule-month,#app .ops-schedule-page .ops-schedule-month .month-controls{margin:0;padding:0;border:0}
+#app .ops-schedule-page .ops-schedule-toolbar{margin:0 0 16px;padding:0;border:0}
+#app .ops-schedule-page .ops-schedule-toolbar-main{gap:12px;margin:0 0 16px}
+#app .ops-schedule-page #month-search{max-width:480px;min-height:42px}
+#app .ops-schedule-page .ops-schedule-view{border-radius:8px;border:1px solid var(--s2h-ui-line);background:var(--s2h-ui-surface-soft);padding:3px;gap:3px}
+#app .ops-schedule-page .ops-schedule-view button{min-height:34px;border:0;border-radius:6px;background:transparent;color:var(--s2h-ui-muted);padding:6px 12px}
+#app .ops-schedule-page .ops-schedule-view button.selected{background:#fff;color:var(--s2h-ui-brand-dark);font-weight:700;box-shadow:inset 0 0 0 1px #C8E7F0}
+#app .ops-schedule-page .ops-schedule-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0;padding:0;border:0}
+#app .ops-schedule-page .ops-schedule-filters button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;min-width:0;min-height:74px;padding:11px 14px;border:1px solid var(--s2h-ui-line);border-radius:8px;background:#fff;color:var(--s2h-ui-muted);text-align:left}
+#app .ops-schedule-page .ops-schedule-filters .ops-status-label{font-size:12px;line-height:1.4;color:inherit}
+#app .ops-schedule-page .ops-schedule-filters .ops-status-number{font-size:23px;line-height:1.15;color:var(--s2h-ui-ink);font-variant-numeric:tabular-nums}
+#app .ops-schedule-page .ops-schedule-filters button.selected{background:var(--s2h-ui-brand-soft);border-color:#B9DFEA;color:var(--s2h-ui-brand-dark)}
+#app .ops-schedule-page .ops-schedule-filters button.selected .ops-status-number{color:var(--s2h-ui-brand-dark)}
+#app .ops-schedule-page .ops-schedule-results{margin:0 0 12px;padding:0;color:var(--s2h-ui-muted)}
+#app .ops-schedule-page .ops-schedule-main{border:0;padding:0;min-width:0}
+#app .ops-schedule-page .ops-schedule-main:not(.is-calendar) table{min-width:740px}
+#app .ops-schedule-page .ops-schedule-main.is-detail table{min-width:1560px}
+#app .ops-schedule-page .ops-schedule-main .table-wrap th{font-size:12px;color:var(--s2h-ui-muted);background:var(--s2h-ui-surface-soft)}
+#app .ops-schedule-page .ops-schedule-main .table-wrap td{font-size:13px;vertical-align:middle;padding:13px 12px}
+#app .ops-schedule-page .ops-schedule-main .seller-cell{font-size:13px;color:var(--s2h-ui-brand-dark)}
+#app .ops-schedule-page .ops-schedule-date{min-width:118px;color:var(--s2h-ui-muted);font-variant-numeric:tabular-nums}
+#app .ops-schedule-page .ops-schedule-date span{display:block;font-size:12px;line-height:1.55;white-space:nowrap}
+#app .ops-schedule-page .ops-date-start{color:var(--s2h-ui-ink);font-weight:650}
+#app .ops-schedule-page .schedule-status{min-height:25px;border-radius:6px;font-size:12px;padding:4px 9px}
+#app .ops-schedule-page .schedule-status.is-active{background:var(--s2h-ui-brand-dark);border-color:var(--s2h-ui-brand-dark);color:#fff}
+#app .ops-schedule-page .schedule-status.is-upcoming{background:var(--s2h-ui-brand-soft);border-color:#C8E7F0;color:var(--s2h-ui-brand-dark)}
+#app .ops-schedule-page .schedule-status.is-completed{background:#EDF1F4;color:#526572}
+#app .ops-schedule-page .schedule-status.is-canceled{background:#F5F1F1;color:#805454;border-color:#E7D8D8}
+#app .ops-schedule-page .ops-prep-button{min-height:32px;border-radius:6px;white-space:nowrap;padding:6px 9px;font-size:12px}
+#app .ops-schedule-page .ops-prep-button.is-ready{background:var(--s2h-ui-brand-soft);border-color:#C8E7F0;color:var(--s2h-ui-brand-dark)}
+#app .ops-schedule-page .ops-prep-button.is-unrecorded{background:#fff;color:var(--s2h-ui-muted)}
+#app .ops-schedule-page .ops-prep-button:disabled{opacity:.55}
+#app .ops-schedule-page .ops-schedule-main.is-detail td.ledger-notes{min-width:150px;max-width:250px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+#app .ops-schedule-page .ops-schedule-note{margin:10px 0 14px;color:var(--s2h-ui-muted)}
+#modal.buy-editor-modal .buy-editor-section-title h3{font-size:16px;color:var(--s2h-ui-ink)}
+#modal.buy-editor-modal .buy-editor-section-title p,#modal.buy-editor-modal .buy-editor-meta>span{color:var(--s2h-ui-muted);font-size:12px}
+#modal.buy-editor-modal .buy-editor-fields{gap:14px 16px}
+#modal.buy-editor-modal .buy-editor-fields>.combo-wrap{min-width:0}
+#modal.buy-editor-modal .modal-actions .primary{background:var(--s2h-ui-brand-dark);border-color:var(--s2h-ui-brand-dark)}
+#modal.buy-editor-modal .modal-actions .primary:hover{background:#006F94;border-color:#006F94}
+@media(max-width:900px){
+ #app .ops-schedule-page .ops-schedule-filters{gap:6px}
+ #app .ops-schedule-page .ops-schedule-filters button{padding:10px 8px;min-height:66px}
+}
+@media(max-width:760px){
+ #app .ops-schedule-page{padding:14px}
+ #app .ops-schedule-page .ops-schedule-heading{align-items:flex-start;flex-direction:column;gap:10px}
+ #app .ops-schedule-page .ops-schedule-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #app .ops-schedule-page .ops-schedule-view button{padding:6px 8px}
+ #modal.buy-editor-modal .buy-editor-fields{grid-template-columns:minmax(0,1fr)}
+}
