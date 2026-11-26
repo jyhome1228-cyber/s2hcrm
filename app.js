@@ -939,7 +939,7 @@ function dashboard(){
  const selectedBuys=valid.filter(b=>b.startDate<=selectedDate&&b.endDate>=selectedDate)
   .sort((a,b)=>Number(b.startDate===selectedDate)-Number(a.startDate===selectedDate)||a.startDate.localeCompare(b.startDate)||String(a.sellerName||"").localeCompare(String(b.sellerName||""),"ko-KR"));
  const selectedRows=selectedBuys.map(b=>{
-  const label=b.startDate===selectedDate?"오늘 오픈":b.endDate===selectedDate?"종료":scheduleStatus(b);
+  const label=b.startDate===selectedDate?(selectedDate===today?"오늘 오픈":"오픈"):b.endDate===selectedDate?"종료":scheduleStatus(b);
   return '<div class="flow-date-event">'
    +'<div class="flow-date-event-copy"><strong>'+h(b.sellerName||"셀러 미확인")+'</strong>'
    +'<span>'+h(b.product||b.productName||"상품 미확인")+'</span>'
@@ -974,7 +974,7 @@ function dashboard(){
   +'<aside class="dashboard-primary-aside" aria-label="오늘 업무와 선택 날짜 공구">'
   +'<div class="flow-side-main">'+sideTabs+(showDate?datePanel:taskPanel)+'</div>'
   +nextPanel+'</aside></div>'
-  +prepPanel+activity+'</div>';
+  + '<div class="dashboard-secondary-grid">'+prepPanel+activity+'</div></div>';
 }
 
 function masterProductName(product){
