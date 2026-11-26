@@ -752,7 +752,13 @@ function monthGrid(list,options={}){
  const firstWeekStart=options.weekOnly?activeWeekStart():datePlus(monthStart,-new Date(Date.UTC(y,m-1,1)).getUTCDay());
  const lastWeekEnd=options.weekOnly?datePlus(firstWeekStart,6):datePlus(monthEnd,6-new Date(Date.UTC(y,m-1,new Date(Date.UTC(y,m,0)).getUTCDate())).getUTCDay());
  const allowed=list.filter(b=>b.id&&b.startDate&&b.endDate&&b.startDate<=lastWeekEnd&&b.endDate>=firstWeekStart&&(options.showCanceled||b.status!=="취소"));
- const maxVisible=options.connected?3:(options.compact?3:(options.weekOnly?7:5));
+ const maxVisible=options.connected?(options.weekOnly?7:4):(options.compact?3:(options.weekOnly?7:5));
+ const today=todayLocal();
+ const fallback=options.weekOnly?(today>=firstWeekStart&&today<=lastWeekEnd?today:firstWeekStart):(today.slice(0,7)===shownMonth()?today:monthStart);
+ const requested=state.calendarSelectedDate||fallback;
+ const selectedDate=options.selectDates&&state.dashboardPanelMode==="date"?
+ (options.weekOnly?(requested>=firstWeekStart&&requested<=lastWeekEnd?requested:fallback):(requested.slice(0,7)===shownMonth()?requested:fallback)):null;
+ let previousLocalLanes=new Map();
  const weekCount=Math.round(daysBetween(firstWeekStart,lastWeekEnd)+1)/7;
  const weeks=[];
  // Keep a stable lane throughout the month so a multi-day groupbuy stays visually connected.
@@ -779,42 +785,52 @@ function monthGrid(list,options={}){
     to:b.endDate<weekEnd?b.endDate:weekEnd
   })).sort((a,b)=>a.from.localeCompare(b.from)||daysBetween(b.from,b.to)-daysBetween(a.from,a.to)||String(a.sellerName).localeCompare(String(b.sellerName),"ko-KR"));
   const laneEnds=[];
-  // Compress unused global lanes each week, preserving relative order without hiding lone carry-over events.
-  const occupiedGlobalLanes=options.connected?[...new Set(events.map(e=>connectedLanes.get(e.id)))].sort((laneA,laneB)=>{
-   // Pin today's openings above other weekly bars, even when the first three lanes are full.
-   const a=events.find(e=>connectedLanes.get(e.id)===laneA),b=events.find(e=>connectedLanes.get(e.id)===laneB);
-   const rank=e=>e.startDate===todayLocal()?0:(e.startDate>=weekStart&&e.startDate<=weekEnd?1:2);
-   return rank(a)-rank(b)||laneA-laneB;
-  }):[];
-  const localLaneByGlobal=new Map(occupiedGlobalLanes.map((id,index)=>[id,index]));
+  // Keep the preceding weekly lane for continuing bars wherever compact grid permits.
+  const occupiedGlobalLanes=options.connected?[...new Set(events.map(e=>connectedLanes.get(e.id)))].sort((a,b)=>a-b):[];
+  const localLaneByGlobal=new Map(),usedLocal=new Set();
+  if(options.connected){
+   for(const e of events.filter(e=>e.startDate<weekStart)){
+    const global=connectedLanes.get(e.id),prior=previousLocalLanes.get(e.id);
+    if(prior!=null&&prior<occupiedGlobalLanes.length&&!usedLocal.has(prior)&&!localLaneByGlobal.has(global)){
+     localLaneByGlobal.set(global,prior);usedLocal.add(prior);
+    }
+   }
+   for(const global of occupiedGlobalLanes){
+    if(localLaneByGlobal.has(global))continue;
+    let lane=0;while(usedLocal.has(lane))lane++;
+    localLaneByGlobal.set(global,lane);usedLocal.add(lane);
+   }
+  }
   for(const e of events){
    let lane=options.connected?localLaneByGlobal.get(connectedLanes.get(e.id)):laneEnds.findIndex(last=>last<e.from);
    if(lane==null||lane<0)lane=laneEnds.length;
    laneEnds[lane]=e.to;e.lane=lane;
   }
+  previousLocalLanes=new Map(events.filter(e=>e.endDate>weekEnd).map(e=>[e.id,e.lane]));
   const weekId=weekStart;
   const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
-  const height=options.connected?(36+Math.max(visible,1)*30+24):(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
+  const hasMore=laneEnds.length>maxVisible,footer=hasMore?28:8;
+  const height=options.connected?(36+Math.max(visible,1)*36+footer):(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
    const selectDate=options.selectDates===true;
-   return '<button type="button" class="cal-bg-day cal-day-add '+(!inMonth?'cal-outside ':'')+(date===todayLocal()?'cal-today':'')+'" style="grid-column:'+(day+1)+';grid-row:1 / -1" '+(selectDate?'data-calendar-date':'data-calendar-add')+'="'+h(date)+'" title="'+h(date)+(selectDate?' 공구 보기':' 공구 등록')+'" aria-label="'+h(date)+(selectDate?' 날짜 공구 보기':' 날짜에 공구 등록')+'"><span class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</span></button>';
+   return '<button type="button" class="cal-bg-day cal-day-add '+(!inMonth?'cal-outside ':'')+(date===today?'cal-today ':'')+(date===selectedDate?'cal-selected':'')+'" '+(selectDate?'aria-pressed="'+(date===selectedDate)+'" ':'')+(date===today?'aria-current="date" ':'')+'style="grid-column:'+(day+1)+';grid-row:1 / -1" '+(selectDate?'data-calendar-date':'data-calendar-add')+'="'+h(date)+'" title="'+h(date)+(selectDate?' 공구 보기':' 공구 등록')+'" aria-label="'+h(date)+(selectDate?' 날짜 공구 보기':' 날짜에 공구 등록')+'"><span class="cal-date-head"><b>'+Number(date.slice(-2))+'</b>'+(count?'<small>'+count+'건</small>':'')+'</span></button>';
   }).join("");
   const bars=events.filter(e=>e.lane<visible).map(e=>{
    const startCol=daysBetween(weekStart,e.from)+1,span=daysBetween(e.from,e.to)+1;
    const startOfEvent=e.from===e.startDate,endOfEvent=e.to===e.endDate;
    const tip=(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인")+" ("+e.startDate+" ~ "+e.endDate+")";
-   const textLabel=(e.startDate===todayLocal()?"오늘 오픈 · ":"")+(e.sellerName||"미확인")+" · "+(e.product||e.productName||"상품 미확인");
+   const sellerLabel=e.sellerName||"셀러 미확인",productLabel=e.product||e.productName||"상품 미확인";
    const progress=scheduleStatus(e);
-   const progressClass=progress==="진행 중"?"cal-range-active":progress==="예정"?"cal-range-upcoming":"cal-range-completed";
-   return '<button type="button" class="cal-range '+progressClass+' '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'">'+h(textLabel)+'</button>';
+   const progressClass=progress==="진행 중"?"cal-range-active":progress==="예정"?"cal-range-upcoming":progress==="취소"?"cal-range-canceled":"cal-range-completed";
+   return '<button type="button" class="cal-range '+progressClass+' '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'" aria-label="'+h(tip+" · "+progress)+'"><span class="cal-range-copy"><strong>'+h(sellerLabel)+'</strong><span>'+h(productLabel)+'</span></span></button>';
   }).join("");
   const hiddenCount=events.filter(e=>e.lane>=maxVisible).length;
-  const more=laneEnds.length>maxVisible?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기':'+'+hiddenCount+'건 더보기')+'</button>':'';
-  weeks.push('<section class="cal-week-row'+(options.compact?' cal-week-compact':'')+(options.connected?' cal-week-connected':'')+'" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+'" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
+  const more=hasMore?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기':'+'+hiddenCount+'건 더보기')+'</button>':'';
+  weeks.push('<section class="cal-week-row'+(options.compact?' cal-week-compact':'')+(options.connected?' cal-week-connected':'')+'" style="--cal-row-height:'+height+'px;--cal-visible-rows:'+Math.max(visible,1)+';--cal-footer:'+footer+'px" aria-label="'+fmt(weekStart)+'부터 '+fmt(weekEnd)+'까지">'+dayCells+bars+more+'</section>');
  }
- return '<div class="cal-scroll"><div class="cal-weekdays">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+'</div><div class="cal-weeks">'+weeks.join("")+'</div></div>';
+ return '<div class="cal-scroll" data-calendar-key="'+h(state.page+"-"+firstWeekStart+"-"+lastWeekEnd)+'" role="region" aria-label="공구 캘린더" tabindex="0"><div class="cal-weekdays">'+["일","월","화","수","목","금","토"].map(d=>'<div class="cal-week">'+d+'</div>').join("")+'</div><div class="cal-weeks">'+weeks.join("")+'</div></div>';
 }
 
 function sampleDate(days){return datePlus(todayLocal(),days);}
@@ -948,7 +964,7 @@ function dashboard(){
  }).join("");
  const datePanel='<div class="flow-date-panel">'
   +'<div class="flow-date-header"><div><strong>'+h(calendarDateLabel(selectedDate))+'</strong>'
-  +'<span>진행 공구 '+selectedBuys.length+'건</span></div>'
+  +'<span>해당 날짜 공구 '+selectedBuys.length+'건</span></div>'
   +'<button type="button" class="flow-date-add" data-calendar-add="'+h(selectedDate)+'">공구 등록</button></div>'
   +'<div class="flow-date-list">'+(selectedRows||'<p class="flow-date-empty">선택한 날짜에 등록된 공구가 없습니다.</p>')+'</div>'
   +""
@@ -1988,9 +2004,9 @@ function schedulePage(){
  const content=state.scheduleView==="calendar"?
   calendarModeControls()+
   '<p class="ops-schedule-note">'+(state.calendarMode==="month"?
-   '같은 공구는 날짜를 가로질러 이어집니다. 공구 막대를 누르면 수정할 수 있습니다.':
+   '공구 막대는 시작일부터 종료일까지 이어집니다. 막대는 수정, 날짜는 공구 등록입니다.':
    '기간 막대를 눌러 공구를 수정하고, 날짜를 눌러 공구를 등록할 수 있습니다.')+'</p>'+
-  monthGrid(calendarItems,{connected:true,weekOnly:state.calendarMode==="week",showCanceled:state.scheduleStatusFilter==="canceled"}) :
+  monthGrid(calendarItems,{connected:true,weekOnly:state.calendarMode==="week",showCanceled:state.scheduleStatusFilter==="canceled"||state.scheduleStatusFilter==="all"}) :
   state.scheduleView==="detail"?
   table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","비고","상태","수정"],monthlyRows(sorted,true)):
   table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows);
@@ -2181,7 +2197,11 @@ function render(){
   +'<p>'+failedSources.map(([key])=>({users:"담당자",sellers:"셀러",products:"상품",groupbuys:"공구 일정",activities:"활동 기록"}[key]||key)).join(" · ")
   +' 정보를 확인할 수 없습니다. 네트워크와 접근 권한을 점검해주세요.</p></div>'
   +'<button type="button" id="data-retry-button" class="secondary">다시 시도</button></div>':"";
+ const oldCalendar=$("#page-body .cal-scroll[data-calendar-key]");
+ const calendarKey=oldCalendar?.dataset.calendarKey,calendarLeft=oldCalendar?.scrollLeft||0;
  $("#page-body").innerHTML=errorBanner+view();
+ const newCalendar=$("#page-body .cal-scroll[data-calendar-key]");
+ if(newCalendar&&newCalendar.dataset.calendarKey===calendarKey)newCalendar.scrollLeft=calendarLeft;
  const retry=$("#data-retry-button");
  if(retry)retry.addEventListener("click",()=>{retry.disabled=true;retry.textContent="새로 연결하는 중";window.location.reload();});
  updateWorkAlerts();
