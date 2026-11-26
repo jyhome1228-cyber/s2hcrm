@@ -3178,3 +3178,139 @@
 @media(prefers-reduced-motion:reduce){
  #app-loading .loading-spinner{animation:none;border-right-color:var(--s2h-ui-brand)}
 }
+
+/* Phase 11 — responsive workspace: preserve readable tables using local scrolling. */
+#app.app{width:100%;min-width:0}
+#app .main,#app .content,#app #page-body{min-width:0}
+#app #page-body>*{max-width:100%;min-width:0}
+#app .topbar-left,#app .top-right,#app .heading>div{min-width:0}
+#app #breadcrumb-page{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .top-right>.avatar{flex:0 0 26px;border-radius:50%}
+#app #whoami{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .top-right>#logout{white-space:nowrap}
+#app .topbar>#demo-banner:not(.hidden){flex:0 0 auto;margin:0;max-width:100%;white-space:normal}
+#app #page-body :is(.table-wrap,.cal-scroll,.insight-chart-scroll),
+#modal .table-wrap,#seller-detail-modal .table-wrap{max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:thin}
+#app .table-wrap:focus-visible,#modal .table-wrap:focus-visible,#seller-detail-modal .table-wrap:focus-visible{outline:2px solid var(--s2h-ui-brand);outline-offset:2px}
+#app :is(.panel,.seller-workspace,.product-workspace,.insight-workspace,.reminder-workspace,.activity-workspace,.ops-schedule-page){min-width:0}
+#app :is(.panel-title,.ops-major-head,.seller-tools,.product-toolbar,.ops-activity-toolbar,.ops-schedule-toolbar-main,.insight-ranking-toolbar){min-width:0;flex-wrap:wrap}
+#app :is(.panel-title,.ops-major-head)>div{min-width:0}
+#app :is(.panel-title h2,.ops-major-head h2,.panel-description,.panel-note){overflow-wrap:anywhere}
+#app :is(.seller-workspace,.product-workspace,.activity-workspace,.ops-schedule-page) .table-wrap td{overflow-wrap:anywhere}
+#app :is(.seller-row-actions,.ops-schedule-view,.product-filters,.ops-seller-filter){max-width:100%}
+#app .dashboard-v5 .dashboard-primary-grid>*,
+#app .dashboard-v5 .dashboard-secondary-grid>*{min-width:0}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-action{max-width:100%;white-space:nowrap}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-controls{min-width:0}
+#app :is(.month-controls,.month-buttons,.cal-display-controls,.cal-week-navigator){max-width:100%;min-width:0}
+#app .month-buttons{flex-wrap:wrap}
+#app .month-buttons input{min-width:0;max-width:150px}
+#app .cal-week-navigator{flex-wrap:wrap}
+#app .cal-week-navigator strong{white-space:nowrap}
+#modal .modal-panel,#seller-detail-modal .seller-detail-dialog{min-width:0;max-width:100%}
+#modal #modal-form,#modal #modal-fields,#seller-detail-modal .seller-detail-dialog-body{min-width:0;min-height:0}
+#modal .modal-fields>*{min-width:0;max-width:100%}
+#modal .modal-head h2,#seller-detail-modal .seller-detail-dialog-head h2{min-width:0;overflow-wrap:anywhere}
+#seller-detail-modal .seller-detail-dialog-head>div{min-width:0}
+#modal .modal-actions{flex-wrap:wrap}
+#modal .modal-actions button{max-width:100%}
+#modal .modal-fields :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,select){max-width:100%;min-width:0}
+#modal .modal-fields :is(.inline-create,.inline-create-grid,.buy-editor-fields,.combo-wrap,.product-family-detail,.insight-seller-table){min-width:0;max-width:100%}
+#seller-detail-modal .seller-profile-header>div,#seller-detail-modal .seller-profile-item{min-width:0}
+#seller-detail-modal .seller-detail-actions{max-width:100%;flex-wrap:wrap}
+#seller-detail-modal .seller-detail-actions button{max-width:100%}
+#seller-detail-modal .seller-detail-dialog-body .panel{min-width:0}
+@media(min-width:1201px){
+ #app .dashboard-v5 .dashboard-primary-grid{grid-template-columns:minmax(0,1fr) minmax(270px,28%);gap:16px}
+ #app .dashboard-v5 .dashboard-primary-aside{display:flex;flex-direction:column}
+}
+@media(min-width:761px) and (max-width:1200px){
+ #app .dashboard-v5 .dashboard-primary-grid{grid-template-columns:minmax(0,1fr);gap:16px}
+ #app .dashboard-v5 .dashboard-primary-aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #app .topbar{gap:8px}
+ #app .top-right{gap:8px}
+ #app #today{display:none}
+}
+@media(min-width:761px) and (max-width:900px){
+ #app .topbar-left{flex:1 1 72px}
+ #app #whoami{max-width:58px}
+ #app .topbar>#demo-banner:not(.hidden){max-width:115px;font-size:10px;padding:5px 7px}
+ #app .sidebar .nav-link{gap:8px;padding-inline:8px}
+}
+@media(max-width:760px){
+ #app.app{width:100%;max-width:100%}
+ #app .main{width:100%;max-width:100%;min-width:0}
+ #app .sidebar{width:100%;max-width:100%;padding:0 12px 8px}
+ #app .sidebar .nav{width:100%;max-width:100%;overscroll-behavior-inline:contain}
+ #app .sidebar .nav-group{flex:0 0 auto}
+ #app .sidebar .nav-link{min-height:40px;height:40px}
+ #app .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 8px;padding:8px 12px;height:auto;min-height:56px}
+ #app .topbar-left{grid-column:1;grid-row:1}
+ #app .top-right{grid-column:2;grid-row:1;justify-content:flex-end;gap:6px;margin:0;min-width:0}
+ #app .topbar>#demo-banner:not(.hidden){grid-column:1/-1;grid-row:2;justify-self:start}
+ #app .top-right>.avatar{flex-basis:24px;width:24px;height:24px}
+ #app #whoami{max-width:60px}
+ #app .top-right>#logout{min-height:40px;padding-inline:3px;font-size:12px}
+ #app :is(#global-seller-search,#work-alert-button){height:40px;min-height:40px;padding-inline:9px}
+ #app .work-alert-popover{right:8px;top:calc(100% + 4px);width:min(370px,calc(100vw - 16px))}
+ #app .work-alert-list{max-height:min(55dvh,420px)}
+ #app .content,#app .content:has(.dashboard-v5){padding:22px 14px 44px}
+ #app .heading{gap:8px;flex-wrap:wrap;align-items:center}
+ #app .heading>#add-button{min-height:40px}
+ #app .dashboard-v5 .dashboard-primary-aside{display:flex;flex-direction:column}
+ #app .dashboard-v5 .dashboard-secondary-grid{grid-template-columns:minmax(0,1fr)}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-major-head{flex-wrap:wrap}
+ #app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-controls{gap:8px}
+ #app .dashboard-v5 .dashboard-primary-calendar .month-buttons{width:auto;justify-content:flex-start}
+ #app .dashboard-v5 .dashboard-primary-aside .ops-work-action{min-height:38px}
+ #app .dashboard-v5 .flow-date-add,#app .dashboard-v5 .flow-date-event-action{min-height:38px}
+ #app .ops-schedule-page .ops-schedule-view{max-width:100%;width:100%}
+ #app .ops-schedule-page .ops-schedule-view button{flex:1 1 0;min-width:0;min-height:38px}
+ #app .ops-schedule-page .ops-schedule-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #app .ops-schedule-page .ops-schedule-filters button{white-space:normal}
+ #app .seller-workspace .seller-tools,#app .activity-workspace .ops-activity-toolbar{align-items:stretch}
+ #app .product-workspace .product-toolbar #product-search,#app .insight-ranking-toolbar input{max-width:none;flex-basis:100%}
+ #app .reminder-workspace .reminder-item .actions button{min-height:40px}
+ #modal.modal,#seller-detail-modal.seller-detail-modal{padding:8px}
+ #modal .modal-panel,#modal.buy-editor-modal .modal-panel,#modal.prep-modal .modal-panel,#seller-detail-modal .seller-detail-dialog{width:100%;max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);border-radius:10px}
+ #modal .modal-head,#modal.buy-editor-modal .modal-head,#modal.prep-modal .modal-head{padding:12px 14px;min-height:52px}
+ #modal #modal-fields,#modal.buy-editor-modal #modal-fields,#modal.prep-modal #modal-fields{padding:14px;scrollbar-width:thin}
+ #modal .modal-actions,#modal.buy-editor-modal .modal-actions,#modal.prep-modal .modal-actions{padding:10px 14px max(10px,env(safe-area-inset-bottom));min-height:0;gap:8px}
+ #modal .modal-actions button{min-height:42px}
+ #modal .modal-fields :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea){font-size:16px}
+ #modal.buy-editor-modal .buy-editor-fields>.combo-wrap>input[type=text]{font-size:16px}
+ #modal .combo-wrap .combo-options{max-height:min(200px,35dvh)}
+ #seller-detail-modal .seller-detail-dialog-head{padding:12px 14px;gap:8px}
+ #seller-detail-modal .seller-detail-dialog-head h2{font-size:17px}
+ #seller-detail-modal .seller-detail-dialog-body{padding:12px}
+ #seller-detail-modal .detail-nav{top:-12px}
+ #seller-detail-modal .seller-detail-actions button{flex:1 1 120px;min-height:40px;white-space:normal}
+ #seller-detail-modal .seller-profile-header{gap:10px}
+ #seller-detail-modal .seller-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #seller-detail-modal .seller-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #seller-detail-modal .seller-profile-stats .seller-profile-item:nth-child(2n){border-right:0}
+ #seller-detail-modal .seller-profile-stats .seller-profile-item:last-child{grid-column:1/-1;border-bottom:0}
+ #toast.toast{bottom:max(12px,env(safe-area-inset-bottom))}
+}
+@media(max-width:400px){
+ #app .top-right>#whoami{display:none}
+ #app .topbar{gap:5px}
+ #app .top-right{gap:4px}
+ #app .content,#app .content:has(.dashboard-v5){padding-inline:12px}
+ #app .heading h1{font-size:21px}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric{padding:11px!important}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .label{font-size:12px}
+ #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .sub{font-size:11px}
+ #app .reminder-workspace .reminder-metrics .metric{padding:10px 8px}
+ #app .ops-schedule-page .ops-schedule-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #seller-detail-modal .seller-profile-item{padding:10px 8px}
+ #modal .modal-actions button{min-width:76px}
+}
+@media(max-height:550px) and (min-width:761px){
+ #app .sidebar .brand-home{margin-bottom:12px}
+ #app .sidebar .nav{gap:12px}
+ #modal.modal,#seller-detail-modal.seller-detail-modal{padding:8px}
+ #modal .modal-panel,#modal.buy-editor-modal .modal-panel,#modal.prep-modal .modal-panel,#seller-detail-modal .seller-detail-dialog{max-height:calc(100dvh - 16px)}
+ #modal .modal-head,#modal.buy-editor-modal .modal-head,#modal.prep-modal .modal-head{min-height:48px;padding-block:9px}
+ #modal .modal-actions,#modal.buy-editor-modal .modal-actions,#modal.prep-modal .modal-actions{min-height:0;padding-block:8px}
+}
