@@ -27,7 +27,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, insightSearch:"", insightSort:"count", insightPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -1003,7 +1003,8 @@ function masterProductName(product){
 // Build the product summary once for each Firestore snapshot, not once per row or search keystroke.
 let productIndexCache=null;
 function productIndex(){
- if(productIndexCache&&productIndexCache.products===state.products&&
+ const today=todayLocal();
+ if(productIndexCache&&productIndexCache.day===today&&productIndexCache.products===state.products&&
     productIndexCache.buys===state.buys&&productIndexCache.sellers===state.sellers)
     return productIndexCache;
  const canonicalCache=new Map();
@@ -1013,9 +1014,9 @@ function productIndex(){
    return canonicalCache.get(raw);
  };
  const groups=new Map(),stats=new Map(),sellerById=new Map(state.sellers.map(x=>[x.id,x]));
- const monthly=new Map(),uniqueSellerIds=new Set();
+ const monthly=new Map(),monthlyStarted=new Map(),uniqueSellerIds=new Set();
  let totalBuys=0,lastYearBuys=0;
- const lastYearDate=datePlus(todayLocal(),-365);
+ const lastYearDate=datePlus(today,-365);
  const getStats=name=>{
    if(!stats.has(name))stats.set(name,{count:0,sellers:new Set(),last:"-",aliases:new Set()});
    return stats.get(name);
@@ -1040,7 +1041,7 @@ function productIndex(){
   totalBuys++;
   const sellerKey=sellerIdentity(sellerById.get(b.sellerId),b);
   uniqueSellerIds.add(sellerKey);
-  if(b.startDate){const month=b.startDate.slice(0,7);monthly.set(month,(monthly.get(month)||0)+1);if(b.startDate>=lastYearDate&&b.startDate<=todayLocal())lastYearBuys++;}
+  if(b.startDate){const month=b.startDate.slice(0,7);monthly.set(month,(monthly.get(month)||0)+1);if(/^\d{4}-\d{2}-\d{2}$/.test(b.startDate)&&b.startDate<=today){monthlyStarted.set(month,(monthlyStarted.get(month)||0)+1);if(b.startDate>=lastYearDate)lastYearBuys++;}}
   const stat=getStats(name);
   stat.count++;
   stat.sellers.add(sellerKey);
@@ -1052,7 +1053,7 @@ function productIndex(){
   return {...g,primary,active,aliases:[...g.aliases].sort((a,b)=>a.localeCompare(b,"ko-KR")),
    searchText:[g.name,...g.aliases,...g.members.flatMap(p=>[p.brand,p.category,p.supplier])].filter(Boolean).join(" ").toLocaleLowerCase()};
  });
- productIndexCache={products:state.products,buys:state.buys,sellers:state.sellers,groups:computed,stats,monthly,totalBuys,lastYearBuys,uniqueSellerCount:uniqueSellerIds.size};
+ productIndexCache={day:today,products:state.products,buys:state.buys,sellers:state.sellers,groups:computed,stats,monthly,monthlyStarted,totalBuys,lastYearBuys,uniqueSellerCount:uniqueSellerIds.size};
  return productIndexCache;
 }
 function productStats(product){
@@ -1468,28 +1469,46 @@ function showProductInsightSellers(productName,asBrand=false){
  });
  draw();
 }
+function insightMonthSeries(index,today){
+ const [year,month]=today.slice(0,7).split("-").map(Number);
+ return Array.from({length:12},(_,i)=>{
+  const key=new Date(Date.UTC(year,month-1-11+i,1)).toISOString().slice(0,7);
+  return {key,count:index.monthlyStarted.get(key)||0};
+ });
+}
 function productInsightsPage(){
- // Use the product snapshot index instead of rescanning all buys and sellers per click.
- const index=productIndex();
- const all=[...index.stats.entries()].map(([name,p])=>({name,...p}))
-  .sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,"ko-KR"));
- const top=all.slice(0,10);
- const monthlyRows=[...index.monthly.entries()].sort((a,b)=>b[0].localeCompare(a[0])).slice(0,12);
- const aliasCounts=new Map(index.groups.map(g=>[g.name,g.aliases.length]));
- const ranking=table(["상품명","공구 횟수","진행 셀러","최근 종료"],top.map(p=>{
-  const count=aliasCounts.get(p.name)||0;
-  return '<tr><td><button type="button" class="insight-product-link" data-insight-product="'+h(p.name)+'">'+h(p.name)+'</button>'+
-   (count?'<small class="insight-alias-count">기존 표기 '+count+'종 통합</small>':'')+
-   '</td><td>'+p.count+'건</td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(p.name)+'">'+p.sellers.size+'명 보기</button></td><td>'+h(p.last||"-")+'</td></tr>';
- }));
- const trend=table(["월","공구 건수"],monthlyRows.map(([month,count])=>
-  '<tr><td>'+h(month)+'</td><td>'+count+'건</td></tr>'));
- return '<div class="metrics">'+metric("진행 상품",all.length,"공구 이력이 있는 상품")+
-  metric("전체 공구 이력",index.totalBuys,"취소 제외 기록")+
-  metric("진행 셀러",index.uniqueSellerCount,"중복 제외")+
-  metric("최근 12개월",index.lastYearBuys,"시작일 기준")+'</div>'+
-  '<div class="layout-two">'+wrap("상품별 공구 현황",ranking)+wrap("월별 공구 추이",trend)+'</div>'+
-  '<p class="panel-note">공구 이력 기준 집계이며 매출 실적이 아닙니다. 확인된 상품 별칭만 통합합니다. 확인되지 않은 표기는 별도 집계됩니다.</p>';
+ const index=productIndex(),today=todayLocal();
+ const all=[...index.stats.entries()].map(([name,p])=>({name,...p}));
+ const aliasesByName=new Map(index.groups.map(g=>[g.name,g.aliases]));
+ const query=state.insightSearch.trim().toLocaleLowerCase();
+ const filtered=all.filter(p=>!query||[p.name,...(aliasesByName.get(p.name)||[])].join(" ").toLocaleLowerCase().includes(query))
+  .sort((a,b)=>(state.insightSort==="sellers"?b.sellers.size-a.sellers.size:state.insightSort==="recent"?String(b.last).localeCompare(String(a.last)):b.count-a.count)||b.count-a.count||a.name.localeCompare(b.name,"ko-KR"));
+ const pageSize=15,pageCount=Math.max(1,Math.ceil(filtered.length/pageSize));
+ state.insightPage=Math.min(pageCount,Math.max(1,state.insightPage));
+ const offset=(state.insightPage-1)*pageSize;
+ const maxCount=Math.max(1,...filtered.map(p=>p.count));
+ const rows=filtered.slice(offset,offset+pageSize).map((p,i)=>{
+  const aliasCount=(aliasesByName.get(p.name)||[]).length;
+  return '<tr><td class="insight-rank">'+(offset+i+1)+'</td><td><button type="button" class="insight-product-link" data-insight-product="'+h(p.name)+'">'+h(p.name)+'</button>'+
+   (aliasCount?'<small class="insight-alias-count">기존 표기 '+aliasCount+'종 통합</small>':'')+
+   '</td><td><div class="insight-volume"><strong>'+p.count+'건</strong><span class="insight-volume-track" aria-hidden="true"><i style="width:'+(p.count/maxCount*100).toFixed(2)+'%"></i></span></div></td><td><button type="button" class="insight-seller-count" data-insight-product="'+h(p.name)+'">'+p.sellers.size+'명 보기</button></td><td>'+h(p.last||"-")+'</td></tr>';
+ });
+ const controls='<div class="insight-ranking-toolbar"><input type="search" id="insight-search" aria-label="상품 인사이트 검색" placeholder="상품명 또는 기존 표기 검색" value="'+h(state.insightSearch)+'"/><label>정렬<select id="insight-sort" aria-label="상품 성과 정렬">'+
+  [["count","공구 횟수순"],["sellers","참여 셀러순"],["recent","최근 종료일순"]].map(([key,label])=>'<option value="'+key+'" '+(state.insightSort===key?"selected":"")+'>'+label+'</option>').join("")+'</select></label></div>';
+ const ranking=controls+'<div class="insight-result-count">조회 결과 '+filtered.length+'개 상품</div>'+table(["순위","상품명","공구 횟수","참여 셀러","최근 종료일"],rows)+
+  (pageCount>1?'<div class="seller-pagination insight-pagination"><span>'+(offset+1)+'–'+Math.min(filtered.length,offset+pageSize)+' / '+filtered.length+'개</span><div><button type="button" class="secondary" data-insight-page="-1" '+(state.insightPage===1?"disabled":"")+'>이전</button><span>'+state.insightPage+' / '+pageCount+'</span><button type="button" class="secondary" data-insight-page="1" '+(state.insightPage===pageCount?"disabled":"")+'>다음</button></div></div>':"");
+ const series=insightMonthSeries(index,today),peak=Math.max(1,...series.map(x=>x.count));
+ const sum=series.reduce((a,b)=>a+b.count,0);
+ const trend='<p class="panel-description">'+h(series[0].key)+' ~ '+h(series[11].key)+' · 시작일이 오늘까지 도래한 공구 '+sum+'건</p>'+
+  '<div class="insight-chart-scroll" role="region" aria-label="월별 공구 건수" tabindex="0"><div class="insight-chart">'+series.map((m,i)=>
+   '<div class="insight-chart-column'+(i===11?' is-current':'')+'" aria-label="'+h(m.key)+' '+m.count+'건"><strong>'+m.count+'</strong><div class="insight-chart-track"><i style="height:'+(m.count/peak*100).toFixed(2)+'%"></i></div><span>'+h(m.key.slice(2).replace("-","."))+'</span></div>').join("")+'</div></div>'+
+  (!sum?'<p class="insight-no-data">해당 기간에 집계된 공구 기록이 없습니다.</p>':'');
+ return '<div class="insight-workspace"><div class="metrics insight-metrics">'+metric("공구 기록 상품",all.length,"공구 이력이 있는 상품")+
+  metric("전체 공구 이력",index.totalBuys,"상품명 확인 · 취소 제외")+
+  metric("참여 셀러",index.uniqueSellerCount,"중복 제외")+
+  metric("최근 365일",index.lastYearBuys,"시작일 기준 · 오늘까지")+'</div>'+
+  wrap("월별 공구 추이",trend)+wrap("상품별 공구 현황",ranking)+
+  '<p class="panel-note">상품명이 있는 취소 제외 공구 기록 기준이며 매출 실적이 아닙니다. 월별 추이는 최근 12개 달의 시작일이 도래한 기록을 집계합니다. 최근 365일 지표와 집계 기간이 다를 수 있습니다. 미래 일정은 전체 이력과 상품별 순위에 포함됩니다.</p></div>';
 }
 function opportunitiesPage(){
  const rows=opportunitiesData().map(x=>'<tr><td><strong>'+h(x.seller.name)+'</strong></td><td>'+h(x.last.product)+'</td><td>'+x.count+'회</td><td>'+h(x.last.endDate)+'</td><td>'+x.gap+'일</td><td><span class="status '+(x.rank<=1?"alert":"")+'">'+h(x.level)+'</span></td><td><button class="mini-button" data-act="contact" data-id="'+h(x.seller.id)+'">연락 기록</button></td></tr>');
@@ -2150,6 +2169,7 @@ function bindSearchInput(selector,stateKey){
   state[stateKey]=input.value;
   if(stateKey==="search")state.sellerPage=1;
   if(stateKey==="productSearch")state.productPage=1;
+  if(stateKey==="insightSearch")state.insightPage=1;
    if(stateKey==="activitySearch")state.activityPage=1;
  };
  const schedule=()=>{
@@ -2240,6 +2260,10 @@ function render(){
  const productSort=$("#product-sort");
  if(productSort)productSort.addEventListener("change",()=>{state.productSort=productSort.value;state.productPage=1;render();});
 
+ bindSearchInput("#insight-search","insightSearch");
+ const insightSort=$("#insight-sort");
+ if(insightSort)insightSort.addEventListener("change",()=>{state.insightSort=insightSort.value;state.insightPage=1;render();});
+ $("#page-body").querySelectorAll("[data-insight-page]").forEach(el=>el.addEventListener("click",()=>{state.insightPage+=Number(el.dataset.insightPage);render();}));
  $("#page-body").querySelectorAll("[data-insight-product]").forEach(el=>el.addEventListener("click",()=>showProductInsightSellers(el.dataset.insightProduct)));
 
  $("#page-body").querySelectorAll("[data-view]").forEach(el=>el.addEventListener("click",()=>{state.scheduleView=el.dataset.view;render();}));
