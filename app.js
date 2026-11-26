@@ -752,7 +752,7 @@ document.addEventListener("keydown",event=>{
 });
 function metric(title,value,description){return '<div class="metric"><div class="label">'+title+'</div><div class="number">'+value+'</div><div class="sub">'+description+'</div></div>';}
 function wrap(title,body,right=""){return '<div class="panel"><div class="panel-title"><h2>'+title+'</h2>'+right+'</div>'+body+'</div>';}
-function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'+headers.map(v=>'<th>'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">등록된 데이터가 없습니다.</td></tr>')+'</tbody></table></div>';}
+function table(headers,rows){return '<div class="table-wrap" tabindex="0" role="region" aria-label="데이터 목록, 필요한 경우 좌우 스크롤"><table><thead><tr>'+headers.map(v=>'<th scope="col">'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">등록된 데이터가 없습니다.</td></tr>')+'</tbody></table></div>';}
 
 
 function shownMonth(){return state.selectedMonth||todayLocal().slice(0,7);}
