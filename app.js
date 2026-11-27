@@ -10,6 +10,16 @@ import { getFirestore, collection, addDoc, updateDoc, doc, getDoc, onSnapshot, q
 const $ = (selector) => document.querySelector(selector);
 let screenBusyCount=0,loadingTimer=null,toastTimer=null;
 let modalSaving=false,modalDirty=false,buyModalPending=false,navigationPending=false;
+let lastMotionView="",lastMotionPage="",composingSearch=null;
+function motionViewKey(state){
+ return state.page==="dashboard"?state.page+"-"+state.dashboardPanelMode:
+ state.page==="products"?state.page+"-"+state.productView:
+ state.page==="schedule"?state.page+"-"+state.scheduleView:state.page;
+}
+function animateWorkspaceEntry(node,small=false){
+ if(!node?.animate||window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)return;
+ try{node.animate([{opacity:small?.65:.5,transform:"translateY("+(small?3:6)+"px)"},{opacity:1,transform:"none"}],{duration:small?140:180,easing:"cubic-bezier(.2,.75,.25,1)",fill:"none"});}catch{}
+}
 function showLoading(label="데이터를 불러오는 중입니다"){
  const layer=document.getElementById("app-loading");
  if(!layer)return;
@@ -163,6 +173,7 @@ function start() {
 function clearListeners(){
  closeWorkAlerts();state.unsubs.forEach(fn=>fn());state.unsubs=[];
  state.user=null;state.staff=null;state.demo=false;state.page="dashboard";state.selectedSellerId=null;
+ lastMotionView="";lastMotionPage="";composingSearch=null;clearTimeout(searchRenderTimer);
  state.sellers=[];state.buys=[];state.products=[];state.activities=[];state.staffUsers=[];state.dataErrors={};
  reminderCache=null;workAlertsCache=null;workAlertEffectShown=false;
  clearTimeout(loadingTimer);loadingTimer=null;screenBusyCount=0;hideLoading();
@@ -2284,12 +2295,13 @@ function bindSearchInput(selector,stateKey){
  if(!input)return;
  let composing=false;
  const sync=()=>{
-  if(!input.isConnected)return;
+  if(!input.isConnected||state[stateKey]===input.value)return false;
   state[stateKey]=input.value;
   if(stateKey==="search")state.sellerPage=1;
   if(stateKey==="productSearch")state.productPage=1;
   if(stateKey==="insightSearch")state.insightPage=1;
    if(stateKey==="activitySearch")state.activityPage=1;
+  return true;
  };
  const schedule=()=>{
   clearTimeout(searchRenderTimer);
@@ -2305,14 +2317,14 @@ function bindSearchInput(selector,stateKey){
    }
   },450);
  };
- input.addEventListener("compositionstart",()=>{composing=true;clearTimeout(searchRenderTimer);});
- input.addEventListener("compositionend",()=>{composing=false;sync();schedule();});
- input.addEventListener("input",event=>{sync();if(!composing&&!event.isComposing)schedule();});
- input.addEventListener("change",()=>{sync();schedule();});
+ input.addEventListener("compositionstart",()=>{composing=true;composingSearch=input;clearTimeout(searchRenderTimer);});
+ input.addEventListener("compositionend",()=>{composing=false;if(composingSearch===input)composingSearch=null;sync();schedule();});
+ input.addEventListener("input",event=>{if(!composing&&!event.isComposing){sync();schedule();}});
+ input.addEventListener("change",()=>{if(!composing&&sync())schedule();});
  input.addEventListener("keydown",event=>{
   if(event.key==="Enter"&&!composing){event.preventDefault();clearTimeout(searchRenderTimer);sync();render();}
  });
- input.addEventListener("blur",()=>{if(!composing&&input.isConnected){clearTimeout(searchRenderTimer);sync();schedule();}});
+ input.addEventListener("blur",()=>{if(!composing&&input.isConnected&&sync())schedule();});
 }
 // Date-based reminders and opening priorities refresh when the app stays open overnight.
 let lastRenderedLocalDate=todayLocal();
@@ -2333,6 +2345,12 @@ function render(){
  if(state.page==="productInsights"){state.page="products";state.productView="insights";}
  const views={dashboard:["대시보드","","",dashboard],sellers:["셀러 관리","SELLER DATABASE","전체 셀러와 공구·연락 이력",sellersPage],schedule:["공구 일정","GROUPBUY SCHEDULE","공구 일정과 운영 상태",schedulePage],reminders:["리마인드","FOLLOW UP","연락 기록이 남기 전까지 미처리 알림 유지",reminderPage],activity:["활동 기록","ACTIVITY LOG","팀원들의 연락과 영업 활동",activityPage],products:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],productInsights:["상품 관리","","상품 등록·수정·복원",productWorkspacePage],import:["백업","","초기 데이터 보관 및 복원",importerPage],opportunities:["재접촉 대상","","최근 공구 이력을 기반으로 검토할 셀러",opportunitiesPage],sellerDetail:["셀러 상세","","",sellerDetailPage]};
  if(!Object.prototype.hasOwnProperty.call(views,state.page))state.page="dashboard";
+ if(composingSearch?.isConnected&&lastMotionPage===state.page)return;
+ const previousPage=lastMotionPage,previousView=lastMotionView,nextView=motionViewKey(state);
+ const pageChanged=previousPage!==state.page,viewChanged=previousView!==nextView;
+ lastMotionPage=state.page;lastMotionView=nextView;
+ const focusedSearch=!pageChanged&&document.activeElement?.matches?.("#page-body input[type=search]")?document.activeElement:null;
+ const searchFocus=focusedSearch?.id?{id:focusedSearch.id,start:focusedSearch.selectionStart,end:focusedSearch.selectionEnd}:null;
  const [title,kicker,caption,view]=views[state.page];
  $("#page-title").textContent=title;
  const isDashboard=state.page==="dashboard";
@@ -2358,6 +2376,18 @@ function render(){
  const oldWork=$("#page-body [data-work-scroll-key]"),workKey=oldWork?.dataset.workScrollKey,workTop=oldWork?.scrollTop||0;
  const oldTable=$("#page-body [data-table-scroll-key]"),tableKey=oldTable?.dataset.tableScrollKey,tableTop=oldTable?.scrollTop||0,tableLeft=oldTable?.scrollLeft||0;
  $("#page-body").innerHTML=errorBanner+view();
+ if(searchFocus){
+  const next=document.getElementById(searchFocus.id);
+  if(next?.matches("#page-body input[type=search]")){next.focus({preventScroll:true});try{next.setSelectionRange(searchFocus.start,searchFocus.end);}catch{}}
+ }
+ if(pageChanged){
+  if(previousPage)window.scrollTo?.({top:0,behavior:"instant"});
+  animateWorkspaceEntry($("#page-body"));
+ }else if(viewChanged){
+  const target=state.page==="dashboard"?$("#page-body .flow-side-main .panel")||$("#page-body .flow-date-panel"):
+   state.page==="schedule"?$("#page-body .ops-schedule-main"):$("#page-body .product-workspace");
+  animateWorkspaceEntry(target,true);
+ }
  const newTable=$("#page-body [data-table-scroll-key]");
  if(newTable&&newTable.dataset.tableScrollKey===tableKey){newTable.scrollTop=tableTop;newTable.scrollLeft=tableLeft;}
  const newWork=$("#page-body [data-work-scroll-key]");
