@@ -3494,3 +3494,46 @@
  #app .page-heading-actions{width:100%}
  #app .dashboard-v5 .dashboard-overview .metrics-dashboard .metric .sub{font-size:11px}
 }
+
+/* UX refinement 3 — calendar readability and a bounded, pageable work panel. */
+#app #page-body .cal-week-row.cal-week-connected{grid-template-rows:36px repeat(var(--cal-visible-rows),40px) var(--cal-footer,28px)!important}
+#app #page-body .cal-week-connected>.cal-range{height:36px!important;min-height:36px!important;padding:2px 8px}
+#app #page-body .cal-range-copy{gap:2px}
+#app #page-body .cal-range-copy strong{font-size:12px;font-weight:650;line-height:1.2}
+#app #page-body .cal-range-copy>span{font-size:11px;font-weight:500;line-height:1.2}
+#app #page-body .cal-week-connected>.cal-range-active{background:var(--s2h-ui-brand-dark);color:#fff}
+#app #page-body .cal-week-connected>.cal-range-upcoming{background:#DFF1F7;color:#075B77}
+#app #page-body .cal-week-connected>.cal-range-completed{background:#F0F2F4;color:#46545D}
+#app #page-body .cal-week-connected>.cal-range-opening{box-shadow:inset 0 0 0 1px var(--s2h-ui-brand)!important}
+#app #page-body .cal-week-connected>.cal-bg-day .cal-date-head b{font-size:13px;font-weight:650}
+#app #page-body .cal-week-connected>.cal-bg-day .cal-date-head small{font-size:11px}
+#app #page-body .cal-week-connected>.cal-bg-day.cal-selected{background:#F0F9FC;box-shadow:inset 0 0 0 1px var(--s2h-ui-brand)}
+#app #page-body .cal-week-connected>.cal-expand{min-height:24px;font-weight:600;font-size:12px}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-calendar-legend{gap:8px 12px;flex-wrap:wrap}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-legend-item i{width:10px;height:10px;border-radius:2px}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-legend-item i.is-active{background:var(--s2h-ui-brand-dark);border-color:var(--s2h-ui-brand-dark)}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-legend-item i.is-upcoming{background:#DFF1F7;border:1px solid #B5DCE8}
+#app .dashboard-v5 .dashboard-primary-calendar .ops-legend-item i.is-past{background:#F0F2F4;border:1px solid #DCE2E6}
+#app .dashboard-v5 .dashboard-primary-aside .ops-task-filters button{font-size:12px;min-height:32px;padding:5px 8px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-task-filters button span{font-size:11px}
+#app .dashboard-v5 .dashboard-task-scroll,#app .dashboard-v5 .dashboard-date-scroll{
+ max-height:clamp(260px,45vh,500px);overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin;padding-right:3px;
+}
+#app .dashboard-v5 :is(.dashboard-task-scroll,.dashboard-date-scroll):focus-visible{outline:2px solid var(--s2h-ui-brand);outline-offset:-2px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-row{min-height:0;padding:10px 0;row-gap:3px;column-gap:8px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-row.is-opening .ops-work-label{color:var(--s2h-ui-brand-dark);font-weight:700}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-row.is-overdue .ops-work-label{color:#805454}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description{gap:2px}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description strong{line-height:1.35}
+#app .dashboard-v5 .dashboard-primary-aside .ops-work-description span,#app .dashboard-v5 .dashboard-primary-aside .ops-work-description small{line-height:1.4}
+#app .dashboard-v5 .dashboard-task-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid #E5E8EB}
+#app .dashboard-v5 .dashboard-task-pagination>span{font-size:12px;color:#606C75;font-variant-numeric:tabular-nums}
+#app .dashboard-v5 .dashboard-task-pagination>div{display:flex;gap:5px}
+#app .dashboard-v5 .dashboard-task-pagination button{min-height:30px;padding:5px 9px;font-size:12px;border-radius:6px}
+#app .dashboard-v5 .flow-date-event-copy strong{font-size:14px;font-weight:650;line-height:1.4}
+#app .dashboard-v5 .flow-date-event-copy span{font-size:13px;line-height:1.4}
+#app .dashboard-v5 .flow-date-event-copy small{font-size:12px;color:#606C75}
+@media(max-width:760px){
+ #app .dashboard-v5 .dashboard-task-scroll,#app .dashboard-v5 .dashboard-date-scroll{max-height:420px}
+ #app .dashboard-v5 .dashboard-task-pagination button{min-height:38px}
+}
