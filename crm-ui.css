@@ -3639,3 +3639,42 @@
 #app #page-body .seller-workspace .workspace-data-table .seller-row-actions{display:flex;flex-wrap:wrap;gap:5px;white-space:normal}
 #app #page-body .seller-workspace .workspace-data-table .seller-row-actions button{flex:0 0 auto}
 #app #page-body .seller-workspace .workspace-data-table tbody td.empty{width:auto;white-space:normal;text-align:center}
+
+/* Dashboard row alignment: reserve the same date and action columns for every item. */
+#app .dashboard-v5 .dashboard-secondary-grid .prep-dashboard-row{
+ display:grid;grid-template-columns:104px minmax(0,1fr) 84px;
+ gap:12px;align-items:center;min-height:76px;height:auto;padding:12px 0;
+}
+#app .dashboard-v5 .prep-dashboard-due{
+ display:block;min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;
+ font-size:12px;line-height:1.45;font-weight:650;font-variant-numeric:tabular-nums;
+}
+#app .dashboard-v5 .prep-dashboard-description{min-width:0;gap:3px}
+#app .dashboard-v5 .prep-dashboard-description :is(strong,span,small){
+ display:block;max-width:100%;min-width:0;line-height:1.5;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;
+}
+#app .dashboard-v5 .prep-dashboard-description strong{font-size:14px;font-weight:650;color:#20272D}
+#app .dashboard-v5 .prep-dashboard-open{
+ width:100%;min-width:0;min-height:34px;padding:6px 8px;
+ border-radius:6px;border-color:#DCE2E6;font-size:12px;font-weight:550;justify-self:end;
+}
+#app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row{
+ display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:12px;align-items:start;
+}
+#app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row>small{
+ text-align:right;white-space:normal;overflow-wrap:anywhere;line-height:1.5;font-variant-numeric:tabular-nums;
+}
+#app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row>div{min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){
+ #app .dashboard-v5 .dashboard-secondary-grid .prep-dashboard-row{grid-template-columns:84px minmax(0,1fr) 72px;gap:8px}
+ #app .dashboard-v5 .prep-dashboard-open{min-height:38px;font-size:11px}
+ #app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row{grid-template-columns:minmax(0,1fr) 94px;gap:8px}
+}
+@media(max-width:420px){
+ #app .dashboard-v5 .dashboard-secondary-grid .prep-dashboard-row{grid-template-columns:76px minmax(0,1fr);align-items:start}
+ #app .dashboard-v5 .prep-dashboard-due{grid-column:1;grid-row:1;padding-top:3px}
+ #app .dashboard-v5 .prep-dashboard-description{grid-column:2;grid-row:1}
+ #app .dashboard-v5 .prep-dashboard-open{grid-column:2;grid-row:2;width:auto;justify-self:start}
+ #app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row{grid-template-columns:minmax(0,1fr)}
+ #app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row>small{text-align:left}
+}
