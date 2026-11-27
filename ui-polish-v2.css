@@ -1420,3 +1420,48 @@
  #app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row{grid-template-columns:minmax(0,1fr)}
  #app .dashboard-v5 .dashboard-secondary-grid .ops-activity-list .activity-row>small{text-align:left}
 }
+
+/* Login entry — one original S2H mark, then a restrained form reveal. */
+#login.login{background:#fff;padding:24px;align-items:center;justify-content:center;overflow-y:auto}
+#login .login-box{width:min(380px,100%);max-width:380px;margin:auto;padding:24px 0}
+#login .login-center-logo{width:170px;max-width:100%;height:auto;margin:0 auto 36px;filter:none;transform-origin:center}
+#login #login-form{display:flex;flex-direction:column;gap:17px;margin:0}
+#login #login-form label{margin:0;color:#303A42;font-size:13px;font-weight:600;line-height:1.5}
+#login #login-form input{display:block;width:100%;height:48px;min-height:48px;margin-top:7px;border:1px solid #DCE2E6;border-radius:6px;padding:11px 13px;background:#fff;color:#20272D;font-size:14px;box-shadow:none;transition:border-color .16s,outline-color .16s}
+#login #login-form input::placeholder{color:#7D8890}
+#login #login-form input:focus{border-color:var(--s2h-ui-brand);outline:2px solid var(--s2h-ui-focus);outline-offset:0}
+#login #login-form .password-field{margin-top:7px}
+#login #login-form .password-field input{margin:0;padding-right:48px}
+#login #login-form .login-submit{height:48px;margin:3px 0 0;border-radius:6px;background:var(--s2h-ui-brand);border-color:var(--s2h-ui-brand);font-weight:650}
+#login #login-form .login-submit:hover{background:var(--s2h-ui-brand-dark);border-color:var(--s2h-ui-brand-dark)}
+#login #login-error:empty{display:none}
+#login #login-error:not(:empty){margin:0;line-height:1.55;overflow-wrap:anywhere}
+#login.login-enter .login-center-logo{animation:s2h-login-logo-intro 1.24s cubic-bezier(.22,.75,.25,1) both}
+#login.login-enter #login-form{animation:s2h-login-form-intro .48s cubic-bezier(.22,.75,.25,1) .76s both}
+#login.login-enter:has(#login-form :focus) .login-center-logo,#login.login-enter #login-form:focus-within{animation:none;opacity:1;transform:none}
+@keyframes s2h-login-logo-intro{
+ 0%{opacity:0;transform:translateY(112px) scale(.92)}
+ 33%{opacity:1;transform:translateY(112px) scale(1.06)}
+ 52%{opacity:1;transform:translateY(112px) scale(1.06)}
+ 100%{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes s2h-login-form-intro{
+ from{opacity:0;transform:translateY(12px)}
+ to{opacity:1;transform:translateY(0)}
+}
+@media(max-width:760px){
+ #login.login{padding:22px}
+ #login .login-box{width:min(380px,100%);padding:20px 0}
+ #login .login-center-logo{width:150px;margin-bottom:32px}
+ #login #login-form input{font-size:16px}
+}
+@media(max-height:480px){
+ #login.login{align-items:flex-start}
+ #login .login-box{margin:auto}
+ #login .login-center-logo{margin-bottom:20px}
+ #login.login-enter .login-center-logo,#login.login-enter #login-form{animation:none}
+}
+@media(prefers-reduced-motion:reduce){
+ #login.login-enter .login-center-logo,#login.login-enter #login-form{animation:none;opacity:1;transform:none}
+ #login #login-form input{transition:none}
+}
