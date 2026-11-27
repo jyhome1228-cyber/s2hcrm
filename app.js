@@ -73,29 +73,23 @@ const textarea = (name,label,val="") => '<label class="full">'+h(label)+'<textar
 const select = (name,label,options,val="") => '<label>'+h(label)+'<select name="'+h(name)+'">'+options.map(([v,t])=>'<option value="'+h(v)+'" '+(v===val?'selected':'')+'>'+h(t)+'</option>').join("")+'</select></label>';
 
 const MAINTENANCE_MODE=true; // Temporary S2H CRM inspection mode
-// Keep the maintenance overlay hidden when regular access is restored.
-if(!MAINTENANCE_MODE)$("#maintenance")?.classList.add("hidden");
-function showMaintenance(){
- if(!MAINTENANCE_MODE)return;
- const gate=$("#maintenance");
- if(gate)gate.classList.remove("hidden");
- $("#login").classList.add("hidden");
+// The login screen replaces the old maintenance announcement; authorization stays unchanged.
+let loginIntroPlayed=false;
+function showLogin(){
+ const login=$("#login");
  $("#app").classList.add("hidden");
+ if(!login.classList.contains("hidden"))return;
+ login.classList.toggle("login-enter",!loginIntroPlayed);
+ loginIntroPlayed=true;
+ login.classList.remove("hidden");
 }
-function showAdminLogin(){
- if(!MAINTENANCE_MODE)return;
- $("#maintenance")?.classList.add("hidden");
- $("#login").classList.remove("hidden");
-}
-$("#maintenance-admin-login")?.addEventListener("click",showAdminLogin);
-
 let db,auth,authGeneration=0,loginPending=false;
 function start() {
   if (!firebaseConfigured) {
-    if(MAINTENANCE_MODE)showMaintenance();
-    else $("#login").classList.remove("hidden");
-    $("#login-error").textContent="Firebase 연결 전입니다. 현재는 미리보기로 화면 구성을 확인할 수 있어요."; $("#preview-button").classList.remove("hidden"); $("#preview-hint").classList.remove("hidden");
-    $("#login-form").querySelector("button").disabled=true;
+    showLogin();
+    $("#login-error").textContent="로그인 서버에 연결할 수 없습니다. 관리자에게 문의해주세요.";
+    if(!MAINTENANCE_MODE){$("#preview-button").classList.remove("hidden");$("#preview-hint").classList.remove("hidden");}
+    $("#login-form").querySelector("button[type=submit]").disabled=true;
     return;
   }
   const app=initializeApp(firebaseConfig);
@@ -103,7 +97,7 @@ function start() {
   onAuthStateChanged(auth, async user => {
     const generation=++authGeneration;
     clearListeners();
-    if (!user){state.user=null;state.staff=null;if(MAINTENANCE_MODE)showMaintenance();else{$("#login").classList.remove("hidden");$("#app").classList.add("hidden");}return;}
+    if (!user){state.user=null;state.staff=null;showLogin();return;}
     try {
       const userDoc=await getDoc(doc(db,"users",user.uid));
       if(generation!==authGeneration||auth.currentUser?.uid!==user.uid)return;
@@ -113,11 +107,11 @@ function start() {
       }
       if(MAINTENANCE_MODE&&userDoc.data().role!=="admin"){
         state.user=null;state.staff=null;
-        showMaintenance();
+        $("#login-error").textContent="현재 관리자 계정만 로그인할 수 있습니다. 이용 권한은 관리자에게 문의해주세요.";
+        showLogin();
         await signOut(auth);
         return;
       }
-      $("#maintenance")?.classList.add("hidden");
       state.user=user;state.staff=userDoc.data();
       const pendingInitial=new Set(["sellers","groupbuys","products","activities"]);
       let initialLoaded=false;
@@ -201,7 +195,7 @@ $("#login-form").addEventListener("submit",async e=>{
   }finally{loginPending=false;button.disabled=false;button.textContent=label;}
 });
 $("#logout").onclick=()=>{if(state.demo){location.reload();return;}signOut(auth);};
-$("#preview-button").onclick=()=>{if(MAINTENANCE_MODE)return showMaintenance();enterPreview();};
+$("#preview-button").onclick=()=>{if(MAINTENANCE_MODE)return showLogin();enterPreview();};
 const togglePassword=$("#toggle-password");
 togglePassword.addEventListener("click",()=>{
  const password=$("#password"),visible=password.type==="password";
@@ -928,7 +922,7 @@ function monthGrid(list,options={}){
 
 function sampleDate(days){return datePlus(todayLocal(),days);}
 function enterPreview(){
- if(MAINTENANCE_MODE){showMaintenance();return;}
+ if(MAINTENANCE_MODE){showLogin();return;}
  state.demo=true;state.user={uid:"demo",email:"preview@s2h.local"};state.staff={name:"미리보기"};
  const sellers=[
  ["sample1","샘플 셀러 A",32],["sample2","샘플 셀러 B",30],["sample3","샘플 셀러 C",30],["sample4","샘플 셀러 D",45],["sample5","샘플 셀러 E",30],["sample6","샘플 셀러 F",30]
