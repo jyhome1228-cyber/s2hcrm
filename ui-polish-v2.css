@@ -1361,3 +1361,23 @@
 @media(max-width:760px){
  #app .dashboard-v5 .dashboard-primary-aside .ops-work-list>.ops-work-row{min-height:88px;padding:10px 0;column-gap:8px}
 }
+
+/* Seller table: predictable column proportions and meaningful wrapping. */
+#app #page-body .seller-workspace .workspace-data-table table{width:100%;min-width:1080px;table-layout:fixed}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(1){width:17%}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(2){width:19%}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(3){width:12%}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(4){width:17%}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(5){width:10%}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(6){width:11%}
+#app #page-body .seller-workspace .workspace-data-table :is(th,td):nth-child(7){width:14%}
+#app #page-body .seller-workspace .workspace-data-table tbody td{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;min-width:0;max-width:none}
+#app #page-body .seller-workspace .workspace-data-table tbody td:nth-child(3){white-space:normal;word-break:keep-all;overflow-wrap:normal}
+#app #page-body .seller-workspace .workspace-data-table tbody td:nth-child(5){white-space:nowrap;font-variant-numeric:tabular-nums}
+#app #page-body .seller-workspace .workspace-data-table :is(.seller-name-link,.seller-alias,.instagram-profile-link,.seller-trade-cell strong,.seller-trade-cell small){
+ display:block;width:auto;max-width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:left;line-height:1.45
+}
+#app #page-body .seller-workspace .workspace-data-table .instagram-profile-link{display:inline;word-break:normal;overflow-wrap:anywhere}
+#app #page-body .seller-workspace .workspace-data-table .seller-row-actions{display:flex;flex-wrap:wrap;gap:5px;white-space:normal}
+#app #page-body .seller-workspace .workspace-data-table .seller-row-actions button{flex:0 0 auto}
+#app #page-body .seller-workspace .workspace-data-table tbody td.empty{width:auto;white-space:normal;text-align:center}
