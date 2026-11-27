@@ -31,7 +31,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{navigationPending=false;hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, insightSearch:"", insightSort:"count", insightPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardTaskPage:1, dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, insightSearch:"", insightSort:"count", insightPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -898,7 +898,7 @@ function monthGrid(list,options={}){
   const weekId=weekStart;
   const expanded=!!state.expandedCalendarWeeks[weekId],visible=expanded?laneEnds.length:Math.min(maxVisible,laneEnds.length);
   const hasMore=laneEnds.length>maxVisible,footer=hasMore?28:8;
-  const height=options.connected?(36+Math.max(visible,1)*36+footer):(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
+  const height=options.connected?(36+Math.max(visible,1)*40+footer):(options.compact?38:44)+Math.max(visible,1)*(options.compact?34:42)+(options.compact?27:34);
   const dayCells=Array.from({length:7},(_,day)=>{
    const date=datePlus(weekStart,day),inMonth=date.slice(0,7)===shownMonth();
    const count=allowed.filter(b=>b.startDate<=date&&b.endDate>=date).length;
@@ -912,7 +912,8 @@ function monthGrid(list,options={}){
    const sellerLabel=e.sellerName||"셀러 미확인",productLabel=e.product||e.productName||"상품 미확인";
    const progress=scheduleStatus(e);
    const progressClass=progress==="진행 중"?"cal-range-active":progress==="예정"?"cal-range-upcoming":progress==="취소"?"cal-range-canceled":"cal-range-completed";
-   return '<button type="button" class="cal-range '+progressClass+' '+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'" aria-label="'+h(tip+" · "+progress)+'"><span class="cal-range-copy"><strong>'+h(sellerLabel)+'</strong><span>'+h(productLabel)+'</span></span></button>';
+   const openingToday=e.startDate===today&&progress!=="취소"&&progress!=="완료";
+   return '<button type="button" class="cal-range '+progressClass+' '+(openingToday?'cal-range-opening ':'')+(startOfEvent?'cal-range-start ':'cal-range-continue ')+(endOfEvent?'cal-range-end':'')+'" data-act="edit-buy" data-id="'+h(e.id)+'" style="grid-column:'+startCol+' / span '+span+';grid-row:'+(e.lane+2)+'" title="'+h(tip)+'" aria-label="'+h(tip+" · "+progress+(openingToday?" · 오늘 오픈":""))+'"><span class="cal-range-copy"><strong>'+h(sellerLabel)+'</strong><span>'+h(productLabel)+'</span></span></button>';
   }).join("");
   const hiddenCount=events.filter(e=>e.lane>=maxVisible).length;
   const more=hasMore?'<button type="button" class="cal-expand" style="grid-column:1 / -1;grid-row:'+(visible+2)+'" data-expand-week="'+weekId+'" aria-expanded="'+expanded+'">'+(expanded?'접기':'+'+hiddenCount+'건 더보기')+'</button>':'';
@@ -973,27 +974,32 @@ function dashboard(){
   +metric("7일 내 오픈",comingWeek.length,"오늘 포함, 일주일")
   +metric("연락 필요",rem.length,"오늘 예정 및 미처리 연락")
   +'</div>';
- const itemRow=item=>'<div class="ops-work-row">'
+ const itemRow=item=>'<div class="ops-work-row'+(item.category==="오늘 오픈"?' is-opening':item.category==="연락 지연"?' is-overdue':'')+'">'
   +'<div class="ops-work-label">'+h(item.category)+'</div>'
   +'<div class="ops-work-description"><strong>'+h(item.seller)+'</strong><span>'+h(item.product)+'</span><small>'+h(item.meta)+'</small></div>'
   +'<button type="button" class="ops-work-action" data-act="'+h(item.action)+'" data-id="'+h(item.id)+'">'+h(item.label)+'</button>'
   +'</div>';
  const tasks=[
   ...opening.map(b=>({category:"오늘 오픈",seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",meta:"종료 "+b.endDate.slice(5).replace("-","."),action:"edit-buy",id:b.id,label:"공구 확인"})),
-  ...rem.map(x=>({category:x.overdue>0?"연락 지연":"연락 필요",seller:x.seller.name,product:x.buy?.product||"후속 연락",meta:"연락 기준일 "+(x.due||"-"),action:"contact",id:x.seller.id,label:"연락 기록"}))
+  ...rem.map(x=>({category:x.overdue>0?"연락 지연":"연락 필요",seller:x.seller.name,product:x.buy?.product||"후속 연락",meta:"연락 예정 "+(x.due||"-")+(x.overdue>0?" · "+x.overdue+"일 지연":""),action:"contact",id:x.seller.id,label:"연락 기록"}))
  ];
  const activeTasks=state.dashboardTaskFilter==="opening"?tasks.filter(t=>t.action==="edit-buy"):
   state.dashboardTaskFilter==="contact"?tasks.filter(t=>t.action==="contact"):tasks;
+ const taskPageSize=12,taskPageCount=Math.max(1,Math.ceil(activeTasks.length/taskPageSize));
+ state.dashboardTaskPage=Math.min(taskPageCount,Math.max(1,Number(state.dashboardTaskPage)||1));
+ const taskOffset=(state.dashboardTaskPage-1)*taskPageSize;
+ const taskPage=activeTasks.slice(taskOffset,taskOffset+taskPageSize);
+ const taskKey=state.dashboardTaskFilter+"-"+state.dashboardTaskPage;
  const taskFilters='<div class="ops-task-filters" role="group" aria-label="오늘 업무 필터">'
   +[["all","전체",tasks.length],["opening","오늘 오픈",opening.length],["contact","연락 필요",rem.length]]
    .map(([key,label,count])=>'<button type="button" data-dashboard-task="'+key+'" aria-pressed="'+(state.dashboardTaskFilter===key)+'" class="'+(state.dashboardTaskFilter===key?"selected":"")+'">'+label+' <span>'+count+'</span></button>').join("")
   +'</div>';
  const taskPanel=wrap("오늘 처리할 업무",
   '<p class="ops-panel-summary">오늘 오픈 '+opening.length+'건 · 미처리 연락 '+rem.length+'건</p>'
-  +taskFilters+'<div class="ops-work-list">'
-  +(activeTasks.slice(0,6).map(itemRow).join("")||'<div class="dash-empty">해당 조건의 업무가 없습니다.</div>')+'</div>'
-  +(activeTasks.length>6?'<p class="ops-more-note">우선 확인할 6건을 표시하고 있습니다.</p>':""),
-  '<button type="button" class="panel-link" data-nav="reminders">연락 대상 보기</button>');
+  +taskFilters+'<div class="ops-work-list dashboard-task-scroll" data-work-scroll-key="'+h(taskKey)+'" tabindex="0" role="region" aria-label="처리할 업무 목록">'
+  +(taskPage.map(itemRow).join("")||'<div class="dash-empty">해당 조건의 업무가 없습니다.</div>')+'</div>'
+  +(activeTasks.length?'<div class="dashboard-task-pagination"><span>'+(taskOffset+1)+'–'+Math.min(taskOffset+taskPageSize,activeTasks.length)+' / '+activeTasks.length+'건</span><div><button type="button" class="mini-button" data-dashboard-task-page="-1" '+(state.dashboardTaskPage===1?"disabled":"")+'>이전</button><button type="button" class="mini-button" data-dashboard-task-page="1" '+(state.dashboardTaskPage===taskPageCount?"disabled":"")+'>다음</button></div></div>':""),
+  state.dashboardTaskFilter==="opening"?'<button type="button" class="panel-link" data-nav="schedule">공구 일정 보기</button>':'<button type="button" class="panel-link" data-nav="reminders">연락 대상 보기</button>');
  const futureItems=upcoming.slice(0,3).map(b=>({
   category:b.startDate.slice(5).replace("-",".")+" 오픈",
   seller:b.sellerName||"미확인",product:b.product||b.productName||"상품 미확인",
@@ -1026,7 +1032,7 @@ function dashboard(){
   +'<div class="ops-major-head"><div><h2>공구 캘린더</h2><p>공구 일정은 시작일부터 종료일까지 이어집니다.</p></div>'
   +'<button type="button" class="panel-link" data-nav="schedule">전체 공구 일정</button></div>'
   +'<div class="ops-calendar-controls">'+monthPicker()+calendarModeControls()+'</div>'
-  +'<div class="ops-calendar-legend"><span>선택한 달 '+monthlyBuys().filter(b=>b.status!=="취소").length+'건</span>'
+  +'<div class="ops-calendar-legend"><span>'+(state.calendarMode==="week"?"선택 주 "+valid.filter(b=>b.startDate<=datePlus(activeWeekStart(),6)&&b.endDate>=activeWeekStart()).length:"선택한 달 "+monthlyBuys().filter(b=>b.status!=="취소").length)+'건</span>'
   +'<span class="ops-legend-item"><i class="is-active"></i>진행 중</span>'
   +'<span class="ops-legend-item"><i class="is-upcoming"></i>예정</span>'
   +'<span class="ops-legend-item"><i class="is-past"></i>완료</span>'
@@ -1054,7 +1060,7 @@ function dashboard(){
   +'<div class="flow-date-header"><div><strong>'+h(calendarDateLabel(selectedDate))+'</strong>'
   +'<span>해당 날짜 공구 '+selectedBuys.length+'건</span></div>'
   +'<button type="button" class="flow-date-add" data-calendar-add="'+h(selectedDate)+'">공구 등록</button></div>'
-  +'<div class="flow-date-list">'+(selectedRows||'<p class="flow-date-empty">선택한 날짜에 등록된 공구가 없습니다.</p>')+'</div>'
+  +'<div class="flow-date-list dashboard-date-scroll" data-work-scroll-key="date-'+h(selectedDate)+'" tabindex="0" role="region" aria-label="선택 날짜 공구 목록">'+(selectedRows||'<p class="flow-date-empty">선택한 날짜에 등록된 공구가 없습니다.</p>')+'</div>'
   +""
   +'</div>';
  const showDate=state.dashboardPanelMode==="date";
@@ -2343,7 +2349,10 @@ function render(){
   +'<button type="button" id="data-retry-button" class="secondary">다시 시도</button></div>':"";
  const oldCalendar=$("#page-body .cal-scroll[data-calendar-key]");
  const calendarKey=oldCalendar?.dataset.calendarKey,calendarLeft=oldCalendar?.scrollLeft||0;
+ const oldWork=$("#page-body [data-work-scroll-key]"),workKey=oldWork?.dataset.workScrollKey,workTop=oldWork?.scrollTop||0;
  $("#page-body").innerHTML=errorBanner+view();
+ const newWork=$("#page-body [data-work-scroll-key]");
+ if(newWork&&newWork.dataset.workScrollKey===workKey)newWork.scrollTop=workTop;
  const newCalendar=$("#page-body .cal-scroll[data-calendar-key]");
  if(newCalendar&&newCalendar.dataset.calendarKey===calendarKey)newCalendar.scrollLeft=calendarLeft;
  const retry=$("#data-retry-button");
@@ -2421,9 +2430,12 @@ function render(){
   state.dashboardPanelMode=button.dataset.dashboardSide;render();
  }));
  $("#page-body").querySelectorAll("[data-dashboard-task]").forEach(button=>button.addEventListener("click",()=>{
-  state.dashboardTaskFilter=button.dataset.dashboardTask;render();
+  state.dashboardTaskFilter=button.dataset.dashboardTask;state.dashboardTaskPage=1;render();
  }));
 
+ $("#page-body").querySelectorAll("[data-dashboard-task-page]").forEach(button=>button.addEventListener("click",()=>{
+  if(button.disabled)return;state.dashboardTaskPage+=Number(button.dataset.dashboardTaskPage);render();
+ }));
  bindSearchInput("#seller-search","search");
  $("#page-body").querySelectorAll("[data-seller-filter]").forEach(button=>button.addEventListener("click",()=>{
   state.sellerOperationFilter=button.dataset.sellerFilter;state.sellerPage=1;render();
