@@ -31,7 +31,7 @@ function navigateTo(page){
  setTimeout(()=>{try{state.page=page;state.search=page==="sellers"?state.search:"";render();}finally{navigationPending=false;hideLoading();}},15);
 }
 
-const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardTaskPage:1, dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, insightSearch:"", insightSort:"count", insightPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
+const state = { user: null, staff: null, sellers: [], buys: [], products: [], activities: [], staffUsers: [], dataErrors:{}, page: "dashboard", search: "", activitySearch:"", activityType:"all", activityPage:1, sellerPage:1, sellerPageSize:50, sellerSort:"name", sellerOperationFilter:"all", dashboardTaskFilter:"all", dashboardTaskPage:1, dashboardPanelMode:"tasks", unsubs: [], modalSave: null, demo:false, selectedMonth:null, scheduleView:"list", scheduleStatusFilter:"all", scheduleSort:"start", monthSearch:"", productSearch:"", productStatus:"active", productSort:"name", productView:"list", productPage:1, insightSearch:"", insightSort:"count", insightPage:1, selectedSellerId:null, expandedReminderId:null, reminderCopied:{}, expandedCalendarWeeks:{}, calendarMode:"month", weekStart:null, calendarSelectedDate:null };
 const todayLocal = () => new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const datePlus = (value, days) => { const [y,m,d]=value.split("-").map(Number); const x=new Date(Date.UTC(y,m-1,d+days));return x.toISOString().slice(0,10); };
 const daysBetween = (a,b) => Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400000);
@@ -784,7 +784,11 @@ document.addEventListener("keydown",event=>{
 });
 function metric(title,value,description){return '<div class="metric"><div class="label">'+title+'</div><div class="number">'+value+'</div><div class="sub">'+description+'</div></div>';}
 function wrap(title,body,right=""){return '<div class="panel"><div class="panel-title"><h2>'+title+'</h2>'+right+'</div>'+body+'</div>';}
-function table(headers,rows){return '<div class="table-wrap" tabindex="0" role="region" aria-label="데이터 목록, 필요한 경우 좌우 스크롤"><table><thead><tr>'+headers.map(v=>'<th scope="col">'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">등록된 데이터가 없습니다.</td></tr>')+'</tbody></table></div>';}
+function table(headers,rows,options={}){
+ const key=options.key?JSON.stringify(options.key):"";
+ const label=options.label||"데이터 목록";
+ return '<div class="table-wrap'+(key?' workspace-data-table':'')+'"'+(key?' data-table-scroll-key="'+h(key)+'"':'')+' tabindex="0" role="region" aria-label="'+h(label+", 필요한 경우 스크롤")+'"><table><thead><tr>'+headers.map(v=>'<th scope="col">'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+ (rows.length?rows.join(""):'<tr><td colspan="'+headers.length+'" class="empty">'+h(options.empty||"등록된 데이터가 없습니다.")+'</td></tr>')+'</tbody></table></div>';
+}
 
 
 function validCalendarMonth(value){return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(value||""))&&value>="2010-01"&&value<="2035-12";}
@@ -1476,7 +1480,7 @@ function productsPage(){
  });
  return wrap("브랜드 목록 · "+filtered.length+"건",
   '<p class="panel-description">전 상품을 브랜드·대표 상품군 기준으로 표시합니다. 명확한 브랜드 정보가 없는 상품도 상세 보기에서 개별 구성과 이력을 확인할 수 있습니다. 브랜드명 추정은 원본 데이터를 변경하지 않습니다.</p>'+
-  controls+'<div class="ops-product-results"><span>조회 결과 '+filtered.length+'개 브랜드</span>'+sortUi+'</div>'+table(["브랜드 / 대표 상품군","상품 수","진행 셀러","공구 이력","최근 종료일","관리"],rows)+
+  controls+'<div class="ops-product-results"><span>조회 결과 '+filtered.length+'개 브랜드</span>'+sortUi+'</div>'+table(["브랜드 / 대표 상품군","상품 수","진행 셀러","공구 이력","최근 종료일","관리"],rows,{key:["products",state.productSearch,state.productStatus,state.productSort,state.productPage],label:"상품 목록",empty:"조건에 맞는 상품이 없습니다."})+
   (pageCount>1?'<div class="product-pagination"><span>'+(from+1)+'–'+Math.min(filtered.length,from+pageSize)+' / '+filtered.length+'건</span><div><button type="button" data-product-page="-1" '+(state.productPage===1?"disabled":"")+'>이전</button><strong>'+state.productPage+' / '+pageCount+'</strong><button type="button" data-product-page="1" '+(state.productPage===pageCount?"disabled":"")+'>다음</button></div></div>':""));
 }
 function productInsightSellers(productName,asBrand=false){
@@ -1582,7 +1586,7 @@ function productInsightsPage(){
  });
  const controls='<div class="insight-ranking-toolbar"><input type="search" id="insight-search" aria-label="상품 인사이트 검색" placeholder="상품명 또는 기존 표기 검색" value="'+h(state.insightSearch)+'"/><label>정렬<select id="insight-sort" aria-label="상품 성과 정렬">'+
   [["count","공구 횟수순"],["sellers","참여 셀러순"],["recent","최근 종료일순"]].map(([key,label])=>'<option value="'+key+'" '+(state.insightSort===key?"selected":"")+'>'+label+'</option>').join("")+'</select></label></div>';
- const ranking=controls+'<div class="insight-result-count">조회 결과 '+filtered.length+'개 상품</div>'+table(["순위","상품명","공구 횟수","참여 셀러","최근 종료일"],rows)+
+ const ranking=controls+'<div class="insight-result-count">조회 결과 '+filtered.length+'개 상품</div>'+table(["순위","상품명","공구 횟수","참여 셀러","최근 종료일"],rows,{key:["insights",state.insightSearch,state.insightSort,state.insightPage],label:"상품별 공구 현황",empty:"조건에 맞는 상품 기록이 없습니다."})+
   (pageCount>1?'<div class="seller-pagination insight-pagination"><span>'+(offset+1)+'–'+Math.min(filtered.length,offset+pageSize)+' / '+filtered.length+'개</span><div><button type="button" class="secondary" data-insight-page="-1" '+(state.insightPage===1?"disabled":"")+'>이전</button><span>'+state.insightPage+' / '+pageCount+'</span><button type="button" class="secondary" data-insight-page="1" '+(state.insightPage===pageCount?"disabled":"")+'>다음</button></div></div>':"");
  const series=insightMonthSeries(index,today),peak=Math.max(1,...series.map(x=>x.count));
  const sum=series.reduce((a,b)=>a+b.count,0);
@@ -2032,10 +2036,15 @@ function sellerOperationalGroups(key=state.sellerOperationFilter){
   return true;
  });
 }
+function sortedSellerGroups(groups=sellerOperationalGroups()){
+ const sort=state.sellerSort||"name";
+ const byName=(a,b)=>String(a.selected.name||"").localeCompare(String(b.selected.name||""),"ko-KR",{numeric:true});
+ return [...groups].sort((a,b)=>(sort==="frequency"?b.histories.length-a.histories.length:sort==="recent"?String(b.recent?.endDate||"").localeCompare(String(a.recent?.endDate||"")):0)||byName(a,b));
+}
 function sellerCSV(){
  if(state.demo)return notify("미리보기 데이터는 내보낼 수 없습니다.");
  const lastActivities=sellerLastActivityIndex();
- const rows=sellerOperationalGroups().map(g=>{
+ const rows=sortedSellerGroups().map(g=>{
   const s=g.selected,b=g.recent;
   const count=g.histories.length;
   const lastActivity=[...g.ids].map(id=>lastActivities.get(id)).filter(Boolean).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
@@ -2061,7 +2070,7 @@ function sellerCSV(){
  notify(rows.length+"명의 셀러 목록을 CSV로 내려받았습니다.");
 }
 function sellersPage(){
- const groups=sellerOperationalGroups(),pageSize=state.sellerPageSize;
+ const groups=sortedSellerGroups(),pageSize=[25,50,100].includes(state.sellerPageSize)?state.sellerPageSize:50;
  const pageCount=Math.max(1,Math.ceil(groups.length/pageSize));
  state.sellerPage=Math.max(1,Math.min(pageCount,state.sellerPage));
  const from=(state.sellerPage-1)*pageSize;
@@ -2080,11 +2089,14 @@ function sellersPage(){
   +tabOptions.map(([key,title])=>'<button type="button" data-seller-filter="'+key+'" aria-pressed="'+(state.sellerOperationFilter===key)+'" class="'+(state.sellerOperationFilter===key?"selected":"")+'">'+title+' <span>'+sellerOperationalGroups(key).length+'</span></button>').join("")
   +'</div>';
  const tools='<div class="seller-tools"><div class="seller-search"><input id="seller-search" type="search" aria-label="셀러명, 인스타그램, 연락처 검색" placeholder="셀러명, 인스타그램, 연락처 검색" value="'+h(state.search)+'"/></div>'
-  +'<span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>현재 목록 CSV</button></div>';
+  +'<span class="seller-results">'+groups.length+'명 조회</span><button class="secondary" type="button" data-export-sellers>조회 목록 CSV</button></div>';
+ const listControls='<div class="workspace-list-controls"><label>정렬<select id="seller-sort" aria-label="셀러 목록 정렬">'+
+ [["name","셀러 이름순"],["frequency","공구 횟수순"],["recent","최근 종료일순"]].map(([key,label])=>'<option value="'+key+'" '+(state.sellerSort===key?'selected':'')+'>'+label+'</option>').join("")+'</select></label>'+
+ '<label>표시<select id="seller-page-size" aria-label="페이지당 셀러 표시 수">'+[25,50,100].map(n=>'<option value="'+n+'" '+(pageSize===n?'selected':'')+'>'+n+'명</option>').join("")+'</select></label></div>';
  const pagination='<div class="seller-pagination"><span>'+(!groups.length?'검색 결과 없음':(from+1)+'–'+Math.min(from+pageSize,groups.length)+' / '+groups.length+'명')+'</span><div><button type="button" class="secondary" data-seller-page="-1" '+(state.sellerPage===1?'disabled':'')+'>이전</button><span class="seller-page-current">'+state.sellerPage+' / '+pageCount+'</span><button type="button" class="secondary" data-seller-page="1" '+(state.sellerPage>=pageCount?'disabled':'')+'>다음</button></div></div>';
  return '<div class="seller-workspace">'+wrap("셀러 목록 · "+sellerGroups().length+"명",
   '<p class="panel-description">동일 인스타그램 계정은 하나로 표시하고 과거 이름과 이력은 보존합니다.</p>'+
-  tools+tabs+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows)+pagination)+'</div>';
+  tools+tabs+listControls+table(["셀러명","채널","연락처","최근 공구","종료일","최근 활동","관리"],rows,{key:["sellers",state.search,state.sellerOperationFilter,state.sellerSort,state.sellerPage,pageSize],label:"셀러 목록",empty:"조건에 맞는 셀러가 없습니다."})+pagination)+'</div>';
 }
 
 function schedulePage(){
@@ -2146,8 +2158,8 @@ function schedulePage(){
    '기간 막대를 눌러 공구를 수정하고, 날짜를 눌러 공구를 등록할 수 있습니다.')+'</p>'+
   monthGrid(calendarItems,{connected:true,weekOnly:state.calendarMode==="week",showCanceled:state.scheduleStatusFilter==="canceled"||state.scheduleStatusFilter==="all"}) :
   state.scheduleView==="detail"?
-  table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","회차","비고","이벤트","상태","수정"],monthlyRows(sorted,true)):
-  table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows);
+  table(["셀러명","상품","팔로워 수","시작일","종료일","정산 요청","결제창","셀러 구분","인스타그램","회차","비고","이벤트","상태","수정"],monthlyRows(sorted,true),{key:["schedule","detail",shownMonth(),state.monthSearch,state.scheduleStatusFilter,state.scheduleSort],label:"공구 상세 대장",empty:"조건에 맞는 공구가 없습니다."}):
+  table(["셀러명","상품","공구 기간","진행 상태","오픈 준비","관리"],viewRows,{key:["schedule","list",shownMonth(),state.monthSearch,state.scheduleStatusFilter,state.scheduleSort],label:"공구 간편 목록",empty:"조건에 맞는 공구가 없습니다."});
  return '<div class="ops-schedule-page">'
   +'<div class="ops-schedule-heading"><div><strong>'+h(weekScoped?weekFrom+" ~ "+weekTo:shownMonth().replace("-","년 ")+"월")+'</strong><p>선택 기간 전체 공구 '+base.length+'건</p></div>'
   +'<div class="ops-schedule-month">'+monthPicker()+'</div></div>'
@@ -2250,7 +2262,7 @@ function activityPage(){
   +'<button type="button" class="secondary" data-activity-page="1" '+(state.activityPage===pageCount?"disabled":"")+'>다음</button></div></div>';
  return '<div class="activity-workspace">'+wrap("활동 기록 · "+matched.length+"건",
   '<p class="panel-description">누가 어떤 셀러에게 연락하거나 업무를 처리했는지 확인할 수 있습니다.</p>'
-  +toolbar+table(["일시","셀러","활동 유형","기록 내용","담당자","다음 연락일"],rows)+pagination)+'</div>';
+  +toolbar+table(["일시","셀러","활동 유형","기록 내용","담당자","다음 연락일"],rows,{key:["activity",state.activitySearch,state.activityType,state.activityPage],label:"활동 기록",empty:"조건에 맞는 활동 기록이 없습니다."})+pagination)+'</div>';
 }
 function importerPage(){
  if(state.demo||state.staff?.role!=="admin")return wrap("접근 제한","<p>관리자 계정만 백업과 데이터 복원을 사용할 수 있습니다.</p>");
@@ -2350,7 +2362,10 @@ function render(){
  const oldCalendar=$("#page-body .cal-scroll[data-calendar-key]");
  const calendarKey=oldCalendar?.dataset.calendarKey,calendarLeft=oldCalendar?.scrollLeft||0;
  const oldWork=$("#page-body [data-work-scroll-key]"),workKey=oldWork?.dataset.workScrollKey,workTop=oldWork?.scrollTop||0;
+ const oldTable=$("#page-body [data-table-scroll-key]"),tableKey=oldTable?.dataset.tableScrollKey,tableTop=oldTable?.scrollTop||0,tableLeft=oldTable?.scrollLeft||0;
  $("#page-body").innerHTML=errorBanner+view();
+ const newTable=$("#page-body [data-table-scroll-key]");
+ if(newTable&&newTable.dataset.tableScrollKey===tableKey){newTable.scrollTop=tableTop;newTable.scrollLeft=tableLeft;}
  const newWork=$("#page-body [data-work-scroll-key]");
  if(newWork&&newWork.dataset.workScrollKey===workKey)newWork.scrollTop=workTop;
  const newCalendar=$("#page-body .cal-scroll[data-calendar-key]");
@@ -2440,6 +2455,9 @@ function render(){
  $("#page-body").querySelectorAll("[data-seller-filter]").forEach(button=>button.addEventListener("click",()=>{
   state.sellerOperationFilter=button.dataset.sellerFilter;state.sellerPage=1;render();
  }));
+ const sellerSort=$("#seller-sort"),sellerSize=$("#seller-page-size");
+ if(sellerSort)sellerSort.addEventListener("change",()=>{state.sellerSort=sellerSort.value;state.sellerPage=1;render();});
+ if(sellerSize)sellerSize.addEventListener("change",()=>{const n=Number(sellerSize.value);if([25,50,100].includes(n)){state.sellerPageSize=n;state.sellerPage=1;render();}});
  const activityType=$("#activity-type");
  if(activityType)activityType.addEventListener("change",()=>{state.activityType=activityType.value;state.activityPage=1;render();});
  $("#page-body").querySelectorAll("[data-activity-page]").forEach(button=>button.addEventListener("click",()=>{
