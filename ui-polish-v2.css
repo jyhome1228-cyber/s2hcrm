@@ -1465,3 +1465,27 @@
  #login.login-enter .login-center-logo,#login.login-enter #login-form{animation:none;opacity:1;transform:none}
  #login #login-form input{transition:none}
 }
+
+/* Interaction polish — motion on entry, never on routine data refresh. */
+:root{--s2h-motion-fast:140ms;--s2h-motion-normal:190ms;--s2h-motion-ease:cubic-bezier(.2,.75,.25,1)}
+#modal.modal:not(.hidden),#seller-detail-modal.seller-detail-modal:not(.hidden){animation:s2h-overlay-in var(--s2h-motion-fast) ease-out both}
+#modal.modal:not(.hidden) .modal-panel,#seller-detail-modal.seller-detail-modal:not(.hidden) .seller-detail-dialog{animation:s2h-dialog-in var(--s2h-motion-normal) var(--s2h-motion-ease) both;transform-origin:center}
+#app .work-alert-popover:not(.hidden){animation:s2h-popover-in var(--s2h-motion-fast) var(--s2h-motion-ease) both;transform-origin:top right}
+#modal .combo-options:not(.hidden){animation:s2h-popover-in var(--s2h-motion-fast) var(--s2h-motion-ease) both;transform-origin:top left}
+#modal .inline-create:not(.hidden),#modal details[open]>.compact-form-grid,#modal details[open]>.buy-editor-fields{animation:s2h-section-in var(--s2h-motion-normal) var(--s2h-motion-ease) both}
+#toast.toast:not(.hidden){animation:s2h-toast-in var(--s2h-motion-normal) var(--s2h-motion-ease) both}
+#app-loading.app-loading:not(.hidden) .loading-inner{animation:s2h-section-in var(--s2h-motion-fast) var(--s2h-motion-ease) both}
+#app :is(.primary,.secondary,.mini-button,.nav-link,.panel-link,.ops-work-action,.flow-date-event-action,.prep-dashboard-open),#modal :is(.primary,.secondary,.mini-button),#seller-detail-modal :is(.primary,.secondary,.mini-button),#login .login-submit{
+ transition:background-color var(--s2h-motion-fast) ease,color var(--s2h-motion-fast) ease,border-color var(--s2h-motion-fast) ease,transform 100ms ease;
+}
+#app :is(.primary,.secondary,.mini-button,.ops-work-action,.flow-date-event-action,.prep-dashboard-open):active:not(:disabled),#modal :is(.primary,.secondary,.mini-button):active:not(:disabled),#seller-detail-modal :is(.primary,.secondary,.mini-button):active:not(:disabled),#login .login-submit:active:not(:disabled){transform:translateY(1px)}
+#modal .compact-form-extra summary:after{transition:transform var(--s2h-motion-fast) var(--s2h-motion-ease)}
+@keyframes s2h-overlay-in{from{background-color:transparent}to{background-color:rgba(23,34,42,.38)}}
+@keyframes s2h-dialog-in{from{opacity:0;transform:translateY(10px) scale(.987)}to{opacity:1;transform:none}}
+@keyframes s2h-popover-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@keyframes s2h-section-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes s2h-toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+ #modal.modal:not(.hidden),#seller-detail-modal.seller-detail-modal:not(.hidden),#modal.modal:not(.hidden) .modal-panel,#seller-detail-modal.seller-detail-modal:not(.hidden) .seller-detail-dialog,#app .work-alert-popover:not(.hidden),#modal .combo-options:not(.hidden),#modal .inline-create:not(.hidden),#modal details[open]>.compact-form-grid,#modal details[open]>.buy-editor-fields,#toast.toast:not(.hidden),#app-loading.app-loading:not(.hidden) .loading-inner{animation:none}
+ #app :is(.primary,.secondary,.mini-button,.nav-link,.panel-link,.ops-work-action,.flow-date-event-action,.prep-dashboard-open),#modal :is(.primary,.secondary,.mini-button),#seller-detail-modal :is(.primary,.secondary,.mini-button),#login .login-submit,#modal .compact-form-extra summary:after{transition:none;transform:none}
+}
